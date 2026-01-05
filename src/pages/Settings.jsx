@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useNotification } from '../contexts/NotificationContext'
-import { useDriveAuth, DriveLoginButton } from '../contexts/DriveContext'
-import { BackupStatus, BackupButton } from '../components/BackupStatus'
+// import { useDriveAuth, DriveLoginButton } from '../contexts/DriveContext'
+// import { BackupStatus, BackupButton } from '../components/BackupStatus'
 
 export default function Settings() {
     const { user, shop } = useAuth()
     const { showNotification } = useNotification()
-    const { isAuthed } = useDriveAuth()
+    // const { isAuthed } = useDriveAuth() // TEMPORARY: Google Drive disabled
     const [loading, setLoading] = useState(false)
-    const [autoBackupEnabled, setAutoBackupEnabled] = useState(shop?.drive_auto_backup || false)
+    // const [autoBackupEnabled, setAutoBackupEnabled] = useState(shop?.drive_auto_backup || false) // TEMPORARY: Google Drive disabled
     const [shopData, setShopData] = useState({
         name: shop?.name || '',
         address: shop?.address || ''
@@ -254,7 +254,8 @@ export default function Settings() {
                     </div>
                 </div>
 
-                {/* Google Drive Backup */}
+                {/* Google Drive Backup - TEMPORARILY DISABLED */}
+                {false && (
                 <div className="bg-white rounded-3xl p-6 mb-6 border border-gray-100">
                     <h2 className="text-lg font-black text-gray-800 mb-4 uppercase">☁️ Google Drive Backup</h2>
 
@@ -262,69 +263,56 @@ export default function Settings() {
                         {/* Drive Auth */}
                         <div className="mb-4">
                             <p className="text-xs text-gray-600 font-bold mb-3">ĐĂNG NHẬP GOOGLE DRIVE</p>
-                            <DriveLoginButton />
+                            {/* <DriveLoginButton /> */}
                         </div>
 
                         {/* Auto Backup Toggle */}
-                        {isAuthed && (
+                        {false && (
                             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <label className="text-sm font-bold text-blue-800">
                                         ☑️ Tự động sao lưu hàng tháng
                                     </label>
                                     <button
-                                        onClick={handleToggleAutoBackup}
+                                        onClick={() => {}}
                                         disabled={loading}
                                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                            autoBackupEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                                            false ? 'bg-blue-600' : 'bg-gray-300'
                                         }`}
                                     >
                                         <span
                                             className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                                autoBackupEnabled ? 'translate-x-6' : 'translate-x-1'
+                                                false ? 'translate-x-6' : 'translate-x-1'
                                             }`}
                                         />
                                     </button>
                                 </div>
                                 <p className="text-xs text-blue-700">
-                                    {autoBackupEnabled 
-                                        ? '✓ Sẽ tự động sao lưu vào ngày 1 hàng tháng lúc 02:00 sáng (GMT+7)'
-                                        : 'Nếu bật, sẽ tự động sao lưu vào ngày 1 hàng tháng'
-                                    }
+                                    {'Nếu bật, sẽ tự động sao lưu vào ngày 1 hàng tháng'}
                                 </p>
                             </div>
                         )}
 
                         {/* Manual Backup */}
-                        {isAuthed && (
+                        {false && (
                             <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4">
                                 <p className="text-sm font-bold text-purple-800 mb-3">💾 Sao lưu thủ công</p>
                                 <p className="text-xs text-purple-700 mb-3">
                                     Chọn tháng cần sao lưu và bấm nút để lưu file lên Google Drive ngay.
                                 </p>
-                                <BackupButton
-                                    shopId={shop?.id}
-                                    shopName={shop?.name}
-                                    supabase={supabase}
-                                    onBackupSuccess={() => {
-                                        showNotification('✅ Sao lưu thành công', 'success')
-                                    }}
-                                    onBackupError={(err) => {
-                                        showNotification(`❌ Lỗi: ${err.message}`, 'error')
-                                    }}
-                                />
+                                {/* <BackupButton /> */}
                             </div>
                         )}
 
                         {/* Backup Status */}
-                        {isAuthed && (
+                        {false && (
                             <div>
                                 <p className="text-xs text-gray-600 font-bold mb-2">LỊCH SỬ SAO LƯU</p>
-                                <BackupStatus shopId={shop?.id} supabase={supabase} />
+                                {/* <BackupStatus /> */}
                             </div>
                         )}
 
-                        {!isAuthed && (
+                        {true && (
                             <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
                                 <p className="text-sm font-bold text-yellow-800 mb-2">⚠️ Chưa đăng nhập Google Drive</p>
                                 <p className="text-xs text-yellow-700">
@@ -334,6 +322,7 @@ export default function Settings() {
                         )}
                     </div>
                 </div>
+                )}
 
                 {/* Help */}
                 <div className="bg-white rounded-3xl p-6 border border-gray-100">

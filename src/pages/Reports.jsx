@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotification } from '../contexts/NotificationContext'
-import { useDriveAuth } from '../contexts/DriveContext'
+// import { useDriveAuth } from '../contexts/DriveContext' // TEMPORARY: Google Drive disabled
 import {
     getMonthlyRevenue,
     getYearlyRevenue,
@@ -11,7 +11,7 @@ import {
     formatDateVN
 } from '../lib/reports'
 import { exportAllData, exportMonthlyReportCompliant } from '../lib/export'
-import { uploadToDrive } from '../lib/driveBackup'
+// import { uploadToDrive } from '../lib/driveBackup' // TEMPORARY: Google Drive disabled
 import RevenueReport from '../components/RevenueReport'
 import CashbookReport from '../components/CashbookReport'
 import InventoryReport from '../components/InventoryReport'
@@ -19,7 +19,7 @@ import InventoryReport from '../components/InventoryReport'
 export default function Reports() {
     const { user, shop } = useAuth()
     const { showNotification } = useNotification()
-    const { isAuthed, accessToken } = useDriveAuth()
+    // const { isAuthed, accessToken } = useDriveAuth() // TEMPORARY: Google Drive disabled
     const [activeTab, setActiveTab] = useState('revenue')
     const [year, setYear] = useState(new Date().getFullYear())
     const [month, setMonth] = useState(new Date().getMonth() + 1)
