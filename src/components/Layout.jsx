@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
 
@@ -7,22 +8,30 @@ export default function Layout({ children }) {
     const location = useLocation()
     const { signOut } = useAuth()
     const { isOnline, pendingCount } = useSync()
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+    const mainItems = [
+        { path: '/sales', label: 'Bán hàng', icon: '🛒' },
+        { path: '/products', label: 'Sản phẩm', icon: '📦' },
+        { path: '/reports', label: 'Báo cáo', icon: '📊' },
+    ]
 
     const sidebarItems = [
         { path: '/dashboard', label: 'Tổng quan', icon: '⛺' },
         { path: '/sales', label: 'Bán hàng', icon: '🛒' },
         { path: '/products', label: 'Sản phẩm', icon: '📦' },
         { path: '/imports', label: 'Nhập hàng', icon: '📥' },
-        { path: '/reports', label: 'Thống kê', icon: '📈' },
-        { path: '/cashbook', label: 'Sổ quỹ', icon: '📊' },
+        { path: '/reports', label: 'Thống kê', icon: '📊' },
+        { path: '/cashbook', label: 'Sổ quỹ', icon: '📈' },
         { path: '/history', label: 'Lịch sử', icon: '📜' },
         { path: '/settings', label: 'Cài đặt', icon: '⚙️' },
     ]
 
-    const bottomMenuItems = [
-        { path: '/sales', label: 'Bán', icon: '🛒' },
-        { path: '/imports', label: 'Nhập', icon: '📥' },
-        { path: '/reports', label: 'Báo cáo', icon: '📈' },
+    const mobileMenuItems = [
+        { path: '/dashboard', label: 'Tổng quan', icon: '⛺' },
+        { path: '/imports', label: 'Nhập hàng', icon: '📥' },
+        { path: '/cashbook', label: 'Sổ quỹ', icon: '📈' },
+        { path: '/history', label: 'Lịch sử', icon: '📜' },
         { path: '/settings', label: 'Cài đặt', icon: '⚙️' },
     ]
 
@@ -75,14 +84,17 @@ export default function Layout({ children }) {
                 {children}
             </main>
 
-            {/* Mobile Bottom Bar */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-pink-50 flex justify-around items-center px-2 py-3 z-[100] safe-bottom">
-                {bottomMenuItems.map(item => (
+            {/* Mobile Bottom Bar - Only Main 3 Items */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-pink-100 flex justify-between items-center px-2 py-2 z-[100] safe-bottom">
+                {mainItems.map(item => (
                     <button
                         key={item.path}
-                        onClick={() => navigate(item.path)}
+                        onClick={() => {
+                            navigate(item.path)
+                            setMobileMenuOpen(false)
+                        }}
                         className={`
-                            flex flex-col items-center gap-1 min-w-[64px] transition-all
+                            flex-1 flex flex-col items-center gap-1 py-2 transition-all
                             ${isActive(item.path) ? 'text-primary' : 'text-gray-400'}
                         `}
                     >
@@ -90,14 +102,80 @@ export default function Layout({ children }) {
                             {item.icon}
                         </span>
                         <span className="text-[10px] font-bold uppercase tracking-tighter">
-                            {item.label}
+                            {item.label.split(' ')[0]}
                         </span>
                         {isActive(item.path) && (
                             <div className="w-1 h-1 rounded-full bg-primary mt-0.5"></div>
                         )}
                     </button>
                 ))}
+
+                {/* Hamburger Menu */}
+                <button
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all ${mobileMenuOpen ? 'text-primary' : 'text-gray-400'}`}
+                >
+                    <span className="text-2xl">☰</span>
+                    <span className="text-[10px] font-bold uppercase tracking-tighter">Thêm</span>
+                </button>
             </nav>
+
+            {/* Mobile Sidebar Menu */}
+            {mobileMenuOpen && (
+                <div className="md:hidden fixed inset-0 z-40">
+                    {/* Backdrop */}
+                    <div 
+                        className="absolute inset-0 bg-black/40"
+                        onClick={() => setMobileMenuOpen(false)}
+                    />
+                    
+                    {/* Sidebar */}
+                    <div className="absolute bottom-24 left-0 right-0 mx-2 bg-white rounded-3xl shadow-2xl overflow-hidden z-50">
+                        <div className="p-4 border-b border-pink-100">
+                            <h2 className="font-black text-gray-800">MENU</h2>
+                        </div>
+                        
+                        <nav className="p-2 space-y-1">
+                            {mobileMenuItems.map(item => (
+                                <button
+                                    key={item.path}
+                                    onClick={() => {
+                                        navigate(item.path)
+                                        setMobileMenuOpen(false)
+                                    }}
+                                    className={`
+                                        w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold transition-all
+                                        ${isActive(item.path)
+                                            ? 'bg-primary text-white'
+                                            : 'text-gray-500 hover:bg-pink-50'}
+                                    `}
+                                >
+                                    <span className="text-xl">{item.icon}</span>
+                                    <span className="text-sm">{item.label}</span>
+                                </button>
+                            ))}
+                        </nav>
+
+                        <div className="p-4 border-t border-pink-100 space-y-3">
+                            <div className="flex items-center gap-3 px-2">
+                                <div className={`w-3 h-3 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
+                                <span className="text-xs font-bold text-gray-400">
+                                    {isOnline ? 'Trực tuyến' : 'Ngoại tuyến'}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    signOut()
+                                    setMobileMenuOpen(false)
+                                }}
+                                className="w-full btn bg-gray-100 text-gray-500 hover:text-red-500 hover:bg-red-50 text-sm"
+                            >
+                                Đăng xuất
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
