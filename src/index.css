@@ -1,0 +1,288 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== CSS VARIABLES (từ css.md spec) ===== */
+:root {
+  --color-primary: #e91e63;
+  --color-primary-dark: #c2185b;
+  --color-primary-light: #f8bbd9;
+
+  --bg-main: #fff5f8;
+  --bg-card: #ffffff;
+
+  --text-main: #222222;
+  --text-muted: #777777;
+
+  --status-success: #4caf50;
+  --status-warning: #ff9800;
+  --status-error: #f44336;
+
+  --touch-min: 44px;
+  --button-min: 48px;
+}
+
+/* ===== BASE STYLES ===== */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: system-ui, -apple-system, 'Roboto', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ===== BUTTON BASE (≥48px touch target) ===== */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center;
+    min-height: var(--button-min);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s, transform 0.1s;
+    border: none;
+  }
+
+  .btn:active {
+    transform: scale(0.98);
+  }
+
+  .btn-primary {
+    @apply btn;
+    background-color: var(--color-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--color-primary-dark);
+  }
+
+  .btn-secondary {
+    @apply btn;
+    background-color: var(--color-primary-light);
+    color: var(--color-primary-dark);
+  }
+
+  /* ===== INPUT BASE (≥44px touch target) ===== */
+  .input {
+    @apply w-full;
+    min-height: var(--touch-min);
+    padding: 0.75rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    background: white;
+    transition: border-color 0.15s;
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  /* Hide number input spinners */
+  .input[type="number"]::-webkit-inner-spin-button,
+  .input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  /* ===== CARD ===== */
+  .card {
+    @apply bg-white rounded-xl p-4;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  /* ===== STICKY CHECKOUT (luôn hiện dưới cùng) ===== */
+  .sticky-checkout {
+    @apply sticky bottom-0 left-0 right-0;
+    @apply bg-white p-4;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ===== STATUS BADGES ===== */
+  .badge-offline {
+    @apply inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full;
+    background-color: #ffebee;
+    color: var(--status-error);
+  }
+
+  .badge-pending {
+    @apply inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full;
+    background-color: #fff3e0;
+    color: var(--status-warning);
+  }
+
+  .badge-synced {
+    @apply inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full;
+    background-color: #e8f5e9;
+    color: var(--status-success);
+  }
+}
+
+/* ===== PRINT STYLES (từ other.md spec) ===== */
+/* ===== PRINT STYLES (từ other.md spec) ===== */
+@media print {
+  body {
+    background: white !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .no-print,
+  nav,
+  button:not(.print-show),
+  .sticky-checkout,
+  header,
+  .btn,
+  .btn-primary,
+  .btn-secondary {
+    display: none !important;
+  }
+
+  /* Print Container */
+  .print-only {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+}
+
+/* Hide print-only elements on screen */
+.print-only {
+  display: none;
+}
+
+/* ===== PRINT STYLES (Receipt/Invoice) ===== */
+@media print {
+  /* Hide all UI elements */
+  body * {
+    display: none !important;
+  }
+
+  /* Show only receipt content */
+  [ref="printRef"],
+  [ref="printRef"] * {
+    display: block !important;
+  }
+
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  /* Receipt page setup */
+  @page {
+    size: 80mm auto;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+
+  /* Receipt styling */
+  div[class*="print"],
+  [ref="printRef"] {
+    max-width: 80mm;
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    font-family: 'Courier New', monospace !important;
+    font-size: 12pt !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Hide buttons and interactive elements */
+  button,
+  input[type="button"],
+  input[type="submit"],
+  .btn,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Show only essential info */
+  h1, h2, p, table, tr, td, div {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Text styling for print */
+  h2 {
+    font-size: 14pt !important;
+    font-weight: bold !important;
+    margin-bottom: 4pt !important;
+  }
+
+  p {
+    font-size: 11pt !important;
+    margin-bottom: 2pt !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  th, td {
+    text-align: left !important;
+    padding: 2pt 0 !important;
+    border: none !important;
+  }
+
+  /* Separators */
+  hr {
+    border: none !important;
+    border-top: 1px dashed #333 !important;
+    margin: 4pt 0 !important;
+  }
+
+  /* No page breaks in middle of receipt */
+  div[ref="printRef"] {
+    page-break-inside: avoid !important;
+  }
+
+  /* Optimize for 80mm thermal printer */
+  * {
+    orphans: 2 !important;
+    widows: 2 !important;
+  }
+}
+
+/* ===== MOBILE KEYBOARD SAFE AREA ===== */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
