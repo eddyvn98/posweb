@@ -64,7 +64,7 @@ Cho phép app truy cập Google Drive để tự động sao lưu file Excel bá
 Tạo file `.env` ở thư mục gốc project:
 
 ```env
-REACT_APP_GOOGLE_CLIENT_ID=YOUR_CLIENT_ID_HERE.apps.googleusercontent.com
+VITE_GOOGLE_CLIENT_ID=YOUR_CLIENT_ID_HERE.apps.googleusercontent.com
 ```
 
 Thay `YOUR_CLIENT_ID_HERE` bằng Client ID từ bước 4.
@@ -92,7 +92,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 ```jsx
 import { GoogleOAuthProvider } from '@react-oauth/google'
 
-const GOOGLE_CLIENT_ID = import.meta.env.REACT_APP_GOOGLE_CLIENT_ID
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
@@ -157,7 +157,7 @@ https://www.googleapis.com/auth/drive.file
    ```
 3. Update `.env` production:
    ```env
-   REACT_APP_GOOGLE_CLIENT_ID=YOUR_PRODUCTION_CLIENT_ID
+   VITE_GOOGLE_CLIENT_ID=YOUR_PRODUCTION_CLIENT_ID
    ```
 4. Deploy lại
 
