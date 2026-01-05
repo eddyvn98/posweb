@@ -125,33 +125,33 @@ export default function Reports() {
             
             showNotification('✅ Đã xuất báo cáo tháng thành công!', 'success')
 
-            // Auto-upload to Drive nếu đã đăng nhập
-            if (isAuthed && accessToken) {
-                try {
-                    showNotification('⏳ Đang sao lưu lên Google Drive...', 'info')
-                    
-                    // Tải file Excel từ download (thực tế cần truyền blob)
-                    // Đây là phần phức tạp hơn - cần modify export function
-                    // Tạm thời log notification
-                    
-                    // Log vào backup_logs table
-                    await supabase
-                        .from('backup_logs')
-                        .insert({
-                            shop_id: shop.id,
-                            month: `${year}-${String(month).padStart(2, '0')}`,
-                            file_name: `Bao-cao-POS-${String(month).padStart(2, '0')}-${year}.xlsx`,
-                            status: 'SUCCESS',
-                            backup_type: 'MANUAL',
-                            backup_source: 'EXPORT'
-                        })
-                    
-                    showNotification('✅ Báo cáo cũng đã được sao lưu lên Google Drive!', 'success')
-                } catch (driveErr) {
-                    console.warn('Lỗi auto-upload Drive:', driveErr)
-                    showNotification('⚠️ Export thành công nhưng upload Drive bị lỗi', 'warning')
-                }
-            }
+            // Auto-upload to Drive disabled - see GOOGLE_SETUP.md to re-enable
+            // if (isAuthed && accessToken) {
+            //     try {
+            //         showNotification('⏳ Đang sao lưu lên Google Drive...', 'info')
+            //         
+            //         // Tải file Excel từ download (thực tế cần truyền blob)
+            //         // Đây là phần phức tạp hơn - cần modify export function
+            //         // Tạm thời log notification
+            //         
+            //         // Log vào backup_logs table
+            //         await supabase
+            //             .from('backup_logs')
+            //             .insert({
+            //                 shop_id: shop.id,
+            //                 month: `${year}-${String(month).padStart(2, '0')}`,
+            //                 file_name: `Bao-cao-POS-${String(month).padStart(2, '0')}-${year}.xlsx`,
+            //                 status: 'SUCCESS',
+            //                 backup_type: 'MANUAL',
+            //                 backup_source: 'EXPORT'
+            //             })
+            //         
+            //         showNotification('✅ Báo cáo cũng đã được sao lưu lên Google Drive!', 'success')
+            //     } catch (driveErr) {
+            //         console.warn('Lỗi auto-upload Drive:', driveErr)
+            //         showNotification('⚠️ Export thành công nhưng upload Drive bị lỗi', 'warning')
+            //     }
+            // }
         } catch (err) {
             alert('❌ Lỗi khi xuất: ' + err.message)
             showNotification(`❌ ${err.message}`, 'error')
@@ -233,18 +233,18 @@ export default function Reports() {
                     </button>
                 </div>
 
-                {/* Drive Status Info */}
-                {isAuthed && (
+                {/* Drive Status Info - DISABLED */}
+                {false && (
                     <div className="w-full mt-3 bg-blue-50 border border-blue-200 rounded-2xl p-3">
                         <p className="text-xs text-blue-700 font-bold">
                             ✓ Google Drive đã kết nối - Báo cáo sẽ tự động sao lưu khi xuất
                         </p>
                     </div>
                 )}
-                {!isAuthed && (
+                {true && (
                     <div className="w-full mt-3 bg-gray-50 border border-gray-200 rounded-2xl p-3">
                         <p className="text-xs text-gray-600">
-                            💡 Đăng nhập Google Drive trong "Cài đặt" để tự động sao lưu báo cáo
+                            💡 Google Drive backup tạm thời vô hiệu hóa. Xem GOOGLE_SETUP.md để bật lại.
                         </p>
                     </div>
                 )}
