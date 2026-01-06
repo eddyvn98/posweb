@@ -25,21 +25,24 @@ export default function BarcodeScanner({ onScan }) {
                 scannerRef.current = html5QrcodeScanner
 
                 await html5QrcodeScanner.start(
-                    { facingMode: "environment" },
+                    "environment",
                     {
-                        fps: 10,
-                        qrbox: { width: 250, height: 150 },
-                        aspectRatio: 2.0
+                        fps: 15,
+                        qrbox: { width: 300, height: 200 },
+                        disableFlip: false,
+                        rememberLastUsedCamera: true
                     },
                     (decodedText) => {
+                        console.log('[Scanner] Detected:', decodedText)
                         const now = Date.now()
                         if (now - lastScan.current > 1500) {
                             lastScan.current = now
+                            console.log('[Scanner] Calling onScan:', decodedText)
                             onScan(decodedText)
                         }
                     },
                     (errorMessage) => {
-                        // ignore
+                        // Ignore error spam
                     }
                 )
 
