@@ -3,12 +3,15 @@ import { v4 as uuidv4 } from 'uuid'
 import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
 import { saveProductLocal, findProductByBarcode } from '../lib/db'
+import { useNotification } from '../contexts/NotificationContext'
 import BarcodeScanner from './BarcodeScanner'
 
 export default function ProductFormModal({ product, onClose, onFinish }) {
     const { shop } = useAuth()
     const { pushProducts } = useSync()
+    const { showNotification } = useNotification()
     const [loading, setLoading] = useState(false)
+    const [formKey, setFormKey] = useState(0)
 
     const [formData, setFormData] = useState({
         name: '',
@@ -53,31 +56,38 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     const handleScan = async (code) => {
         console.log('[ProductForm] Barcode scanned:', code)
 
-        // Kiểm tra xem barcode đó đã tồn tại không
+        // 1. Nếu barcode đã tồn tại → load sản phẩm cũ
         const existingProduct = await findProductByBarcode(code)
         if (existingProduct) {
-            console.log('[ProductForm] Found existing product:', existingProduct.name)
-            // Load sản phẩm cũ để sửa
+            setFormKey(k => k + 1)
             setFormData(existingProduct)
             showNotification(`📝 Tải: ${existingProduct.name}`, 'info')
             return
         }
 
-        // Nếu đang tạo liên tục + có sản phẩm hiện tại + quét mã khác
-        if (
-            isContinuous &&
-            formData.barcode &&
-            formData.barcode !== code
-        ) {
-            // Chỉ auto-save khi đủ dữ liệu tối thiểu
+        // 2. Nếu đang tạo liên tục + có sản phẩm hiện tại
+        if (isContinuous && formData.barcode && formData.barcode !== code) {
             if (formData.name?.trim() && formData.price) {
                 await handleAutoSave()
-                resetForm()
+
+                // 🔥 RESET CỨNG FORM
+                setFormKey(k => k + 1)
+                setFormData({
+                    name: '',
+                    barcode: '',
+                    price: '',
+                    cost_price: '',
+                    stock_quantity: 0,
+                    image_url: null
+                })
             }
         }
 
-        // Set barcode mới cho form mới
-        setFormData(prev => ({ ...prev, barcode: code }))
+        // 3. GÁN BARCODE CHO FORM MỚI
+        setFormData(prev => ({
+            ...prev,
+            barcode: code
+        }))
     }
 
     const handleAutoSave = async () => {
@@ -167,7 +177,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white w-full max-w-md rounded-xl shadow-2xl animate-fade-in-up max-h-[90vh] overflow-y-auto">
-                <form onSubmit={handleSubmit}>
+                <form key={formKey} onSubmit={handleSubmit}>
                     <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
                         <h2 className="text-lg font-bold">{product ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}</h2>
                         <button type="button" onClick={onClose} className="text-gray-400 hover:text-red-500">✕</button>
