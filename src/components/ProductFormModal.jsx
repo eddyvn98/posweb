@@ -42,7 +42,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     const resetForm = () => {
         setFormData({
             name: '',
-            barcode: `${Math.floor(Date.now() / 1000)}`,
+            barcode: '',
             price: '',
             cost_price: '',
             stock_quantity: 0,
@@ -50,41 +50,46 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
         })
     }
 
-    const handleScan = (code) => {
+    const handleScan = async (code) => {
         console.log('[ProductForm] Barcode scanned:', code)
-        
-        // Nếu quét mã khác → auto save sản phẩm hiện tại rồi reset form mới
-        if (formData.barcode && formData.barcode !== code) {
-            // Auto-save current product nếu có tên
+
+        // Nếu đang tạo liên tục + có sản phẩm hiện tại + quét mã khác
+        if (
+            isContinuous &&
+            formData.barcode &&
+            formData.barcode !== code
+        ) {
+            // Chỉ auto-save khi đủ dữ liệu tối thiểu
             if (formData.name?.trim() && formData.price) {
-                handleAutoSave()
+                await handleAutoSave()
+                resetForm()
             }
         }
-        
-        // Set mã mới
+
+        // Set barcode mới cho form mới
         setFormData(prev => ({ ...prev, barcode: code }))
     }
 
     const handleAutoSave = async () => {
         try {
             const newProduct = {
-                id: product?.id || uuidv4(),
+                id: uuidv4(),
                 shop_id: shop.id,
                 ...formData,
                 price: Number(formData.price),
                 cost_price: Number(formData.cost_price),
                 stock_quantity: Number(formData.stock_quantity),
                 is_active: true,
-                created_at: product?.created_at || new Date().toISOString()
+                created_at: new Date().toISOString()
             }
 
-            // Save local
             await saveProductLocal(newProduct)
-            // Sync to server
             await pushProducts(newProduct)
             console.log('[ProductForm] Auto-saved:', newProduct.name)
+            showNotification(`✅ Lưu: ${newProduct.name}`, 'success')
         } catch (err) {
             console.error('Auto-save error:', err)
+            showNotification('❌ Lỗi lưu sản phẩm', 'error')
         }
     }
 
