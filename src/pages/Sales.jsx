@@ -53,11 +53,6 @@ export default function Sales() {
         }
     }
 
-    // 2. Barcode Logic (Hardware)
-    useScanBarcode({
-        onScan: handleScanResult
-    })
-
     // 3. Layout Handlers
     const handleCheckoutSuccess = (saleData) => {
         setShowCheckout(false)
@@ -71,7 +66,7 @@ export default function Sales() {
             <div className="flex-1 flex flex-col h-[55vh] md:h-full relative z-0 border-b md:border-b-0">
                 {/* Camera - collapse when searching per new4.md */}
                 <div className={`overflow-hidden transition-all duration-250 ${isSearching ? 'h-0 opacity-0' : 'h-auto opacity-100'}`}>
-                    <BarcodeScanner onScan={handleScanResult} />
+                    <BarcodeScanner onDetected={handleScanResult} active={!isSearching} />
                 </div>
 
                 {/* Search Bar + Action Buttons */}
