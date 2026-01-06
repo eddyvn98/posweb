@@ -126,7 +126,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
                     <div className="p-4 space-y-3">
                         {/* Scanner */}
-                        <BarcodeScanner onScan={handleScan} />
+                        <BarcodeScanner onDetected={handleScan} active={true} />
 
                         {/* Image Upload */}
                         <div className="flex bg-gray-50 p-2 rounded items-center gap-3">
