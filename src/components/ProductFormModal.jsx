@@ -51,6 +51,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     }
 
     const handleScan = (code) => {
+        console.log('[ProductForm] Barcode scanned:', code)
         setFormData(prev => ({ ...prev, barcode: code }))
     }
 

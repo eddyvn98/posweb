@@ -10,12 +10,13 @@ export default function BarcodeScanner({ onDetected, active }) {
         if (!decodedText) return
         if (decodedText === lastScannedRef.current) return
 
+        console.log('[BarcodeScanner] Detected:', decodedText)
         lastScannedRef.current = decodedText
         onDetected(decodedText)
     }
 
     const onScanError = (err) => {
-        // console.log("scan error", err)
+        console.log('[BarcodeScanner] Scan error:', err?.message || err)
     }
 
     useEffect(() => {
