@@ -148,3 +148,10 @@ export const deleteSyncedSales = async () => {
     }
     await tx.done
 }
+
+export const debugProducts = async () => {
+    const db = await initDB()
+    const all = await db.getAll('products')
+    console.log('[DEBUG] Products in IndexedDB:', all)
+    return all
+}

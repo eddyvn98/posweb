@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { searchLocalProducts, deleteProductLocal } from '../lib/db'
+import { searchLocalProducts, deleteProductLocal, debugProducts } from '../lib/db'
 import ProductFormModal from '../components/ProductFormModal'
 import { useSync } from '../contexts/SyncContext'
 import { useCart } from '../contexts/CartContext'
@@ -23,6 +23,9 @@ export default function Products() {
 
     const loadProducts = async () => {
         const results = await searchLocalProducts(query || ' ')
+        console.log('[DEBUG] Products loaded:', results.length, results)
+        console.log('[DEBUG] Calling debugProducts...')
+        await debugProducts()
 
         // Client-side Sort & Filter
         let processed = [...results]
