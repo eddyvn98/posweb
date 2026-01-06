@@ -52,7 +52,40 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
     const handleScan = (code) => {
         console.log('[ProductForm] Barcode scanned:', code)
+        
+        // Nếu quét mã khác → auto save sản phẩm hiện tại rồi reset form mới
+        if (formData.barcode && formData.barcode !== code) {
+            // Auto-save current product nếu có tên
+            if (formData.name?.trim() && formData.price) {
+                handleAutoSave()
+            }
+        }
+        
+        // Set mã mới
         setFormData(prev => ({ ...prev, barcode: code }))
+    }
+
+    const handleAutoSave = async () => {
+        try {
+            const newProduct = {
+                id: product?.id || uuidv4(),
+                shop_id: shop.id,
+                ...formData,
+                price: Number(formData.price),
+                cost_price: Number(formData.cost_price),
+                stock_quantity: Number(formData.stock_quantity),
+                is_active: true,
+                created_at: product?.created_at || new Date().toISOString()
+            }
+
+            // Save local
+            await saveProductLocal(newProduct)
+            // Sync to server
+            await pushProducts(newProduct)
+            console.log('[ProductForm] Auto-saved:', newProduct.name)
+        } catch (err) {
+            console.error('Auto-save error:', err)
+        }
     }
 
     useEffect(() => {
