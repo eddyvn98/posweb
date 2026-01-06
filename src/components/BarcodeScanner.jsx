@@ -38,7 +38,7 @@ export default function BarcodeScanner({ onDetected, active }) {
                     { facingMode: "environment" },
                     {
                         fps: 10,
-                        qrbox: { width: 120, height: 75 },
+                        qrbox: { width: 110, height: 110 },
                         disableFlip: true
                     },
                     onScanSuccess,
