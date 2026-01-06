@@ -40,10 +40,10 @@ export default function BarcodeScanner({ onDetected, active }) {
                 await scannerRef.current.start(
                     { facingMode: "environment" },
                     {
-                        fps: 10,
-                        qrbox: { width: 240, height: 240 },
+                        fps: 15,
+                        qrbox: { width: 100, height: 100 },
                         aspectRatio: 1.0,
-                        disableFlip: true
+                        disableFlip: false
                     },
                     onScanSuccess,
                     onScanError
