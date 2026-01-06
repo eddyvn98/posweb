@@ -69,6 +69,11 @@ export default function Sales() {
         <div className="flex flex-col md:flex-row h-full overflow-hidden bg-gray-100">
             {/* --- LEFT: SEARCH & PRODUCTS --- */}
             <div className="flex-1 flex flex-col h-[55vh] md:h-full relative z-0 border-b md:border-b-0">
+                {/* Camera - collapse when searching per new4.md */}
+                <div className={`overflow-hidden transition-all duration-250 ${isSearching ? 'h-0 opacity-0' : 'h-auto opacity-100'}`}>
+                    <BarcodeScanner onScan={handleScanResult} />
+                </div>
+
                 {/* Search Bar + Action Buttons */}
                 <div className="p-3 bg-white shadow-sm z-10 border-b space-y-2">
                     {/* Search Input */}
