@@ -65,27 +65,33 @@ export default function Sales() {
         <div className="flex flex-col md:flex-row h-full overflow-hidden bg-gray-100">
             {/* --- LEFT: SEARCH & PRODUCTS --- */}
             <div className="flex-1 flex flex-col h-[55vh] md:h-full relative z-0 border-b md:border-b-0">
-                <div className="p-3 bg-white shadow-sm z-10 flex items-center justify-between border-b gap-3">
-                    <div className="flex-1">
-                        <BarcodeScanner onScan={handleScanResult} />
-                    </div>
-                    <button
-                        onClick={() => setShowQuickSale(true)}
-                        className="btn bg-primary text-white font-black px-4 h-12 rounded-2xl shadow-lg shadow-pink-100 active:scale-95 transition-all whitespace-nowrap text-sm"
-                    >
-                        ⚡ BÁN NHANH
-                    </button>
-                </div>
-
-                <div className="px-3 py-2 bg-gray-50 flex gap-2 border-b">
+                {/* Search Bar + Action Buttons */}
+                <div className="p-3 bg-white shadow-sm z-10 border-b space-y-2">
+                    {/* Search Input */}
                     <input
                         autoFocus
                         type="text"
-                        className="input flex-1 focus:ring-primary focus:border-primary shadow-inner bg-white border-pink-100"
+                        className="input w-full focus:ring-primary focus:border-primary shadow-inner bg-white border-pink-100"
                         placeholder="Tìm tên hoặc quét mã SP..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                     />
+                    
+                    {/* Action Buttons Row */}
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowQuickSale(true)}
+                            className="flex-1 btn bg-primary text-white font-black py-3 rounded-2xl shadow-lg shadow-pink-100 active:scale-95 transition-all text-sm hover:shadow-xl"
+                        >
+                            ⚡ BÁN NHANH
+                        </button>
+                        <button
+                            onClick={() => navigate('/history')}
+                            className="flex-1 btn bg-blue-50 text-blue-600 font-black py-3 rounded-2xl border border-blue-200 active:scale-95 transition-all text-sm hover:bg-blue-100"
+                        >
+                            📜 LỊCH SỬ
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-3 content-start custom-scrollbar">
