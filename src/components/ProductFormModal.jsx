@@ -23,7 +23,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
         image_url: null
     })
 
-    const [isContinuous, setIsContinuous] = useState(false)
+    const [isContinuous, setIsContinuous] = useState(true)
 
     // Image Handle
     const handleImageChange = (e) => {
@@ -293,22 +293,6 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                     </div>
 
                     <div className="p-4 border-t bg-gray-50">
-                        {/* Continuous Checkbox (Only for Create Mode) */}
-                        {!product && (
-                            <div className="flex items-center gap-2 mb-3">
-                                <input
-                                    type="checkbox"
-                                    id="continuous"
-                                    checked={isContinuous}
-                                    onChange={e => setIsContinuous(e.target.checked)}
-                                    className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
-                                />
-                                <label htmlFor="continuous" className="text-sm text-gray-700 select-none cursor-pointer">
-                                    Tạo liên tục (không đóng popup)
-                                </label>
-                            </div>
-                        )}
-
                         <div className="flex gap-3">
                             <button
                                 type="button"
