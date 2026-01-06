@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react"
 
 export default function BarcodeScanner({ onDetected, active }) {
     const scannerRef = useRef(null)
+    const isStartingRef = useRef(false)
     const lastScannedRef = useRef(null)
 
     const onScanSuccess = (decodedText) => {
@@ -19,11 +20,20 @@ export default function BarcodeScanner({ onDetected, active }) {
         if (!active) return
 
         const startScanner = async () => {
-            if (!scannerRef.current) {
-                scannerRef.current = new Html5Qrcode("reader")
-            }
+            if (isStartingRef.current) return
+            isStartingRef.current = true
 
             try {
+                if (!scannerRef.current) {
+                    scannerRef.current = new Html5Qrcode("reader")
+                }
+
+                // ⛔ nếu đang scan thì KHÔNG start lại
+                if (scannerRef.current.getState() === "SCANNING") {
+                    isStartingRef.current = false
+                    return
+                }
+
                 await scannerRef.current.start(
                     { facingMode: "environment" },
                     {
@@ -36,14 +46,19 @@ export default function BarcodeScanner({ onDetected, active }) {
                 )
             } catch (err) {
                 console.error("Camera Start Error", err)
+            } finally {
+                isStartingRef.current = false
             }
         }
 
         startScanner()
 
         return () => {
-            if (scannerRef.current?.isScanning) {
-                scannerRef.current.stop()
+            if (
+                scannerRef.current &&
+                scannerRef.current.getState() === "SCANNING"
+            ) {
+                scannerRef.current.stop().catch(() => {})
             }
         }
     }, [active, onDetected])
