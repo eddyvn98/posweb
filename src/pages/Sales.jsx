@@ -19,11 +19,19 @@ export default function Sales() {
     const [showCheckout, setShowCheckout] = useState(false)
     const [showQuickSale, setShowQuickSale] = useState(false)
     const [lastSale, setLastSale] = useState(null)
+    const [isMounted, setIsMounted] = useState(true)
 
     const { cart, addToCart, removeFromCart, updateQuantity, clearCart, totalAmount, totalItems } = useCart()
 
     // Core state per new4.md
     const isSearching = isSearchInputFocused || query.trim().length > 0
+
+    // 🎥 Camera lifecycle - stop when unmounted (navigate away)
+    useEffect(() => {
+        return () => {
+            setIsMounted(false)
+        }
+    }, [])
 
     // 1. Search Logic
     useEffect(() => {
@@ -64,9 +72,9 @@ export default function Sales() {
         <div className="flex flex-col md:flex-row h-full overflow-hidden bg-gray-100">
             {/* --- LEFT: SEARCH & PRODUCTS --- */}
             <div className="flex-1 flex flex-col h-[55vh] md:h-full relative z-0 border-b md:border-b-0">
-                {/* Camera - collapse UI when searching, but keep scanner active */}
+                {/* Camera - only active while on Sales page */}
                 <div className={`camera-wrapper ${isSearching ? 'collapsed' : 'full'}`}>
-                    <BarcodeScanner onDetected={handleScanResult} active={true} />
+                    <BarcodeScanner onDetected={handleScanResult} active={isMounted} />
                 </div>
 
                 {/* Search Bar + Action Buttons */}

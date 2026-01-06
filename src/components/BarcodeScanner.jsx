@@ -39,9 +39,8 @@ export default function BarcodeScanner({ onDetected, active }) {
     }
 
     useEffect(() => {
-        if (!active) return
-
         const startScanner = async () => {
+            if (!active) return
             if (isStartingRef.current) return
             isStartingRef.current = true
 
@@ -78,22 +77,27 @@ export default function BarcodeScanner({ onDetected, active }) {
             }
         }
 
-        startScanner()
+        const stopScanner = async () => {
+            if (!scannerRef.current) return
+            
+            try {
+                if (scannerRef.current.getState() === "SCANNING") {
+                    await scannerRef.current.stop()
+                    console.log('[BarcodeScanner] Camera stopped')
+                }
+            } catch (err) {
+                console.warn("Camera stop error", err)
+            }
+        }
+
+        if (active) {
+            startScanner()
+        } else {
+            stopScanner()
+        }
 
         return () => {
-            if (
-                scannerRef.current &&
-                scannerRef.current.getState() === "SCANNING"
-            ) {
-                scannerRef.current
-                    .stop()
-                    .then(() => {
-                        // Stop completed successfully
-                    })
-                    .catch((err) => {
-                        console.warn("Camera stop error", err)
-                    })
-            }
+            stopScanner()
         }
     }, [active, onDetected])
 

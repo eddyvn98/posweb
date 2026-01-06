@@ -13,6 +13,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     const [loading, setLoading] = useState(false)
     const [formKey, setFormKey] = useState(0)
     const scanLock = useRef(false)
+    const [isClosed, setIsClosed] = useState(false)
 
     const [formData, setFormData] = useState({
         name: '',
@@ -24,6 +25,13 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     })
 
     const [isContinuous, setIsContinuous] = useState(true)
+
+    // 🎥 Cleanup camera when modal closes
+    useEffect(() => {
+        return () => {
+            setIsClosed(true)
+        }
+    }, [])
 
     // Image Handle
     const handleImageChange = (e) => {
@@ -197,8 +205,8 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                     </div>
 
                     <div className="p-4 space-y-3">
-                        {/* Scanner - only active when creating (not editing) */}
-                        <BarcodeScanner onDetected={handleScan} active={!product} />
+                        {/* Scanner - only active when creating (not editing) and modal is open */}
+                        <BarcodeScanner onDetected={handleScan} active={!product && !isClosed} />
 
                         {/* Image Upload */}
                         <div className="flex bg-gray-50 p-2 rounded items-center gap-3">
