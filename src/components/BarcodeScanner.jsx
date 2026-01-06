@@ -14,7 +14,9 @@ export default function BarcodeScanner({ onDetected, active }) {
         onDetected(decodedText)
     }
 
-    const onScanError = () => {}
+    const onScanError = (err) => {
+        // console.log("scan error", err)
+    }
 
     useEffect(() => {
         if (!active) return
@@ -38,7 +40,8 @@ export default function BarcodeScanner({ onDetected, active }) {
                     { facingMode: "environment" },
                     {
                         fps: 10,
-                        qrbox: { width: 110, height: 110 },
+                        qrbox: { width: 240, height: 240 },
+                        aspectRatio: 1.0,
                         disableFlip: true
                     },
                     onScanSuccess,

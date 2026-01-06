@@ -64,9 +64,9 @@ export default function Sales() {
         <div className="flex flex-col md:flex-row h-full overflow-hidden bg-gray-100">
             {/* --- LEFT: SEARCH & PRODUCTS --- */}
             <div className="flex-1 flex flex-col h-[55vh] md:h-full relative z-0 border-b md:border-b-0">
-                {/* Camera - collapse when searching per new4.md */}
+                {/* Camera - collapse UI when searching, but keep scanner active */}
                 <div className={`camera-wrapper ${isSearching ? 'collapsed' : 'full'}`}>
-                    <BarcodeScanner onDetected={handleScanResult} active={!isSearching} />
+                    <BarcodeScanner onDetected={handleScanResult} active={true} />
                 </div>
 
                 {/* Search Bar + Action Buttons */}
