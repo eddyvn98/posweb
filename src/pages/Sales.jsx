@@ -104,8 +104,9 @@ export default function Sales() {
                     </div>
                 </div>
 
-                {/* Product content - hidden on mobile when searching per new4.md */}
-                <div className={`flex-1 overflow-y-auto p-3 content-start custom-scrollbar ${isSearching ? 'hidden md:block' : 'block'}`}>
+                {/* Product Grid - Desktop/Tablet always, Mobile only when not searching */}
+                {!isSearching && (
+                <div className="flex-1 overflow-y-auto p-3 content-start custom-scrollbar">
                     {query.trim() ? (
                         <>
                             {products.length === 0 ? (
@@ -130,43 +131,42 @@ export default function Sales() {
                         </div>
                     )}
                 </div>
+                )}
 
-                {/* Mobile Search Results Overlay - shows when searching on mobile */}
+                {/* Mobile Search Results - shows when searching */}
                 {isSearching && (
-                    <div className="md:hidden absolute inset-0 top-auto flex flex-col bg-white border-t border-pink-100 z-30">
-                        <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
-                            {products.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <p className="text-4xl mb-3">🔍</p>
-                                    <p className="text-gray-600 font-bold">Không tìm thấy sản phẩm</p>
-                                    <p className="text-gray-400 text-xs mt-1">Thử từ khóa khác</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {products.map(p => (
-                                        <div key={p.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-100">
-                                            <div className="flex-1">
-                                                <p className="font-bold text-gray-800 text-sm">{p.name}</p>
-                                                <p className="text-primary font-black text-sm">
-                                                    {new Intl.NumberFormat('vi-VN').format(p.price)}đ
-                                                </p>
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    addToCart(p)
-                                                    setQuery('')
-                                                    setIsSearchInputFocused(false)
-                                                }}
-                                                className="btn bg-primary text-white py-2 px-4 rounded-xl text-sm font-black"
-                                            >
-                                                + Thêm
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                <div className="flex-1 overflow-y-auto p-3 custom-scrollbar bg-white border-t border-pink-100">
+                    {products.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-4xl mb-3">🔍</p>
+                            <p className="text-gray-600 font-bold">Không tìm thấy sản phẩm</p>
+                            <p className="text-gray-400 text-xs mt-1">Thử từ khóa khác</p>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {products.map(p => (
+                                <div key={p.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <div className="flex-1">
+                                        <p className="font-bold text-gray-800 text-sm">{p.name}</p>
+                                        <p className="text-primary font-black text-sm">
+                                            {new Intl.NumberFormat('vi-VN').format(p.price)}đ
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            addToCart(p)
+                                            setQuery('')
+                                            setIsSearchInputFocused(false)
+                                        }}
+                                        className="btn bg-primary text-white py-2 px-4 rounded-xl text-sm font-black"
+                                    >
+                                        + Thêm
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
                 )}
             </div>
 
