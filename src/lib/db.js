@@ -155,3 +155,14 @@ export const debugProducts = async () => {
     console.log('[DEBUG] Products in IndexedDB:', all)
     return all
 }
+
+export const findProductByBarcode = async (barcode) => {
+    const db = await initDB()
+    try {
+        const product = await db.getFromIndex('products', 'barcode', barcode)
+        return product || null
+    } catch (err) {
+        console.warn('Barcode lookup error:', err)
+        return null
+    }
+}

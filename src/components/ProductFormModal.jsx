@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
-import { saveProductLocal } from '../lib/db'
+import { saveProductLocal, findProductByBarcode } from '../lib/db'
 import BarcodeScanner from './BarcodeScanner'
 
 export default function ProductFormModal({ product, onClose, onFinish }) {
@@ -52,6 +52,16 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
     const handleScan = async (code) => {
         console.log('[ProductForm] Barcode scanned:', code)
+
+        // Kiểm tra xem barcode đó đã tồn tại không
+        const existingProduct = await findProductByBarcode(code)
+        if (existingProduct) {
+            console.log('[ProductForm] Found existing product:', existingProduct.name)
+            // Load sản phẩm cũ để sửa
+            setFormData(existingProduct)
+            showNotification(`📝 Tải: ${existingProduct.name}`, 'info')
+            return
+        }
 
         // Nếu đang tạo liên tục + có sản phẩm hiện tại + quét mã khác
         if (
