@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
@@ -12,6 +12,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     const { showNotification } = useNotification()
     const [loading, setLoading] = useState(false)
     const [formKey, setFormKey] = useState(0)
+    const scanLock = useRef(false)
 
     const [formData, setFormData] = useState({
         name: '',
@@ -54,23 +55,30 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     }
 
     const handleScan = async (code) => {
-        console.log('[ProductForm] Barcode scanned:', code)
+        if (product) return // Không scan khi đang edit sản phẩm cũ
+        if (scanLock.current) return
+        scanLock.current = true
 
-        // 1. Nếu barcode đã tồn tại → load sản phẩm cũ
-        const existingProduct = await findProductByBarcode(code)
-        if (existingProduct) {
-            setFormKey(k => k + 1)
-            setFormData(existingProduct)
-            showNotification(`📝 Tải: ${existingProduct.name}`, 'info')
-            return
-        }
+        try {
+            console.log('[ProductForm] Barcode scanned:', code)
 
-        // 2. Nếu đang tạo liên tục + có sản phẩm hiện tại
-        if (isContinuous && formData.barcode && formData.barcode !== code) {
-            if (formData.name?.trim() && formData.price) {
-                await handleAutoSave()
+            // 1. Nếu barcode đã tồn tại → load sản phẩm cũ
+            const existingProduct = await findProductByBarcode(code)
+            if (existingProduct) {
+                setFormKey(k => k + 1)
+                setFormData(existingProduct)
+                showNotification(`📝 Tải: ${existingProduct.name}`, 'info')
+                return
+            }
 
-                // 🔥 RESET CỨNG FORM
+            // 2. Nếu đang tạo liên tục + có sản phẩm hiện tại + quét mã khác
+            if (isContinuous && formData.barcode && formData.barcode !== code) {
+                // Auto-save nếu đủ dữ liệu
+                if (formData.name?.trim() && formData.price) {
+                    await handleAutoSave()
+                }
+                
+                // 🔥 DÙ CÓ SAVE HAY KHÔNG → FORM PHẢI MỚI
                 setFormKey(k => k + 1)
                 setFormData({
                     name: '',
@@ -80,17 +88,28 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                     stock_quantity: 0,
                     image_url: null
                 })
-            }
-        }
 
-        // 3. GÁN BARCODE CHO FORM MỚI
-        setFormData(prev => ({
-            ...prev,
-            barcode: code
-        }))
+                // Focus vào barcode input để quét tiếp mượt
+                requestAnimationFrame(() => {
+                    document.getElementById('barcode-input')?.focus()
+                })
+            }
+
+            // 3. GÁN BARCODE CHO FORM MỚI
+            setFormData(prev => ({
+                ...prev,
+                barcode: code
+            }))
+        } finally {
+            setTimeout(() => {
+                scanLock.current = false
+            }, 500) // debounce scan
+        }
     }
 
     const handleAutoSave = async () => {
+        if (!isContinuous) return
+
         try {
             const newProduct = {
                 id: uuidv4(),
@@ -115,14 +134,8 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
     useEffect(() => {
         if (product) {
+            setFormKey(k => k + 1)
             setFormData(product)
-        } else {
-            // Auto gen barcode for new product
-            setFormData(prev => ({
-                ...prev,
-                barcode: `${Math.floor(Date.now() / 1000)}`,
-                image_url: null
-            }))
         }
     }, [product])
 
@@ -184,8 +197,8 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                     </div>
 
                     <div className="p-4 space-y-3">
-                        {/* Scanner */}
-                        <BarcodeScanner onDetected={handleScan} active={true} />
+                        {/* Scanner - only active when creating (not editing) */}
+                        <BarcodeScanner onDetected={handleScan} active={!product} />
 
                         {/* Image Upload */}
                         <div className="flex bg-gray-50 p-2 rounded items-center gap-3">
@@ -224,6 +237,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                             <label className="block text-sm font-medium text-gray-700">Mã vạch</label>
                             <div className="flex gap-2">
                                 <input
+                                    id="barcode-input"
                                     className="input flex-1"
                                     value={formData.barcode}
                                     onChange={e => setFormData({ ...formData, barcode: e.target.value })}
