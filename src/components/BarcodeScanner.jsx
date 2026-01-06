@@ -25,7 +25,7 @@ export default function BarcodeScanner({ onScan }) {
                 scannerRef.current = html5QrcodeScanner
 
                 await html5QrcodeScanner.start(
-                    { exact: "environment" },
+                    "environment",
                     {
                         fps: 5,
                         qrbox: 200
