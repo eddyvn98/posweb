@@ -58,7 +58,14 @@ export default function BarcodeScanner({ onDetected, active }) {
                 scannerRef.current &&
                 scannerRef.current.getState() === "SCANNING"
             ) {
-                scannerRef.current.stop().catch(() => {})
+                scannerRef.current
+                    .stop()
+                    .then(() => {
+                        // Stop completed successfully
+                    })
+                    .catch((err) => {
+                        console.warn("Camera stop error", err)
+                    })
             }
         }
     }, [active, onDetected])
