@@ -63,5 +63,5 @@ export default function BarcodeScanner({ onDetected, active }) {
         }
     }, [active, onDetected])
 
-    return <div id="reader" style={{ height: '60px' }} />
+    return <div id="reader" />
 }
