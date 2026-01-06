@@ -6,12 +6,31 @@ export default function BarcodeScanner({ onDetected, active }) {
     const isStartingRef = useRef(false)
     const lastScannedRef = useRef(null)
 
+    const playBeep = () => {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+        const oscillator = audioContext.createOscillator()
+        const gainNode = audioContext.createGain()
+
+        oscillator.connect(gainNode)
+        gainNode.connect(audioContext.destination)
+
+        oscillator.frequency.value = 1000 // 1kHz beep
+        oscillator.type = 'sine'
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1)
+
+        oscillator.start(audioContext.currentTime)
+        oscillator.stop(audioContext.currentTime + 0.1)
+    }
+
     const onScanSuccess = (decodedText) => {
         if (!decodedText) return
         if (decodedText === lastScannedRef.current) return
 
         console.log('[BarcodeScanner] Detected:', decodedText)
         lastScannedRef.current = decodedText
+        playBeep()
         onDetected(decodedText)
     }
 
@@ -41,13 +60,17 @@ export default function BarcodeScanner({ onDetected, active }) {
                     { facingMode: "environment" },
                     {
                         fps: 15,
-                        qrbox: { width: 100, height: 100 },
+                        qrbox: (vw, vh) => {
+                        const width = Math.min(vw * 0.9, 420)
+                        const height = Math.min(90, vh * 0.6)
+                        return { width, height }
+                        },
                         aspectRatio: 1.0,
-                        disableFlip: false
+                        disableFlip: true
                     },
                     onScanSuccess,
                     onScanError
-                )
+                    )
             } catch (err) {
                 console.error("Camera Start Error", err)
             } finally {
