@@ -58,11 +58,13 @@ export default function BarcodeScanner({ onDetected, active }) {
                 await scannerRef.current.start(
                     { facingMode: "environment" },
                     {
-                        fps: 15,
+                        fps: 10,
                         qrbox: (vw, vh) => {
-                        const width = Math.min(vw * 0.9, 420)
-                        const height = Math.min(90, vh * 0.6)
-                        return { width, height }
+                            const size = Math.min(vw * 0.8, 320)
+                            return {
+                                width: size,
+                                height: Math.max(220, size * 0.6)
+                            }
                         },
                         aspectRatio: 1.0,
                         disableFlip: true
