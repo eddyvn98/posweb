@@ -4,19 +4,19 @@
 
 /* ===== CSS VARIABLES (từ css.md spec) ===== */
 :root {
-  --color-primary: #e91e63;
-  --color-primary-dark: #c2185b;
-  --color-primary-light: #f8bbd9;
+  --color-primary: var(--tg-theme-button-color, #e91e63);
+  --color-primary-dark: var(--tg-theme-button-color, #c2185b);
+  --color-primary-light: var(--tg-theme-button-color, #f8bbd9);
 
-  --bg-main: #fff5f8;
-  --bg-card: #ffffff;
+  --bg-main: var(--tg-theme-secondary-bg-color, #fff5f8);
+  --bg-card: var(--tg-theme-bg-color, #ffffff);
 
-  --text-main: #222222;
-  --text-muted: #777777;
+  --text-main: var(--tg-theme-text-color, #222222);
+  --text-muted: var(--tg-theme-hint-color, #777777);
 
   --status-success: #4caf50;
   --status-warning: #ff9800;
-  --status-error: #f44336;
+  --status-error: var(--tg-theme-destructive-text-color, #f44336);
 
   --touch-min: 44px;
   --button-min: 48px;
@@ -181,6 +181,7 @@ body {
 
 /* ===== PRINT STYLES (Receipt/Invoice) ===== */
 @media print {
+
   /* Hide all UI elements */
   body * {
     display: none !important;
@@ -232,7 +233,13 @@ body {
   }
 
   /* Show only essential info */
-  h1, h2, p, table, tr, td, div {
+  h1,
+  h2,
+  p,
+  table,
+  tr,
+  td,
+  div {
     display: block !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -255,7 +262,8 @@ body {
     border-collapse: collapse !important;
   }
 
-  th, td {
+  th,
+  td {
     text-align: left !important;
     padding: 2pt 0 !important;
     border: none !important;

@@ -85,7 +85,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                 if (formData.name?.trim() && formData.price) {
                     await handleAutoSave()
                 }
-                
+
                 // 🔥 DÙ CÓ SAVE HAY KHÔNG → FORM PHẢI MỚI
                 setFormKey(k => k + 1)
                 setFormData({

@@ -94,7 +94,7 @@ export default function Sales() {
                             }
                         }}
                     />
-                    
+
                     {/* Action Buttons Row */}
                     <div className="flex gap-2">
                         <button
@@ -114,67 +114,67 @@ export default function Sales() {
 
                 {/* Product Grid - Desktop/Tablet always, Mobile only when not searching */}
                 {!isSearching && (
-                <div className="flex-1 overflow-y-auto p-3 content-start custom-scrollbar">
-                    {query.trim() ? (
-                        <>
-                            {products.length === 0 ? (
-                                <div className="text-center py-16">
-                                    <p className="text-5xl mb-4">🔍</p>
-                                    <p className="text-gray-600 font-bold text-lg">Không tìm thấy sản phẩm</p>
-                                    <p className="text-gray-400 text-sm mt-2">Thử từ khóa khác hoặc quét mã vạch</p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                    {products.map(p => (
-                                        <ProductCard key={p.id} product={p} onAdd={addToCart} />
-                                    ))}
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                        <div className="text-center mt-12 opacity-30 select-none animate-fade-in-up">
-                            <div className="text-7xl mb-4">🏪</div>
-                            <h3 className="text-lg font-black text-gray-800 uppercase tracking-tighter">Sẵn sàng bán hàng</h3>
-                            <p className="text-xs text-gray-500 font-medium tracking-tight">Quét mã vạch hoặc nhập tên để tìm</p>
-                        </div>
-                    )}
-                </div>
+                    <div className="flex-1 overflow-y-auto p-3 content-start custom-scrollbar">
+                        {query.trim() ? (
+                            <>
+                                {products.length === 0 ? (
+                                    <div className="text-center py-16">
+                                        <p className="text-5xl mb-4">🔍</p>
+                                        <p className="text-gray-600 font-bold text-lg">Không tìm thấy sản phẩm</p>
+                                        <p className="text-gray-400 text-sm mt-2">Thử từ khóa khác hoặc quét mã vạch</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                        {products.map(p => (
+                                            <ProductCard key={p.id} product={p} onAdd={addToCart} />
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="text-center mt-12 opacity-30 select-none animate-fade-in-up">
+                                <div className="text-7xl mb-4">🏪</div>
+                                <h3 className="text-lg font-black text-gray-800 uppercase tracking-tighter">Sẵn sàng bán hàng</h3>
+                                <p className="text-xs text-gray-500 font-medium tracking-tight">Quét mã vạch hoặc nhập tên để tìm</p>
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 {/* Mobile Search Results - shows when searching */}
                 {isSearching && (
-                <div className="flex-1 overflow-y-auto p-3 custom-scrollbar bg-white border-t border-pink-100">
-                    {products.length === 0 ? (
-                        <div className="text-center py-12">
-                            <p className="text-4xl mb-3">🔍</p>
-                            <p className="text-gray-600 font-bold">Không tìm thấy sản phẩm</p>
-                            <p className="text-gray-400 text-xs mt-1">Thử từ khóa khác</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {products.map(p => (
-                                <div key={p.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-100">
-                                    <div className="flex-1">
-                                        <p className="font-bold text-gray-800 text-sm">{p.name}</p>
-                                        <p className="text-primary font-black text-sm">
-                                            {new Intl.NumberFormat('vi-VN').format(p.price)}đ
-                                        </p>
+                    <div className="flex-1 overflow-y-auto p-3 custom-scrollbar bg-white border-t border-pink-100">
+                        {products.length === 0 ? (
+                            <div className="text-center py-12">
+                                <p className="text-4xl mb-3">🔍</p>
+                                <p className="text-gray-600 font-bold">Không tìm thấy sản phẩm</p>
+                                <p className="text-gray-400 text-xs mt-1">Thử từ khóa khác</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {products.map(p => (
+                                    <div key={p.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div className="flex-1">
+                                            <p className="font-bold text-gray-800 text-sm">{p.name}</p>
+                                            <p className="text-primary font-black text-sm">
+                                                {new Intl.NumberFormat('vi-VN').format(p.price)}đ
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                addToCart(p)
+                                                setQuery('')
+                                                setIsSearchInputFocused(false)
+                                            }}
+                                            className="btn bg-primary text-white py-2 px-4 rounded-xl text-sm font-black"
+                                        >
+                                            + Thêm
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={() => {
-                                            addToCart(p)
-                                            setQuery('')
-                                            setIsSearchInputFocused(false)
-                                        }}
-                                        className="btn bg-primary text-white py-2 px-4 rounded-xl text-sm font-black"
-                                    >
-                                        + Thêm
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
 

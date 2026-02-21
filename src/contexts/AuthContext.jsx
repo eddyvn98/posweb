@@ -1,83 +1,58 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import api from '../lib/api'
 
 const AuthContext = createContext({})
 
 export const useAuth = () => useContext(AuthContext)
 
 export const AuthProvider = ({ children }) => {
-    const [session, setSession] = useState(null)
     const [user, setUser] = useState(null)
     const [shop, setShop] = useState(null)
-    const [profile, setProfile] = useState(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        // 1. Get initial session
-        if (!supabase) {
-            setLoading(false)
-            return
+        const token = localStorage.getItem('pos_token')
+        const savedUser = localStorage.getItem('pos_user')
+        const savedShop = localStorage.getItem('pos_shop')
+
+        if (token && savedUser && savedShop) {
+            setUser(JSON.parse(savedUser))
+            setShop(JSON.parse(savedShop))
         }
-
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session)
-            setUser(session?.user ?? null)
-            if (session?.user) {
-                fetchProfileAndShop(session.user.id)
-            } else {
-                setLoading(false)
-            }
-        })
-
-        // 2. Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session)
-            setUser(session?.user ?? null)
-
-            if (session?.user) {
-                fetchProfileAndShop(session.user.id)
-            } else {
-                setShop(null)
-                setProfile(null)
-                setLoading(false)
-            }
-        })
-
-        return () => subscription.unsubscribe()
+        setLoading(false)
     }, [])
 
-    const fetchProfileAndShop = async (userId) => {
+    const loginWithTelegram = async (initData) => {
         try {
-            // Get profile linked to shop
-            const { data: profileData, error: profileError } = await supabase
-                .from('profiles')
-                .select('*, shops(*)')
-                .eq('id', userId)
-                .single()
+            const response = await api.post('/auth/telegram-auth', { initData })
+            const { token, user, shop } = response.data
 
-            if (profileError) throw profileError
+            localStorage.setItem('pos_token', token)
+            localStorage.setItem('pos_user', JSON.stringify(user))
+            localStorage.setItem('pos_shop', JSON.stringify(shop))
 
-            setProfile(profileData)
-            setShop(profileData.shops)
+            setUser(user)
+            setShop(shop)
+            return { success: true }
         } catch (error) {
-            console.error('Error loading shop data:', error.message)
-        } finally {
-            setLoading(false)
+            console.error('Login Error:', error)
+            return { success: false, error: error.message }
         }
     }
 
-    const signOut = async () => {
-        await supabase.auth.signOut()
+    const signOut = () => {
+        localStorage.removeItem('pos_token')
+        localStorage.removeItem('pos_user')
+        localStorage.removeItem('pos_shop')
+        setUser(null)
         setShop(null)
-        setProfile(null)
     }
 
     const value = {
-        session,
         user,
         shop,
-        profile,
         loading,
+        loginWithTelegram,
         signOut
     }
 

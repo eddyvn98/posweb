@@ -1,0 +1,19 @@
+{
+    "name": "posweb-telegram-bot",
+    "version": "1.0.0",
+    "description": "Telegram Bot and Auth Endpoint for posweb",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node --watch server.js"
+    },
+    "dependencies": {
+        "better-sqlite3": "^12.6.2",
+        "cors": "^2.8.5",
+        "crypto": "^1.0.1",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2",
+        "jsonwebtoken": "^9.0.3",
+        "telegraf": "^4.16.3"
+    }
+}

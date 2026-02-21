@@ -86,8 +86,7 @@ export default function Reports() {
         if (!shop?.id) return
         setExporting(true)
         try {
-            const { supabase } = await import('../lib/supabase')
-            await exportAllData(shop.id, supabase)
+            await exportAllData(shop.id)
             alert('✅ Đã xuất dữ liệu sao lưu thành công!')
         } catch (err) {
             alert('❌ Lỗi khi xuất: ' + err.message)
@@ -109,8 +108,6 @@ export default function Reports() {
 
         setExporting(true)
         try {
-            const { supabase } = await import('../lib/supabase')
-            
             // Export Excel
             await exportMonthlyReportCompliant(
                 shop.id,
@@ -119,39 +116,10 @@ export default function Reports() {
                 shop.name,
                 revenueData,
                 cashbookData,
-                inventoryData,
-                supabase
+                inventoryData
             )
-            
-            showNotification('✅ Đã xuất báo cáo tháng thành công!', 'success')
 
-            // Auto-upload to Drive disabled - see GOOGLE_SETUP.md to re-enable
-            // if (isAuthed && accessToken) {
-            //     try {
-            //         showNotification('⏳ Đang sao lưu lên Google Drive...', 'info')
-            //         
-            //         // Tải file Excel từ download (thực tế cần truyền blob)
-            //         // Đây là phần phức tạp hơn - cần modify export function
-            //         // Tạm thời log notification
-            //         
-            //         // Log vào backup_logs table
-            //         await supabase
-            //             .from('backup_logs')
-            //             .insert({
-            //                 shop_id: shop.id,
-            //                 month: `${year}-${String(month).padStart(2, '0')}`,
-            //                 file_name: `Bao-cao-POS-${String(month).padStart(2, '0')}-${year}.xlsx`,
-            //                 status: 'SUCCESS',
-            //                 backup_type: 'MANUAL',
-            //                 backup_source: 'EXPORT'
-            //             })
-            //         
-            //         showNotification('✅ Báo cáo cũng đã được sao lưu lên Google Drive!', 'success')
-            //     } catch (driveErr) {
-            //         console.warn('Lỗi auto-upload Drive:', driveErr)
-            //         showNotification('⚠️ Export thành công nhưng upload Drive bị lỗi', 'warning')
-            //     }
-            // }
+            showNotification('✅ Đã xuất báo cáo tháng thành công!', 'success')
         } catch (err) {
             alert('❌ Lỗi khi xuất: ' + err.message)
             showNotification(`❌ ${err.message}`, 'error')

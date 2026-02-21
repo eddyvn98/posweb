@@ -71,7 +71,7 @@ export default function BarcodeScanner({ onDetected, active }) {
                     },
                     onScanSuccess,
                     onScanError
-                    )
+                )
             } catch (err) {
                 console.error("Camera Start Error", err)
             } finally {
@@ -81,7 +81,7 @@ export default function BarcodeScanner({ onDetected, active }) {
 
         const stopScanner = async () => {
             if (!scannerRef.current) return
-            
+
             try {
                 if (scannerRef.current.getState() === "SCANNING") {
                     await scannerRef.current.stop()

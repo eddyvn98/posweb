@@ -29,61 +29,61 @@ function App() {
                                 <CartBar />
                                 <TestConsole />
                                 <Routes>
-                                <Route path="/login" element={<Login />} />
+                                    <Route path="/login" element={<Login />} />
 
-                                <Route path="/" element={<Navigate to="/sales" replace />} />
+                                    <Route path="/" element={<Navigate to="/sales" replace />} />
 
-                                <Route path="/dashboard" element={
-                                    <ProtectedRoute>
-                                        <Layout><Home /></Layout>
-                                    </ProtectedRoute>
-                                } />
+                                    <Route path="/dashboard" element={
+                                        <ProtectedRoute>
+                                            <Layout><Home /></Layout>
+                                        </ProtectedRoute>
+                                    } />
 
-                                <Route path="/sales" element={
-                                    <ProtectedRoute>
-                                        <Layout><Sales /></Layout>
-                                    </ProtectedRoute>
-                                } />
+                                    <Route path="/sales" element={
+                                        <ProtectedRoute>
+                                            <Layout><Sales /></Layout>
+                                        </ProtectedRoute>
+                                    } />
 
-                                <Route path="/products" element={
-                                    <ProtectedRoute>
-                                        <Layout><Products /></Layout>
-                                    </ProtectedRoute>
-                                } />
+                                    <Route path="/products" element={
+                                        <ProtectedRoute>
+                                            <Layout><Products /></Layout>
+                                        </ProtectedRoute>
+                                    } />
 
-                                <Route path="/history" element={
-                                    <ProtectedRoute>
-                                        <Layout><History /></Layout>
-                                    </ProtectedRoute>
-                                } />
+                                    <Route path="/history" element={
+                                        <ProtectedRoute>
+                                            <Layout><History /></Layout>
+                                        </ProtectedRoute>
+                                    } />
 
-                                <Route path="/reports" element={
-                                    <ProtectedRoute>
-                                        <Layout><Reports /></Layout>
-                                    </ProtectedRoute>
-                                } />
+                                    <Route path="/reports" element={
+                                        <ProtectedRoute>
+                                            <Layout><Reports /></Layout>
+                                        </ProtectedRoute>
+                                    } />
 
-                                <Route path="/imports" element={
-                                    <ProtectedRoute>
-                                        <Layout><Imports /></Layout>
-                                    </ProtectedRoute>
-                                } />
+                                    <Route path="/imports" element={
+                                        <ProtectedRoute>
+                                            <Layout><Imports /></Layout>
+                                        </ProtectedRoute>
+                                    } />
 
-                                <Route path="/cashbook" element={
-                                    <ProtectedRoute>
-                                        <Layout><Cashbook /></Layout>
-                                    </ProtectedRoute>
-                                } />
+                                    <Route path="/cashbook" element={
+                                        <ProtectedRoute>
+                                            <Layout><Cashbook /></Layout>
+                                        </ProtectedRoute>
+                                    } />
 
-                                <Route path="/settings" element={
-                                    <ProtectedRoute>
-                                        <Layout><Settings /></Layout>
-                                    </ProtectedRoute>
-                                } />
+                                    <Route path="/settings" element={
+                                        <ProtectedRoute>
+                                            <Layout><Settings /></Layout>
+                                        </ProtectedRoute>
+                                    } />
 
-                                {/* Catch all - redirect to home (which redirects to login if needed) */}
-                                <Route path="*" element={<Navigate to="/" replace />} />
-                            </Routes>
+                                    {/* Catch all - redirect to home (which redirects to login if needed) */}
+                                    <Route path="*" element={<Navigate to="/" replace />} />
+                                </Routes>
                             </DriveProvider>
                         </NotificationProvider>
                     </CartProvider>

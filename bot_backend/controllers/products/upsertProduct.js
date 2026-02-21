@@ -1,0 +1,33 @@
+const db = require('../../db/connection');
+
+function upsertProduct(req, res) {
+    try {
+        const { shop_id } = req.user;
+        const product = req.body;
+
+        const stmt = db.prepare(`
+            INSERT INTO products (id, shop_id, barcode, name, price, cost_price, stock_quantity, image_url, is_active)
+            VALUES (@id, @shop_id, @barcode, @name, @price, @cost_price, @stock_quantity, @image_url, @is_active)
+            ON CONFLICT(shop_id, barcode) DO UPDATE SET
+                name = excluded.name,
+                price = excluded.price,
+                cost_price = excluded.cost_price,
+                stock_quantity = excluded.stock_quantity,
+                image_url = excluded.image_url,
+                is_active = excluded.is_active
+        `);
+
+        stmt.run({
+            ...product,
+            shop_id,
+            is_active: product.is_active ? 1 : 0
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Upsert Product Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+
+module.exports = upsertProduct;
