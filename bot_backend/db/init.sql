@@ -1,7 +1,8 @@
--- Create shops table
 CREATE TABLE IF NOT EXISTS shops (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  address TEXT,
+  updated_at DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

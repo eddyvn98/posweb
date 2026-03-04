@@ -82,6 +82,12 @@ export const AuthProvider = ({ children }) => {
         setShop(null)
     }
 
+    const updateShopInfo = (updatedShop) => {
+        const newShop = { ...shop, ...updatedShop }
+        localStorage.setItem('pos_shop', JSON.stringify(newShop))
+        setShop(newShop)
+    }
+
     const value = {
         user,
         shop,
@@ -89,7 +95,8 @@ export const AuthProvider = ({ children }) => {
         loginWithTelegram,
         login,
         register,
-        signOut
+        signOut,
+        updateShopInfo
     }
 
 

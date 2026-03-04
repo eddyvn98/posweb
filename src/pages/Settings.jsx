@@ -4,7 +4,7 @@ import api from '../lib/api'
 import { useNotification } from '../contexts/NotificationContext'
 
 export default function Settings() {
-    const { user, shop } = useAuth()
+    const { user, shop, updateShopInfo } = useAuth()
     const { showNotification } = useNotification()
     const [loading, setLoading] = useState(false)
     const [shopData, setShopData] = useState({
@@ -38,10 +38,14 @@ export default function Settings() {
                 address: shopData.address || null
             })
 
+            updateShopInfo({
+                name: shopData.name,
+                address: shopData.address
+            })
+
             showNotification('✅ Cập nhật thông tin cửa hàng thành công', 'success')
             setEditingShop(false)
-            // Note: In a real app, you'd want to update the AuthContext's shop state here too
-            // or force a refresh. For now, we assume local state is enough.
+
         } catch (err) {
             console.error('Error updating shop:', err)
             showNotification('❌ Lỗi khi cập nhật: ' + (err.response?.data?.error || err.message), 'error')

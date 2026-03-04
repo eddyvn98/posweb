@@ -78,8 +78,8 @@ app.listen(port, () => {
     // Tự động backup khi khởi động (chạy sau 5s để đảm bảo DB đã sẵn sàng)
     setTimeout(async () => {
         try {
-            const { uploadBackupToDrive } = require('./services/backupService');
-            await uploadBackupToDrive();
+            const { sendBackupToTelegram } = require('./services/backupService');
+            await sendBackupToTelegram();
         } catch (e) {
             console.error('Auto backup failed:', e.message);
         }

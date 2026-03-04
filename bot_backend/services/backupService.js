@@ -1,66 +1,71 @@
-const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 const db = require('../db/connection');
+const axios = require('axios');
+const FormData = require('form-data');
 
 /**
- * Service xử lý việc sao lưu Database lên Google Drive
+ * Service xử lý việc sao lưu Database và gửi qua Telegram
  */
-async function uploadBackupToDrive() {
-    const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
+async function sendBackupToTelegram() {
+    const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+    // Chúng ta sẽ lấy Telegram ID của chủ shop từ DB hoặc .env
+    // Ưu tiên lấy từ .env nếu có cấu hình riêng cho backup, nếu không lấy của owner đầu tiên trong DB
+    let chatId = process.env.ADMIN_TELEGRAM_ID;
+
+    if (!chatId) {
+        const owner = db.prepare("SELECT telegram_id FROM users WHERE role = 'owner' LIMIT 1").get();
+        chatId = owner ? owner.telegram_id : null;
+    }
+
     const dbPath = path.resolve(__dirname, '../pos.db');
 
-    if (!clientEmail || !privateKey) {
-        console.error('⚠️ Thiếu cấu hình Google Service Account để backup.');
-        return { success: false, error: 'Missing credentials' };
+    if (!BOT_TOKEN || !chatId) {
+        console.error('⚠️ Thiếu cấu hình Telegram (Token hoặc Chat ID) để backup.');
+        return { success: false, error: 'Missing Telegram config' };
     }
 
     try {
-        const auth = new google.auth.JWT(
-            clientEmail,
-            null,
-            privateKey,
-            ['https://www.googleapis.com/auth/drive.file']
-        );
-
-        const drive = google.drive({ version: 'v3', auth });
-
         const fileName = `pos_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.db`;
+        console.log(`📦 Đang gửi bản sao lưu qua Telegram: ${fileName}...`);
 
-        console.log(`📦 Đang tải lên bản sao lưu: ${fileName}...`);
+        const formData = new FormData();
+        formData.append('chat_id', chatId);
+        formData.append('document', fs.createReadStream(dbPath), { filename: fileName });
+        formData.append('caption', `📦 Bản sao lưu hệ thống POS\n📅 Ngày: ${new Date().toLocaleString('vi-VN')}\n💾 Kích thước: ${(fs.statSync(dbPath).size / 1024 / 1024).toFixed(2)} MB`);
 
-        const response = await drive.files.create({
-            requestBody: {
-                name: fileName,
-                mimeType: 'application/x-sqlite3',
-                // Có thể thêm parents: ['folder_id'] nếu muốn vào thư mục cụ thể
-            },
-            media: {
-                mimeType: 'application/x-sqlite3',
-                body: fs.createReadStream(dbPath),
-            },
+        const response = await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, formData, {
+            headers: formData.getHeaders(),
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
         });
 
-        console.log('✅ Sao lưu thành công! File ID:', response.data.id);
+        if (response.data.ok) {
+            console.log('✅ Sao lưu qua Telegram thành công!');
 
-        // Lưu log vào DB
-        db.prepare(`
-            INSERT INTO backup_logs (id, shop_id, status, file_name, file_size_bytes)
-            VALUES (?, ?, ?, ?, ?)
-        `).run(
-            require('uuid').v4(),
-            'pos-shop-001', // Mặc định shop chính
-            'SUCCESS',
-            fileName,
-            fs.statSync(dbPath).size
-        );
+            const shop = db.prepare("SELECT id FROM shops LIMIT 1").get();
+            const shopId = shop ? shop.id : 'default-shop';
 
-        return { success: true, fileId: response.data.id };
+            // Lưu log vào DB
+            db.prepare(`
+                INSERT INTO backup_logs (id, shop_id, status, file_name, file_size_bytes)
+                VALUES (?, ?, ?, ?, ?)
+            `).run(
+                require('uuid').v4(),
+                shopId,
+                'SUCCESS',
+                fileName,
+                fs.statSync(dbPath).size
+            );
+
+            return { success: true };
+        } else {
+            throw new Error(response.data.description);
+        }
     } catch (error) {
-        console.error('❌ Lỗi sao lưu Google Drive:', error.message);
+        console.error('❌ Lỗi sao lưu Telegram:', error.message);
         return { success: false, error: error.message };
     }
 }
 
-module.exports = { uploadBackupToDrive };
+module.exports = { sendBackupToTelegram };

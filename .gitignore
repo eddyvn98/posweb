@@ -26,3 +26,8 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Firebase
+.firebase/
+*.cache
+bot_backend/backup_err.json
