@@ -5,6 +5,7 @@ import ProductFormModal from '../components/ProductFormModal'
 import { useSync } from '../contexts/SyncContext'
 import { useCart } from '../contexts/CartContext'
 import { useNotification } from '../contexts/NotificationContext'
+import { useScanBarcode } from '../hooks/useScanBarcode'
 
 export default function Products() {
     const navigate = useNavigate()
@@ -13,6 +14,11 @@ export default function Products() {
     const { showNotification } = useNotification()
 
     const [query, setQuery] = useState('')
+
+    // 🚀 Enable Bluetooth/External Scanner to find product
+    useScanBarcode({
+        onScan: (code) => setQuery(code)
+    })
     const [products, setProducts] = useState([])
     const [editingProduct, setEditingProduct] = useState(null)
     const [showModal, setShowModal] = useState(false)

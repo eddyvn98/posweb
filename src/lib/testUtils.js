@@ -3,12 +3,7 @@
  * Helpers for stress testing and QA verification
  */
 
-/**
- * TASK 9.1: Sales Stress Test
- * Simulate 100 offline sales and verify sync integrity
- */
-
-import { supabase } from '../lib/supabase'
+import api from '../lib/api'
 import { saveOfflineSale, getPendingSales, markSaleSynced, initDB } from '../lib/db'
 
 export const testStress = {
@@ -123,12 +118,9 @@ export const testStress = {
 
         try {
             // Count before sync
-            const { data: beforeData } = await supabase
-                .from('sales')
-                .select('id')
-                .eq('shop_id', shopId)
-
-            const countBefore = beforeData?.length || 0
+            const resBefore = await api.get('/sales')
+            const beforeData = resBefore.data || []
+            const countBefore = beforeData.length
             console.log(`[TEST] Sales in DB before sync: ${countBefore}`)
 
             // Execute sync
@@ -138,13 +130,9 @@ export const testStress = {
             await new Promise(resolve => setTimeout(resolve, 2000))
 
             // Count after sync
-            const { data: afterData } = await supabase
-                .from('sales')
-                .select('id, code, total_amount, created_at')
-                .eq('shop_id', shopId)
-                .order('created_at', { ascending: true })
-
-            const countAfter = afterData?.length || 0
+            const resAfter = await api.get('/sales')
+            const afterData = resAfter.data || []
+            const countAfter = afterData.length
             const syncedCount = countAfter - countBefore
 
             const endTime = performance.now()

@@ -23,6 +23,11 @@ function upsertProduct(req, res) {
             is_active: product.is_active ? 1 : 0
         });
 
+        // Đồng bộ Google Sheet (chạy ngầm)
+        const shop = db.prepare('SELECT name FROM shops WHERE id = ?').get(shop_id);
+        const { syncProduct } = require('../../services/googleSheetService');
+        syncProduct({ ...product, shop_id }, shop ? shop.name : 'Cửa hàng');
+
         res.json({ success: true });
     } catch (error) {
         console.error('Upsert Product Error:', error);

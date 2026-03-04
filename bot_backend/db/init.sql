@@ -35,11 +35,35 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS inventory_logs (
   id TEXT PRIMARY KEY,
   shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
-  product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  product_id TEXT REFERENCES products(id) ON DELETE CASCADE, -- NULL for bulk imports
   change_amount INTEGER NOT NULL,
   current_stock INTEGER NOT NULL,
   type TEXT CHECK (type IN ('import', 'sale', 'adjustment', 'void')) NOT NULL,
   note TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- IMPORTS
+CREATE TABLE IF NOT EXISTS imports (
+  id TEXT PRIMARY KEY,
+  shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+  import_date TEXT NOT NULL,
+  supplier_name TEXT NOT NULL,
+  total_cost REAL NOT NULL DEFAULT 0,
+  note TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- BACKUP LOGS
+CREATE TABLE IF NOT EXISTS backup_logs (
+  id TEXT PRIMARY KEY,
+  shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+  status TEXT CHECK (status IN ('SUCCESS', 'FAILURE')) NOT NULL,
+  file_name TEXT,
+  file_size_bytes INTEGER,
+  month TEXT,
+  year INTEGER,
+  error_message TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

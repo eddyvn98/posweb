@@ -4,7 +4,6 @@ import { searchLocalProducts } from '../lib/db'
 import { useCart } from '../contexts/CartContext'
 import { useScanBarcode } from '../hooks/useScanBarcode'
 
-import BarcodeScanner from '../components/BarcodeScanner'
 import ProductCard from '../components/ProductCard'
 import CartItem from '../components/CartItem'
 import CheckoutModal from '../components/CheckoutModal'
@@ -19,19 +18,16 @@ export default function Sales() {
     const [showCheckout, setShowCheckout] = useState(false)
     const [showQuickSale, setShowQuickSale] = useState(false)
     const [lastSale, setLastSale] = useState(null)
-    const [isMounted, setIsMounted] = useState(true)
 
     const { cart, addToCart, removeFromCart, updateQuantity, clearCart, totalAmount, totalItems } = useCart()
 
+    // 🚀 Enable Bluetooth/External Scanner
+    useScanBarcode({
+        onScan: (code) => handleScanResult(code)
+    })
+
     // Core state per new4.md
     const isSearching = isSearchInputFocused || query.trim().length > 0
-
-    // 🎥 Camera lifecycle - stop when unmounted (navigate away)
-    useEffect(() => {
-        return () => {
-            setIsMounted(false)
-        }
-    }, [])
 
     // 1. Search Logic
     useEffect(() => {
@@ -71,11 +67,7 @@ export default function Sales() {
     return (
         <div className="flex flex-col md:flex-row h-full overflow-hidden bg-gray-100">
             {/* --- LEFT: SEARCH & PRODUCTS --- */}
-            <div className="flex-1 flex flex-col h-[55vh] md:h-full relative z-0 border-b md:border-b-0">
-                {/* Camera - only active while on Sales page */}
-                <div className={`camera-wrapper ${isSearching ? 'collapsed' : 'full'}`}>
-                    <BarcodeScanner onDetected={handleScanResult} active={isMounted} />
-                </div>
+            <div className="flex-1 flex flex-col h-full relative z-0">
 
                 {/* Search Bar + Action Buttons */}
                 <div className="p-3 bg-white shadow-sm z-10 border-b space-y-2">

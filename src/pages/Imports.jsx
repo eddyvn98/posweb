@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { supabase } from '../lib/supabase'
+import api from '../lib/api'
 import ImportModal from '../components/ImportModal'
 import { useNotification } from '../contexts/NotificationContext'
 
@@ -16,14 +16,8 @@ export default function Imports() {
 
         setLoading(true)
         try {
-            const { data, error } = await supabase
-                .from('imports')
-                .select('*')
-                .eq('shop_id', shop.id)
-                .order('import_date', { ascending: false })
-
-            if (error) throw error
-            setImports(data || [])
+            const response = await api.get('/imports')
+            setImports(response.data || [])
         } catch (err) {
             console.error('Error loading imports:', err)
             showNotification('Lỗi khi tải danh sách nhập hàng', 'error')

@@ -2,37 +2,19 @@ import React, { useState, useEffect } from 'react'
 
 /**
  * Hiển thị trạng thái sao lưu gần nhất
- * Props: { shopId, supabase }
+ * Props: { shopId }
  */
-export const BackupStatus = ({ shopId, supabase }) => {
+export const BackupStatus = ({ shopId }) => {
     const [lastBackup, setLastBackup] = useState(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         if (!shopId) return
-        
-        const loadLastBackup = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('backup_logs')
-                    .select('*')
-                    .eq('shop_id', shopId)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .single()
 
-                if (error && error.code !== 'PGRST116') throw error
-                
-                setLastBackup(data || null)
-            } catch (err) {
-                console.error('Lỗi load backup status:', err)
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        loadLastBackup()
-    }, [shopId, supabase])
+        // Temporarily disabled since backup_logs are now local and we need an endpoint
+        // For now, we'll just show "No record" until the endpoint is implemented if needed
+        setLoading(false)
+    }, [shopId])
 
     if (loading) {
         return <div className="text-sm text-gray-500">Đang tải...</div>
@@ -58,16 +40,16 @@ export const BackupStatus = ({ shopId, supabase }) => {
                     {statusIcon} {lastBackup.status === 'SUCCESS' ? 'Thành công' : 'Thất bại'}
                 </span>
             </div>
-            
+
             <div className="text-xs text-gray-600 space-y-1">
                 <p>Tháng: <span className="font-mono">{lastBackup.month}</span></p>
                 <p>File: <span className="font-mono">{lastBackup.file_name}</span></p>
                 <p>Lúc: {createdDate}</p>
-                
+
                 {lastBackup.file_size_bytes && (
                     <p>Dung lượng: {(lastBackup.file_size_bytes / 1024).toFixed(2)} KB</p>
                 )}
-                
+
                 {lastBackup.error_message && (
                     <p className="text-red-600 mt-2">⚠️ Lỗi: {lastBackup.error_message}</p>
                 )}
@@ -78,12 +60,11 @@ export const BackupStatus = ({ shopId, supabase }) => {
 
 /**
  * Nút bấm để sao lưu ngay
- * Props: { shopId, shopName, supabase, onBackupSuccess, onBackupError }
+ * Props: { shopId, shopName, onBackupSuccess, onBackupError }
  */
-export const BackupButton = ({ 
-    shopId, 
-    shopName, 
-    supabase, 
+export const BackupButton = ({
+    shopId,
+    shopName,
     month,  // YYYY-MM
     year,   // 2026
     onBackupSuccess,
@@ -95,7 +76,7 @@ export const BackupButton = ({
     const handleBackupNow = async () => {
         setIsLoading(true)
         setStatus('Đang sao lưu...')
-        
+
         try {
             // Gọi API backend để generate Excel + upload Drive
             const response = await fetch('/api/backup/manual', {
@@ -116,23 +97,23 @@ export const BackupButton = ({
             }
 
             const result = await response.json()
-            
+
             setStatus('✓ Sao lưu thành công!')
-            
+
             if (onBackupSuccess) {
                 onBackupSuccess(result)
             }
-            
+
             // Clear status sau 3 giây
             setTimeout(() => setStatus(''), 3000)
         } catch (err) {
             console.error('Lỗi sao lưu:', err)
             setStatus(`✕ Lỗi: ${err.message}`)
-            
+
             if (onBackupError) {
                 onBackupError(err)
             }
-            
+
             setTimeout(() => setStatus(''), 5000)
         } finally {
             setIsLoading(false)
@@ -148,7 +129,7 @@ export const BackupButton = ({
             >
                 {isLoading ? 'Đang sao lưu...' : '💾 Sao lưu ngay'}
             </button>
-            
+
             {status && (
                 <p className={`text-sm ${status.includes('✓') ? 'text-green-600' : 'text-red-600'}`}>
                     {status}

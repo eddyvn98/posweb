@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import api from '../lib/api'
 import { useNotification } from '../contexts/NotificationContext'
 
 export default function ImportModal({ shopId, onClose, onSuccess }) {
@@ -35,57 +35,12 @@ export default function ImportModal({ shopId, onClose, onSuccess }) {
 
         setLoading(true)
         try {
-            // 1. Create import record
-            const { data: importData, error: importError } = await supabase
-                .from('imports')
-                .insert([
-                    {
-                        shop_id: shopId,
-                        import_date: formData.import_date,
-                        supplier_name: formData.supplier_name,
-                        total_cost: formData.total_cost,
-                        note: formData.note || null
-                    }
-                ])
-                .select()
-
-            if (importError) throw importError
-
-            const importId = importData[0].id
-
-            // 2. Create inventory log (record import)
-            const { error: logError } = await supabase
-                .from('inventory_logs')
-                .insert([
-                    {
-                        shop_id: shopId,
-                        product_id: null, // Bulk import, no specific product
-                        change_amount: 0, // Placeholder
-                        current_stock: 0,
-                        type: 'import',
-                        note: `Nhập hàng từ ${formData.supplier_name}`,
-                        ref_id: importId
-                    }
-                ])
-
-            if (logError) console.warn('Inventory log error (non-critical):', logError)
-
-            // 3. Create cash flow (record expense)
-            const { error: cashError } = await supabase
-                .from('cash_flows')
-                .insert([
-                    {
-                        shop_id: shopId,
-                        amount: formData.total_cost,
-                        type: 'out',
-                        category: 'import',
-                        description: `Nhập hàng từ ${formData.supplier_name}`,
-                        ref_id: importId,
-                        created_at: new Date(formData.import_date).toISOString()
-                    }
-                ])
-
-            if (cashError) throw cashError
+            await api.post('/imports', {
+                import_date: formData.import_date,
+                supplier_name: formData.supplier_name,
+                total_cost: formData.total_cost,
+                note: formData.note || null
+            })
 
             showNotification('✅ Ghi nhận nhập hàng thành công!', 'success')
             onSuccess()

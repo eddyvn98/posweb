@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const productsRoutes = require('./routes/products');
 const salesRoutes = require('./routes/sales');
 const reportsRoutes = require('./routes/reports');
+const importsRoutes = require('./routes/imports');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -24,6 +25,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/imports', importsRoutes);
 
 // Telegram Bot Setup
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -72,4 +74,14 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.listen(port, () => {
     console.log(`🌐 API Server listening at http://localhost:${port}`);
+
+    // Tự động backup khi khởi động (chạy sau 5s để đảm bảo DB đã sẵn sàng)
+    setTimeout(async () => {
+        try {
+            const { uploadBackupToDrive } = require('./services/backupService');
+            await uploadBackupToDrive();
+        } catch (e) {
+            console.error('Auto backup failed:', e.message);
+        }
+    }, 5000);
 });

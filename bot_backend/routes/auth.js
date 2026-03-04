@@ -41,6 +41,7 @@ router.post('/telegram-auth', (req, res) => {
         const token = authService.generateToken(user);
         const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(user.shop_id);
 
+        // ...existing code...
         res.json({
             success: true,
             token,
@@ -53,6 +54,51 @@ router.post('/telegram-auth', (req, res) => {
     }
 });
 
+router.post('/login', (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Thiếu email hoặc mật khẩu' });
+        }
+
+        const user = authService.loginWithEmail(email, password);
+        const token = authService.generateToken(user);
+        const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(user.shop_id);
+
+        res.json({
+            success: true,
+            token,
+            user,
+            shop
+        });
+    } catch (error) {
+        res.status(401).json({ error: error.message });
+    }
+});
+
+router.post('/register', (req, res) => {
+    try {
+        const { email, password, shopName } = req.body;
+        if (!email || !password || !shopName) {
+            return res.status(400).json({ error: 'Thiếu thông tin đăng ký' });
+        }
+
+        const user = authService.registerWithEmail(email, password, shopName);
+        const token = authService.generateToken(user);
+        const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(user.shop_id);
+
+        res.json({
+            success: true,
+            token,
+            user,
+            shop
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 router.patch('/shop', authenticateToken, updateShop);
 
 module.exports = router;
+

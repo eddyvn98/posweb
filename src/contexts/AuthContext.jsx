@@ -36,7 +36,41 @@ export const AuthProvider = ({ children }) => {
             return { success: true }
         } catch (error) {
             console.error('Login Error:', error)
-            return { success: false, error: error.message }
+            return { success: false, error: error.response?.data?.error || error.message }
+        }
+    }
+
+    const login = async (email, password) => {
+        try {
+            const response = await api.post('/auth/login', { email, password })
+            const { token, user, shop } = response.data
+
+            localStorage.setItem('pos_token', token)
+            localStorage.setItem('pos_user', JSON.stringify(user))
+            localStorage.setItem('pos_shop', JSON.stringify(shop))
+
+            setUser(user)
+            setShop(shop)
+            return { success: true }
+        } catch (error) {
+            return { success: false, error: error.response?.data?.error || error.message }
+        }
+    }
+
+    const register = async (email, password, shopName) => {
+        try {
+            const response = await api.post('/auth/register', { email, password, shopName })
+            const { token, user, shop } = response.data
+
+            localStorage.setItem('pos_token', token)
+            localStorage.setItem('pos_user', JSON.stringify(user))
+            localStorage.setItem('pos_shop', JSON.stringify(shop))
+
+            setUser(user)
+            setShop(shop)
+            return { success: true }
+        } catch (error) {
+            return { success: false, error: error.response?.data?.error || error.message }
         }
     }
 
@@ -53,8 +87,11 @@ export const AuthProvider = ({ children }) => {
         shop,
         loading,
         loginWithTelegram,
+        login,
+        register,
         signOut
     }
+
 
     return (
         <AuthContext.Provider value={value}>

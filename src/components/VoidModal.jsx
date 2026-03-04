@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function VoidModal({ sale, onClose, onVoidSuccess }) {
@@ -24,18 +24,9 @@ export default function VoidModal({ sale, onClose, onVoidSuccess }) {
 
         setLoading(true)
         try {
-            // Update sale to mark as void
-            const { error } = await supabase
-                .from('sales')
-                .update({
-                    is_void: true,
-                    void_reason: reason,
-                    void_at: new Date().toISOString()
-                })
-                .eq('id', sale.id)
-                .eq('shop_id', shop.id)
-
-            if (error) throw error
+            await api.post(`/sales/${sale.id}/void`, {
+                reason: reason
+            })
 
             setStep('success')
             setTimeout(() => {
@@ -117,11 +108,10 @@ export default function VoidModal({ sale, onClose, onVoidSuccess }) {
                                     <button
                                         key={r}
                                         onClick={() => setReason(r)}
-                                        className={`w-full p-3 rounded-lg border-2 font-bold text-sm transition ${
-                                            reason === r
+                                        className={`w-full p-3 rounded-lg border-2 font-bold text-sm transition ${reason === r
                                                 ? 'bg-red-100 border-red-500 text-red-700'
                                                 : 'bg-white border-gray-200 text-gray-700 hover:border-red-300'
-                                        }`}
+                                            }`}
                                     >
                                         {r}
                                     </button>
