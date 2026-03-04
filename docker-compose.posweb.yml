@@ -1,0 +1,26 @@
+services:
+  backend:
+    build:
+      context: ./bot_backend
+      dockerfile: Dockerfile
+    container_name: posweb-backend
+    env_file:
+      - ./bot_backend/.env
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./bot_backend/pos.db:/app/pos.db
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_URL: https://api-posweb.vivutrade.io.vn/api
+    container_name: posweb-frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+    restart: unless-stopped
