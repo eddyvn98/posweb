@@ -40,6 +40,18 @@ body {
   min-height: 100dvh;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 100%;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 /* ===== BUTTON BASE (≥48px touch target) ===== */
 @layer components {
   .btn {

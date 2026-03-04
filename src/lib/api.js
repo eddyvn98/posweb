@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const host = typeof window !== 'undefined' ? window.location.hostname : '';
+const API_URL = (
+    import.meta.env.VITE_API_URL ||
+    (host === 'posweb.vivutrade.io.vn' ? 'https://api-posweb.vivutrade.io.vn/api' : '') ||
+    'http://localhost:3001/api'
+);
 
 const api = axios.create({
     baseURL: API_URL,

@@ -31,3 +31,4 @@ npm-debug.log*
 .firebase/
 *.cache
 bot_backend/backup_err.json
+.playwright-cli/

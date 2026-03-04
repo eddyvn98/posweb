@@ -12,55 +12,73 @@ export default function Login() {
     const navigate = useNavigate()
     const { loginWithTelegram, login, register } = useAuth()
 
-    // Handle Telegram Auto-Login
     useEffect(() => {
-        const initData = window.Telegram?.WebApp?.initData;
+        const initData = window.Telegram?.WebApp?.initData
         if (initData) {
-            handleTelegramLogin(initData);
+            handleTelegramLogin(initData)
         }
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const handleTelegramLogin = async (initData) => {
-        setLoading(true);
-        setError('Đang xác thực với Telegram...');
+        setLoading(true)
+        setError('Đang xác thực với Telegram...')
         try {
-            const result = await loginWithTelegram(initData);
+            const result = await loginWithTelegram(initData)
             if (result.success) {
-                navigate('/sales');
+                navigate('/sales')
             } else {
-                throw new Error(result.error || 'Xác thực Telegram thất bại');
+                throw new Error(result.error || 'Xác thực Telegram thất bại')
             }
         } catch (err) {
-            setError('Lỗi Telegram: ' + err.message);
+            setError(`Lỗi Telegram: ${err.message}`)
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
+    }
+
+    const validateAuthForm = () => {
+        if (!email.trim()) return 'Vui lòng nhập email'
+        if (!/\S+@\S+\.\S+/.test(email.trim())) return 'Email không hợp lệ'
+        if (!password) return 'Vui lòng nhập mật khẩu'
+        if (password.length < 6) return 'Mật khẩu phải có ít nhất 6 ký tự'
+        if (isSignUp && !shopName.trim()) return 'Vui lòng nhập tên cửa hàng'
+        return null
+    }
 
     const handleAuth = async (e) => {
         e.preventDefault()
+        const validationError = validateAuthForm()
+        if (validationError) {
+            setError(validationError)
+            return
+        }
+
         setLoading(true)
         setError(null)
 
         try {
-            let result;
-            if (isSignUp) {
-                if (!shopName) throw new Error('Vui lòng nhập tên cửa hàng');
-                result = await register(email, password, shopName);
-            } else {
-                result = await login(email, password);
-            }
+            const cleanEmail = email.trim()
+            const cleanShopName = shopName.trim()
+            const result = isSignUp
+                ? await register(cleanEmail, password, cleanShopName)
+                : await login(cleanEmail, password)
 
             if (result.success) {
-                navigate('/sales');
+                navigate('/sales')
             } else {
-                setError(result.error);
+                setError(result.error || 'Đăng nhập thất bại')
             }
         } catch (err) {
-            setError(err.message);
+            setError(err.message)
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
+    }
+
+    const toggleAuthMode = () => {
+        setIsSignUp((prev) => !prev)
+        setError(null)
     }
 
     return (
@@ -79,7 +97,7 @@ export default function Login() {
                     </div>
                 )}
 
-                <form onSubmit={handleAuth} className="space-y-4">
+                <form onSubmit={handleAuth} className="space-y-4" noValidate>
                     {isSignUp && (
                         <div>
                             <label className="block text-sm font-medium text-text-main mb-1">Tên cửa hàng</label>
@@ -90,6 +108,7 @@ export default function Login() {
                                 value={shopName}
                                 onChange={(e) => setShopName(e.target.value)}
                                 placeholder="Cửa hàng của tôi"
+                                autoComplete="organization"
                             />
                         </div>
                     )}
@@ -103,6 +122,8 @@ export default function Login() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="ten@cuahang.com"
+                            autoComplete="email"
+                            inputMode="email"
                         />
                     </div>
 
@@ -116,6 +137,7 @@ export default function Login() {
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
                             minLength={6}
+                            autoComplete={isSignUp ? 'new-password' : 'current-password'}
                         />
                     </div>
 
@@ -131,7 +153,7 @@ export default function Login() {
                         <button
                             type="button"
                             className="text-primary hover:underline text-sm"
-                            onClick={() => setIsSignUp(!isSignUp)}
+                            onClick={toggleAuthMode}
                         >
                             {isSignUp ? 'Đã có tài khoản? Đăng nhập' : 'Chưa có tài khoản? Đăng ký ngay'}
                         </button>
@@ -152,4 +174,3 @@ export default function Login() {
         </div>
     )
 }
-

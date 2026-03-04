@@ -19,6 +19,8 @@ import CartBar from './components/CartBar'
 import Layout from './components/Layout'
 
 function App() {
+    const showTestConsole = import.meta.env.DEV && import.meta.env.VITE_ENABLE_TEST_CONSOLE === 'true'
+
     return (
         <BrowserRouter>
             <AuthProvider>
@@ -27,7 +29,7 @@ function App() {
                         <NotificationProvider>
                             <DriveProvider>
                                 <CartBar />
-                                <TestConsole />
+                                {showTestConsole && <TestConsole />}
                                 <Routes>
                                     <Route path="/login" element={<Login />} />
 

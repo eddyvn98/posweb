@@ -12,7 +12,7 @@ export default function TestConsole() {
     const logsEndRef = useRef(null)
 
     const addLog = (message, type = 'info') => {
-        setLogs(prev => [...prev, { message, type, timestamp: new Date().toLocaleTimeString() }])
+        setLogs((prev) => [...prev, { message, type, timestamp: new Date().toLocaleTimeString() }])
         setTimeout(() => logsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
     }
 
@@ -33,7 +33,6 @@ export default function TestConsole() {
             }
 
             const results = await testStress.runFullTest(shop.id, user.id, pushSales, 100)
-
             console.log = originalLog
 
             if (results.overall.success) {
@@ -56,15 +55,14 @@ export default function TestConsole() {
         addLog('Starting rapid scan test...', 'info')
 
         try {
-            // Mock scan handler
             const mockHandler = async (barcode) => {
                 addLog(`Scanned: ${barcode}`, 'debug')
-                await new Promise(resolve => setTimeout(resolve, 10))
+                await new Promise((resolve) => setTimeout(resolve, 10))
             }
 
             const results = await testMobileUX.simulateRapidScans(mockHandler, 20, 100)
 
-            addLog(`✅ SCAN TEST COMPLETED`, 'success')
+            addLog('✅ SCAN TEST COMPLETED', 'success')
             addLog(`Success: ${results.successCount}/20`, 'success')
             addLog(`Average time: ${results.averagePerScan}ms`, 'success')
 
@@ -103,30 +101,28 @@ export default function TestConsole() {
 
     return (
         <>
-            {/* Floating Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="fixed bottom-6 right-6 w-12 h-12 bg-purple-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-purple-700 transition z-40 font-bold text-lg"
                 title="Epic 9 Test Console"
+                aria-label={isOpen ? 'Đóng test console' : 'Mở test console'}
             >
                 🧪
             </button>
 
-            {/* Test Console Panel */}
             {isOpen && (
                 <div className="fixed bottom-24 right-6 w-96 max-h-[600px] bg-white rounded-2xl shadow-2xl border-2 border-purple-200 z-40 flex flex-col">
-                    {/* Header */}
                     <div className="bg-purple-600 text-white px-4 py-3 rounded-t-xl font-bold flex justify-between items-center">
                         🧪 Test Console
                         <button
                             onClick={() => setIsOpen(false)}
                             className="text-white hover:bg-purple-700 rounded px-2 py-1"
+                            aria-label="Đóng bảng test console"
                         >
                             ✕
                         </button>
                     </div>
 
-                    {/* Control Buttons */}
                     <div className="p-3 bg-purple-50 border-b border-purple-100 grid grid-cols-2 gap-2">
                         <button
                             onClick={runStressTest}
@@ -156,7 +152,6 @@ export default function TestConsole() {
                         </button>
                     </div>
 
-                    {/* Logs */}
                     <div className="flex-1 overflow-y-auto p-3 bg-gray-50 font-mono text-xs space-y-1">
                         {logs.length === 0 ? (
                             <div className="text-gray-400 italic">No logs yet. Click a button to start testing.</div>
@@ -170,7 +165,6 @@ export default function TestConsole() {
                         <div ref={logsEndRef} />
                     </div>
 
-                    {/* Info */}
                     <div className="px-3 py-2 bg-purple-50 border-t border-purple-100 text-xs text-gray-600">
                         <p><strong>Shop:</strong> {shop?.id?.slice(0, 8)}...</p>
                         <p><strong>Logs:</strong> {logs.length}</p>
