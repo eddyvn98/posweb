@@ -22,6 +22,9 @@ export default function ProductCard({ product, onAdd }) {
                 <p className="text-[10px] text-gray-400 mt-1 font-mono">
                     {product.barcode}
                 </p>
+                <p className="text-[10px] text-gray-500 mt-1">
+                    ĐV: {product.unit || 'Cái'}
+                </p>
             </div>
 
             <div className="mt-3 flex justify-between items-end">

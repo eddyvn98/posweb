@@ -66,7 +66,7 @@ function createSale(req, res) {
             type: 'in',
             category: 'sale',
             description: `Thu tiền bán hàng đơn ${sale.code}`,
-            ref_id: saleId,
+            ref_id: resultId,
             created_at: sale.sale_date
         }, shopName);
 

@@ -4,7 +4,10 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
 import { saveProductLocal, findProductByBarcode } from '../lib/db'
 import { useNotification } from '../contexts/NotificationContext'
+import api from '../lib/api'
 import BarcodeScanner from './BarcodeScanner'
+
+const DEFAULT_UNIT = 'Cái'
 
 export default function ProductFormModal({ product, onClose, onFinish }) {
     const { shop } = useAuth()
@@ -14,30 +17,81 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     const [formKey, setFormKey] = useState(0)
     const scanLock = useRef(false)
     const [isClosed, setIsClosed] = useState(false)
+    const [units, setUnits] = useState([])
 
     const [formData, setFormData] = useState({
         name: '',
         barcode: '',
+        unit: DEFAULT_UNIT,
         price: '',
         cost_price: '',
         stock_quantity: 0,
         image_url: null
     })
 
-    const [isContinuous, setIsContinuous] = useState(true)
+    const [isContinuous] = useState(true)
 
-    // 🎥 Cleanup camera when modal closes
     useEffect(() => {
         return () => {
             setIsClosed(true)
         }
     }, [])
 
-    // Image Handle
+    const loadUnits = async () => {
+        try {
+            const response = await api.get('/units')
+            const data = Array.isArray(response.data) ? response.data : []
+            setUnits(data)
+            if (data.length > 0 && !formData.unit) {
+                setFormData((prev) => ({ ...prev, unit: data[0].name }))
+            }
+        } catch (err) {
+            console.error('Load units error:', err)
+            setUnits([])
+        }
+    }
+
+    useEffect(() => {
+        loadUnits()
+    }, [])
+
+    const handleCreateUnit = async () => {
+        const name = prompt('Nhập tên đơn vị mới')
+        if (!name?.trim()) return
+        try {
+            const response = await api.post('/units', { name: name.trim() })
+            const created = response.data
+            setUnits((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+            setFormData((prev) => ({ ...prev, unit: created.name }))
+            showNotification('Đã tạo đơn vị mới', 'success')
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Không thể tạo đơn vị', 'error')
+        }
+    }
+
+    const handleEditUnit = async () => {
+        const selected = units.find((u) => u.name === formData.unit)
+        if (!selected) {
+            showNotification('Vui lòng chọn đơn vị trước', 'info')
+            return
+        }
+
+        const name = prompt('Sửa tên đơn vị', selected.name)
+        if (!name?.trim() || name.trim() === selected.name) return
+
+        try {
+            await api.patch(`/units/${selected.id}`, { name: name.trim() })
+            await loadUnits()
+            setFormData((prev) => ({ ...prev, unit: name.trim() }))
+            showNotification('Đã cập nhật đơn vị', 'success')
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Không thể sửa đơn vị', 'error')
+        }
+    }
+
     const handleImageChange = (e) => {
         const file = e.target.files[0]
         if (file) {
-            // Check size (max 500KB roughly)
             if (file.size > 500000) {
                 alert('Ảnh quá lớn! Vui lòng chọn ảnh < 500KB')
                 return
@@ -45,73 +99,58 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
             const reader = new FileReader()
             reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, image_url: reader.result }))
+                setFormData((prev) => ({ ...prev, image_url: reader.result }))
             }
             reader.readAsDataURL(file)
         }
     }
 
-    const resetForm = () => {
-        setFormData({
-            name: '',
-            barcode: '',
-            price: '',
-            cost_price: '',
-            stock_quantity: 0,
-            image_url: null
-        })
-    }
-
     const handleScan = async (code) => {
-        if (product) return // Không scan khi đang edit sản phẩm cũ
+        if (product) return
         if (scanLock.current) return
         scanLock.current = true
 
         try {
-            console.log('[ProductForm] Barcode scanned:', code)
-
-            // 1. Nếu barcode đã tồn tại → load sản phẩm cũ
             const existingProduct = await findProductByBarcode(code)
             if (existingProduct) {
-                setFormKey(k => k + 1)
-                setFormData(existingProduct)
-                showNotification(`📝 Tải: ${existingProduct.name}`, 'info')
+                setFormKey((k) => k + 1)
+                setFormData({
+                    ...existingProduct,
+                    unit: existingProduct.unit || DEFAULT_UNIT
+                })
+                showNotification(`Tải: ${existingProduct.name}`, 'info')
                 return
             }
 
-            // 2. Nếu đang tạo liên tục + có sản phẩm hiện tại + quét mã khác
             if (isContinuous && formData.barcode && formData.barcode !== code) {
-                // Auto-save nếu đủ dữ liệu
                 if (formData.name?.trim() && formData.price) {
                     await handleAutoSave()
                 }
 
-                // 🔥 DÙ CÓ SAVE HAY KHÔNG → FORM PHẢI MỚI
-                setFormKey(k => k + 1)
+                setFormKey((k) => k + 1)
                 setFormData({
                     name: '',
                     barcode: '',
+                    unit: DEFAULT_UNIT,
                     price: '',
                     cost_price: '',
                     stock_quantity: 0,
                     image_url: null
                 })
 
-                // Focus vào barcode input để quét tiếp mượt
                 requestAnimationFrame(() => {
                     document.getElementById('barcode-input')?.focus()
                 })
             }
 
-            // 3. GÁN BARCODE CHO FORM MỚI
-            setFormData(prev => ({
+            setFormData((prev) => ({
                 ...prev,
                 barcode: code
             }))
         } finally {
             setTimeout(() => {
                 scanLock.current = false
-            }, 500) // debounce scan
+            }, 500)
         }
     }
 
@@ -123,6 +162,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                 id: uuidv4(),
                 shop_id: shop.id,
                 ...formData,
+                unit: formData.unit || DEFAULT_UNIT,
                 price: Number(formData.price),
                 cost_price: Number(formData.cost_price),
                 stock_quantity: Number(formData.stock_quantity),
@@ -132,18 +172,20 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
             await saveProductLocal(newProduct)
             await pushProducts(newProduct)
-            console.log('[ProductForm] Auto-saved:', newProduct.name)
-            showNotification(`✅ Lưu: ${newProduct.name}`, 'success')
+            showNotification(`Lưu: ${newProduct.name}`, 'success')
         } catch (err) {
             console.error('Auto-save error:', err)
-            showNotification('❌ Lỗi lưu sản phẩm', 'error')
+            showNotification('Lỗi lưu sản phẩm', 'error')
         }
     }
 
     useEffect(() => {
         if (product) {
-            setFormKey(k => k + 1)
-            setFormData(product)
+            setFormKey((k) => k + 1)
+            setFormData({
+                ...product,
+                unit: product.unit || DEFAULT_UNIT
+            })
         }
     }, [product])
 
@@ -156,6 +198,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                 id: product?.id || uuidv4(),
                 shop_id: shop.id,
                 ...formData,
+                unit: formData.unit || DEFAULT_UNIT,
                 price: Number(formData.price),
                 cost_price: Number(formData.cost_price),
                 stock_quantity: Number(formData.stock_quantity),
@@ -163,35 +206,30 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                 created_at: product?.created_at || new Date().toISOString()
             }
 
-            // 1. Save Local (Offline First)
             await saveProductLocal(newProduct)
-
-            // 2. Sync to Server (if online)
             await pushProducts(newProduct)
 
-            onFinish() // Reload list
+            onFinish()
             onClose()
-
         } catch (err) {
             console.error(err)
-            alert('Lỗi: ' + err.message)
+            alert(`Lỗi: ${err.message}`)
         } finally {
             setLoading(false)
         }
     }
 
     const generateBarcode = () => {
-        setFormData(prev => ({
+        setFormData((prev) => ({
             ...prev,
             barcode: `${Math.floor(Date.now() / 1000)}`
         }))
     }
 
     const handlePriceBlur = (field, value) => {
-        let numeric = Number(value)
-        if (!isNaN(numeric) && numeric > 0 && numeric < 1000) {
-            // Smart input: '50' -> '50000'
-            setFormData(prev => ({ ...prev, [field]: numeric * 1000 }))
+        const numeric = Number(value)
+        if (!Number.isNaN(numeric) && numeric > 0 && numeric < 1000) {
+            setFormData((prev) => ({ ...prev, [field]: numeric * 1000 }))
         }
     }
 
@@ -205,10 +243,8 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                     </div>
 
                     <div className="p-4 space-y-3">
-                        {/* Scanner - only active when creating (not editing) and modal is open */}
                         <BarcodeScanner onDetected={handleScan} active={!product && !isClosed} />
 
-                        {/* Image Upload */}
                         <div className="flex bg-gray-50 p-2 rounded items-center gap-3">
                             <div className="w-16 h-16 bg-white border rounded flex items-center justify-center overflow-hidden shrink-0">
                                 {formData.image_url ? (
@@ -228,7 +264,6 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                             </div>
                         </div>
 
-                        {/* Name */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Tên sản phẩm *</label>
                             <input
@@ -236,11 +271,10 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                                 required
                                 className="input w-full"
                                 value={formData.name}
-                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             />
                         </div>
 
-                        {/* Barcode */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Mã vạch</label>
                             <div className="flex gap-2">
@@ -248,7 +282,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                                     id="barcode-input"
                                     className="input flex-1"
                                     value={formData.barcode}
-                                    onChange={e => setFormData({ ...formData, barcode: e.target.value })}
+                                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
                                 />
                                 <button
                                     type="button"
@@ -260,7 +294,28 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                             </div>
                         </div>
 
-                        {/* Prices */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Đơn vị</label>
+                            <div className="flex gap-2">
+                                <select
+                                    className="input flex-1"
+                                    value={formData.unit || DEFAULT_UNIT}
+                                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                                >
+                                    {units.length === 0 && <option value={DEFAULT_UNIT}>{DEFAULT_UNIT}</option>}
+                                    {units.map((unit) => (
+                                        <option key={unit.id} value={unit.name}>{unit.name}</option>
+                                    ))}
+                                </select>
+                                <button type="button" onClick={handleCreateUnit} className="btn bg-green-50 text-green-700 text-xs px-2">
+                                    + ĐV
+                                </button>
+                                <button type="button" onClick={handleEditUnit} className="btn bg-amber-50 text-amber-700 text-xs px-2">
+                                    Sửa
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Giá bán *</label>
@@ -268,7 +323,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                                     type="number" required min="0" step="1000"
                                     className="input w-full font-mono text-lg font-bold text-primary"
                                     value={formData.price}
-                                    onChange={e => setFormData({ ...formData, price: e.target.value })}
+                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                                     onBlur={(e) => handlePriceBlur('price', e.target.value)}
                                     placeholder="0"
                                 />
@@ -282,20 +337,19 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                                     type="number" min="0" step="1000"
                                     className="input w-full"
                                     value={formData.cost_price}
-                                    onChange={e => setFormData({ ...formData, cost_price: e.target.value })}
+                                    onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
                                     onBlur={(e) => handlePriceBlur('cost_price', e.target.value)}
                                 />
                             </div>
                         </div>
 
-                        {/* Stock */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Tồn kho ban đầu</label>
                             <input
                                 type="number" required
                                 className="input w-full"
                                 value={formData.stock_quantity}
-                                onChange={e => setFormData({ ...formData, stock_quantity: e.target.value })}
+                                onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
                             />
                         </div>
                     </div>

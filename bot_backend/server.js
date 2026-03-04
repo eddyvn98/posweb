@@ -9,6 +9,7 @@ const productsRoutes = require('./routes/products');
 const salesRoutes = require('./routes/sales');
 const reportsRoutes = require('./routes/reports');
 const importsRoutes = require('./routes/imports');
+const unitsRoutes = require('./routes/units');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -26,6 +27,7 @@ app.use('/api/products', productsRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/imports', importsRoutes);
+app.use('/api/units', unitsRoutes);
 
 // Telegram Bot Setup
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;

@@ -9,7 +9,7 @@ import { useScanBarcode } from '../hooks/useScanBarcode'
 
 export default function Products() {
     const navigate = useNavigate()
-    const { pushProducts } = useSync()
+    const { deleteProduct } = useSync()
     const { addToCart } = useCart()
     const { showNotification } = useNotification()
 
@@ -71,6 +71,7 @@ export default function Products() {
         e.stopPropagation()
         if (confirm('Bạn chắc chắn muốn xoá?')) {
             await deleteProductLocal(id)
+            await deleteProduct(id)
             loadProducts()
             showNotification('Đã xóa sản phẩm', 'info')
         }
@@ -162,6 +163,7 @@ export default function Products() {
                                 <div className="flex-1 min-w-0">
                                     <h3 className="font-bold text-sm text-gray-800 line-clamp-2 leading-tight mb-1 group-hover:text-primary transition-colors">{p.name}</h3>
                                     <p className="text-[10px] text-gray-400 truncate font-mono uppercase tracking-tighter">{p.barcode}</p>
+                                    <p className="text-[10px] text-gray-500 mt-1">Đơn vị: {p.unit || 'Cái'}</p>
                                 </div>
 
                                 <div className="mt-3 flex justify-between items-end">
@@ -202,3 +204,4 @@ export default function Products() {
         </div>
     )
 }
+

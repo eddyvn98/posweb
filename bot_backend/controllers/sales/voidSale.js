@@ -64,8 +64,15 @@ function voidSale(req, res) {
         res.json({ success: true });
     } catch (error) {
         console.error('Void Sale Error:', error);
+        if (error.message === 'Sale not found') {
+            return res.status(404).json({ error: error.message });
+        }
+        if (error.message === 'Sale already voided') {
+            return res.status(409).json({ error: error.message });
+        }
         res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 }
 
 module.exports = voidSale;
+

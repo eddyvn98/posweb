@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import api from '../lib/api'
 
 /**
  * Hiển thị trạng thái sao lưu gần nhất
@@ -79,24 +80,13 @@ export const BackupButton = ({
 
         try {
             // Gọi API backend để generate Excel + upload Drive
-            const response = await fetch('/api/backup/manual', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    shop_id: shopId,
-                    shop_name: shopName,
-                    month: month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
-                    year: year || new Date().getFullYear()
-                })
+            const response = await api.post('/reports/backup', {
+                shop_id: shopId,
+                shop_name: shopName,
+                month: month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
+                year: year || new Date().getFullYear()
             })
-
-            if (!response.ok) {
-                throw new Error(`Backup API error: ${response.statusText}`)
-            }
-
-            const result = await response.json()
+            const result = response.data
 
             setStatus('✓ Sao lưu thành công!')
 

@@ -6,10 +6,11 @@ function upsertProduct(req, res) {
         const product = req.body;
 
         const stmt = db.prepare(`
-            INSERT INTO products (id, shop_id, barcode, name, price, cost_price, stock_quantity, image_url, is_active)
-            VALUES (@id, @shop_id, @barcode, @name, @price, @cost_price, @stock_quantity, @image_url, @is_active)
+            INSERT INTO products (id, shop_id, barcode, name, unit, price, cost_price, stock_quantity, image_url, is_active)
+            VALUES (@id, @shop_id, @barcode, @name, @unit, @price, @cost_price, @stock_quantity, @image_url, @is_active)
             ON CONFLICT(shop_id, barcode) DO UPDATE SET
                 name = excluded.name,
+                unit = excluded.unit,
                 price = excluded.price,
                 cost_price = excluded.cost_price,
                 stock_quantity = excluded.stock_quantity,
@@ -19,6 +20,7 @@ function upsertProduct(req, res) {
 
         stmt.run({
             ...product,
+            unit: product.unit || 'Cái',
             shop_id,
             is_active: product.is_active ? 1 : 0
         });

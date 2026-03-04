@@ -5,6 +5,7 @@ const authService = require('../services/authService');
 const db = require('../db/connection');
 const authenticateToken = require('../middleware/auth');
 const updateShop = require('../controllers/auth/updateShop');
+const changePassword = require('../controllers/auth/changePassword');
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -99,6 +100,8 @@ router.post('/register', (req, res) => {
 });
 
 router.patch('/shop', authenticateToken, updateShop);
+router.patch('/change-password', authenticateToken, changePassword);
 
 module.exports = router;
+
 

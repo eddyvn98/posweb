@@ -19,10 +19,12 @@ export default function CartItem({ item, onUpdateQty, onRemove }) {
                 <div className="text-xs text-gray-400 font-mono">
                     {new Intl.NumberFormat('vi-VN').format(item.price)} đ
                 </div>
+                <div className="text-[10px] text-gray-400">
+                    Đơn vị: {item.unit || 'Cái'}
+                </div>
             </div>
 
             <div className="flex items-center gap-4">
-                {/* Quantity Controls */}
                 <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-9 bg-gray-50/50 shadow-sm">
                     <button
                         onClick={() => handleUpdate(-1)}
@@ -41,7 +43,6 @@ export default function CartItem({ item, onUpdateQty, onRemove }) {
                     </button>
                 </div>
 
-                {/* Total & Remove */}
                 <div className="min-w-[80px] text-right">
                     <div className="font-bold text-sm text-primary">
                         {new Intl.NumberFormat('vi-VN').format(item.price * item.quantity)}

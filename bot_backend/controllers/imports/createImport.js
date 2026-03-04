@@ -18,14 +18,7 @@ function createImport(req, res) {
             VALUES (?, ?, ?, ?, ?, ?)
         `).run(importId, shop_id, import_date, supplier_name, total_cost, note || null);
 
-        // 2. Create inventory log (placeholder for bulk import)
-        const logId = uuidv4();
-        db.prepare(`
-            INSERT INTO inventory_logs (id, shop_id, product_id, change_amount, current_stock, type, note)
-            VALUES (?, ?, NULL, 0, 0, 'import', ?)
-        `).run(logId, shop_id, `Nhập hàng từ ${supplier_name}`);
-
-        // 3. Create cash flow (expense)
+        // 2. Create cash flow (expense)
         const cashFlowId = uuidv4();
         db.prepare(`
             INSERT INTO cash_flows (id, shop_id, amount, type, category, description, ref_id, created_at)
@@ -34,7 +27,7 @@ function createImport(req, res) {
             cashFlowId,
             shop_id,
             total_cost,
-            `Nhập hàng từ ${supplier_name}`,
+            `Nhap hang tu ${supplier_name}`,
             importId,
             new Date(import_date).toISOString()
         );
@@ -45,17 +38,17 @@ function createImport(req, res) {
     try {
         const resultId = transaction();
 
-        // Đồng bộ Google Sheet (chạy ngầm)
+        // Sync to Google Sheets asynchronously
         const shop = db.prepare('SELECT name FROM shops WHERE id = ?').get(shop_id);
         const { syncImport, syncCashFlow } = require('../../services/googleSheetService');
-        const shopName = shop ? shop.name : 'Cửa hàng';
+        const shopName = shop ? shop.name : 'Cua hang';
 
         syncImport({ id: resultId, import_date, supplier_name, total_cost, note }, shopName);
         syncCashFlow({
             amount: total_cost,
             type: 'out',
             category: 'import',
-            description: `Nhập hàng từ ${supplier_name}`,
+            description: `Nhap hang tu ${supplier_name}`,
             ref_id: resultId,
             created_at: import_date
         }, shopName);

@@ -3,6 +3,21 @@ const { JWT } = require('google-auth-library');
 const fs = require('fs');
 const path = require('path');
 
+const VI = {
+    banHang: '\u0042\u00e1\u006e\u0020\u0068\u00e0\u006e\u0067',
+    sanPham: '\u0053\u1ea3\u006e\u0020\u0070\u0068\u1ea9\u006d',
+    nhapKho: '\u004e\u0068\u1ead\u0070\u0020\u006b\u0068\u006f',
+    soQuy: '\u0053\u1ed5\u0020\u0071\u0169\u0079',
+    donDaHuy: '\u0110\u01a1\u006e\u0020\u0111\u00e3\u0020\u0068\u1ee7\u0079',
+    headers: {
+        sales: ['\u004e\u0067\u00e0\u0079\u0020\u0067\u0068\u0069\u0020\u0073\u1ed5', '\u0053\u1ed1\u0020\u0068\u0069\u1ec7\u0075\u0020\u0063\u0068\u1ee9\u006e\u0067\u0020\u0074\u1eeb', '\u0044\u0069\u1ec5\u006e\u0020\u0067\u0069\u1ea3\u0069', 'Doanh thu (+)', '\u0048\u00ec\u006e\u0068\u0020\u0074\u0068\u1ee9\u0063\u0020\u0074\u0068\u0061\u006e\u0068\u0020\u0074\u006f\u00e1\u006e', '\u0043\u0068\u0069\u0020\u0074\u0069\u1ebf\u0074'],
+        products: ['\u004e\u0067\u00e0\u0079\u0020\u0043\u1ead\u0070\u0020\u004e\u0068\u1ead\u0074', 'Barcode', '\u004d\u00e3\u0020\u0053\u1ea3\u006e\u0020\u0050\u0068\u1ea9\u006d', '\u0054\u00ea\u006e\u0020\u0053\u1ea3\u006e\u0020\u0050\u0068\u1ea9\u006d', '\u0110\u01a1\u006e\u0020\u0076\u1ecb', '\u0047\u0069\u00e1\u0020\u0042\u00e1\u006e', '\u0047\u0069\u00e1\u0020\u0056\u1ed1\u006e', '\u0054\u1ed3\u006e\u0020\u004b\u0068\u006f', '\u0054\u0072\u1ea1\u006e\u0067\u0020\u0054\u0068\u00e1\u0069'],
+        imports: ['\u004e\u0067\u00e0\u0079\u0020\u0067\u0068\u0069\u0020\u0073\u1ed5', '\u0053\u1ed1\u0020\u0068\u0069\u1ec7\u0075\u0020\u0063\u0068\u1ee9\u006e\u0067\u0020\u0074\u1eeb', '\u004e\u0068\u00e0\u0020\u0063\u0075\u006e\u0067\u0020\u0063\u1ea5\u0070', '\u0047\u0069\u00e1\u0020\u0074\u0072\u1ecb\u0020\u006e\u0068\u1ead\u0070\u0020\u0028\u002b\u0029', '\u0047\u0068\u0069\u0020\u0063\u0068\u00fa'],
+        cashbook: ['\u004e\u0067\u00e0\u0079', '\u0048\u1ea1\u006e\u0067\u0020\u006d\u1ee5\u0063', '\u0044\u0069\u1ec5\u006e\u0020\u0067\u0069\u1ea3\u0069', '\u0054\u0068\u0075\u0020\u0028\u002b\u0029', '\u0043\u0068\u0069\u0020\u0028\u002d\u0029', '\u004d\u00e3\u0020\u0063\u0068\u1ee9\u006e\u0067\u0020\u0074\u1eeb'],
+        voids: ['\u004e\u0067\u00e0\u0079\u0020\u0048\u1ee7\u0079', '\u0053\u1ed1\u0020\u0068\u0069\u1ec7\u0075\u0020\u0111\u01a1\u006e', '\u004c\u00fd\u0020\u0064\u006f\u0020\u0068\u1ee7\u0079', 'Shop']
+    }
+};
+
 const logFile = path.resolve(__dirname, '../sheets_sync.log');
 const log = (msg) => {
     const entry = `[${new Date().toISOString()}] ${msg}\n`;
@@ -10,152 +25,93 @@ const log = (msg) => {
     console.log(msg);
 };
 
-/**
- * Hàm chung để ghi dữ liệu vào một sheet cụ thể
- */
 async function appendToSheet(tabName, rowData, headers) {
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
     const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
-
-    if (!spreadsheetId || !clientEmail || !privateKey) {
-        log(`⚠️ Bỏ qua đồng bộ ${tabName}: Thiếu cấu hình .env`);
-        return;
-    }
+    if (!spreadsheetId || !clientEmail || !privateKey) return;
 
     try {
-        const auth = new JWT({
-            email: clientEmail,
-            key: privateKey,
-            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-        });
-
+        const auth = new JWT({ email: clientEmail, key: privateKey, scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
         const doc = new GoogleSpreadsheet(spreadsheetId, auth);
         await doc.loadInfo();
 
-        // Tìm hoặc tạo sheet theo tên
         let sheet = doc.sheetsByTitle[tabName];
         if (!sheet) {
-            log(`ℹ️ Đang tạo sheet mới: "${tabName}"`);
             sheet = await doc.addSheet({ title: tabName, headerValues: headers });
         } else {
-            // Kiểm tra và cập nhật tiêu đề nếu có thay đổi (để chuẩn hóa theo luật 2026)
-            try {
-                await sheet.loadHeaderRow();
-                const currentHeaders = sheet.headerValues;
-                const isMatch = headers.every((h, i) => h === currentHeaders[i]) && headers.length === currentHeaders.length;
-
-                if (!isMatch) {
-                    log(`ℹ️ Cập nhật cấu trúc cột cho tab "${tabName}"...`);
-                    await sheet.setHeaderRow(headers);
-                }
-            } catch (e) {
-                await sheet.setHeaderRow(headers);
-            }
+            await sheet.setHeaderRow(headers);
         }
-
-        // Mapping rowData to use the exact header keys to avoid mismatch
         await sheet.addRow(rowData);
-        log(`✅ Thành công! Đã đồng bộ dữ liệu vào tab "${tabName}".`);
     } catch (error) {
-        log(`❌ Lỗi đồng bộ tab "${tabName}": ${error.message}`);
+        log(`Sync error ${tabName}: ${error.message}`);
     }
 }
 
-/**
- * Đồng bộ đơn hàng (Sổ doanh thu S1a-HKD)
- */
 async function syncSale(sale, shopName) {
-    const headers = ['Ngày ghi sổ', 'Số hiệu chứng từ', 'Diễn giải', 'Doanh thu (+)', 'Hình thức thanh toán', 'Chi Tiết'];
-    const itemsStr = sale.items ? sale.items.map(i => `${i.product_name} (x${i.quantity})`).join(', ') : '';
-
+    const headers = VI.headers.sales;
+    const itemsStr = sale.items ? sale.items.map((i) => `${i.product_name} (x${i.quantity})`).join(', ') : '';
     const rowData = {
-        'Ngày ghi sổ': new Date(sale.sale_date || Date.now()).toLocaleString('vi-VN'),
-        'Số hiệu chứng từ': sale.code,
-        'Diễn giải': `Doanh thu bán hàng - Shop: ${shopName}`,
-        'Doanh thu (+)': Number(sale.total_amount),
-        'Hình thức thanh toán': sale.payment_method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản',
-        'Chi Tiết': itemsStr
+        [headers[0]]: new Date(sale.sale_date || Date.now()).toLocaleString('vi-VN'),
+        [headers[1]]: sale.code,
+        [headers[2]]: `Doanh thu bán hàng - Shop: ${shopName}`,
+        [headers[3]]: Number(sale.total_amount),
+        [headers[4]]: sale.payment_method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản',
+        [headers[5]]: itemsStr
     };
-
-    return appendToSheet('Bán hàng', rowData, headers);
+    return appendToSheet(VI.banHang, rowData, headers);
 }
 
-/**
- * Đồng bộ sản phẩm (khi thêm hoặc cập nhật)
- */
-async function syncProduct(product, shopName) {
-    const headers = ['Ngày Cập Nhật', 'Barcode', 'Mã Sản Phẩm', 'Tên Sản Phẩm', 'Giá Bán', 'Giá Vốn', 'Tồn Kho', 'Trạng Thái'];
-
+async function syncProduct(product) {
+    const headers = VI.headers.products;
     const rowData = {
-        'Ngày Cập Nhật': new Date().toLocaleString('vi-VN'),
-        'Barcode': product.barcode,
-        'Mã Sản Phẩm': product.id,
-        'Tên Sản Phẩm': product.name,
-        'Giá Bán': Number(product.price),
-        'Giá Vốn': Number(product.cost_price || 0),
-        'Tồn Kho': Number(product.stock_quantity || 0),
-        'Trạng Thái': product.is_active ? 'Đang bán' : 'Ngừng bán'
+        [headers[0]]: new Date().toLocaleString('vi-VN'),
+        [headers[1]]: product.barcode,
+        [headers[2]]: product.id,
+        [headers[3]]: product.name,
+        [headers[4]]: product.unit || '\u0043\u00e1\u0069',
+        [headers[5]]: Number(product.price),
+        [headers[6]]: Number(product.cost_price || 0),
+        [headers[7]]: Number(product.stock_quantity || 0),
+        [headers[8]]: product.is_active ? '\u0110\u0061\u006e\u0067\u0020\u0062\u00e1\u006e' : '\u004e\u0067\u1eeb\u006e\u0067\u0020\u0062\u00e1\u006e'
     };
-
-    return appendToSheet('Sản phẩm', rowData, headers);
+    return appendToSheet(VI.sanPham, rowData, headers);
 }
 
-/**
- * Đồng bộ phiếu nhập kho (Sổ vật tư S2-HKD)
- */
-async function syncImport(importData, shopName) {
-    const headers = ['Ngày ghi sổ', 'Số hiệu chứng từ', 'Nhà cung cấp', 'Giá trị nhập (+)', 'Ghi chú'];
-
+async function syncImport(importData) {
+    const headers = VI.headers.imports;
     const rowData = {
-        'Ngày ghi sổ': new Date(importData.import_date).toLocaleString('vi-VN'),
-        'Số hiệu chứng từ': importData.id || 'N/A',
-        'Nhà cung cấp': importData.supplier_name,
-        'Giá trị nhập (+)': Number(importData.total_cost),
-        'Ghi chú': importData.note || ''
+        [headers[0]]: new Date(importData.import_date).toLocaleString('vi-VN'),
+        [headers[1]]: importData.id || 'N/A',
+        [headers[2]]: importData.supplier_name,
+        [headers[3]]: Number(importData.total_cost),
+        [headers[4]]: importData.note || ''
     };
-
-    return appendToSheet('Nhập kho', rowData, headers);
+    return appendToSheet(VI.nhapKho, rowData, headers);
 }
 
-/**
- * Đồng bộ dòng tiền (Sổ quỹ S6-HKD)
- */
-async function syncCashFlow(cashFlow, shopName) {
-    const headers = ['Ngày', 'Hạng mục', 'Diễn giải', 'Thu (+)', 'Chi (-)', 'Mã chứng từ'];
-
+async function syncCashFlow(cashFlow) {
+    const headers = VI.headers.cashbook;
     const rowData = {
-        'Ngày': new Date(cashFlow.created_at || Date.now()).toLocaleString('vi-VN'),
-        'Hạng mục': cashFlow.category || 'Khác',
-        'Diễn giải': cashFlow.description,
-        'Thu (+)': cashFlow.type === 'in' ? Number(cashFlow.amount) : 0,
-        'Chi (-)': cashFlow.type === 'out' ? Number(cashFlow.amount) : 0,
-        'Mã chứng từ': cashFlow.ref_id || ''
+        [headers[0]]: new Date(cashFlow.created_at || Date.now()).toLocaleString('vi-VN'),
+        [headers[1]]: cashFlow.category || '\u004b\u0068\u00e1\u0063',
+        [headers[2]]: cashFlow.description,
+        [headers[3]]: cashFlow.type === 'in' ? Number(cashFlow.amount) : 0,
+        [headers[4]]: cashFlow.type === 'out' ? Number(cashFlow.amount) : 0,
+        [headers[5]]: cashFlow.ref_id || ''
     };
-
-    return appendToSheet('Sổ quỹ', rowData, headers);
+    return appendToSheet(VI.soQuy, rowData, headers);
 }
 
-/**
- * Đồng bộ khi hủy đơn hàng (Đối soát)
- */
 async function syncVoidSale(saleId, reason, shopName) {
-    const headers = ['Ngày Hủy', 'Số hiệu đơn', 'Lý do hủy', 'Shop'];
-
+    const headers = VI.headers.voids;
     const rowData = {
-        'Ngày Hủy': new Date().toLocaleString('vi-VN'),
-        'Số hiệu đơn': saleId,
-        'Lý do hủy': reason,
-        'Shop': shopName
+        [headers[0]]: new Date().toLocaleString('vi-VN'),
+        [headers[1]]: saleId,
+        [headers[2]]: reason,
+        [headers[3]]: shopName
     };
-
-    return appendToSheet('Đơn đã hủy', rowData, headers);
+    return appendToSheet(VI.donDaHuy, rowData, headers);
 }
 
-module.exports = {
-    syncSale,
-    syncProduct,
-    syncImport,
-    syncCashFlow,
-    syncVoidSale
-};
+module.exports = { syncSale, syncProduct, syncImport, syncCashFlow, syncVoidSale };

@@ -1,7 +1,7 @@
 import { openDB } from 'idb'
 
 const DB_NAME = 'pos_db'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export const initDB = async () => {
     return openDB(DB_NAME, DB_VERSION, {
@@ -21,6 +21,12 @@ export const initDB = async () => {
                 })
                 salesStore.createIndex('synced', 'synced', { unique: false })
                 salesStore.createIndex('created_at', 'created_at', { unique: false })
+            }
+
+            // Pending product updates for offline-first sync.
+            if (!db.objectStoreNames.contains('pending_products')) {
+                const productQueue = db.createObjectStore('pending_products', { keyPath: 'id' })
+                productQueue.createIndex('created_at', 'created_at', { unique: false })
             }
         },
     })
@@ -80,6 +86,25 @@ export const saveProductLocal = async (product) => {
 export const deleteProductLocal = async (id) => {
     const db = await initDB()
     await db.delete('products', id)
+}
+
+export const queuePendingProduct = async (product) => {
+    const db = await initDB()
+    await db.put('pending_products', {
+        ...product,
+        op: product.op || 'upsert',
+        created_at: new Date().toISOString()
+    })
+}
+
+export const getPendingProducts = async () => {
+    const db = await initDB()
+    return db.getAll('pending_products')
+}
+
+export const removePendingProduct = async (id) => {
+    const db = await initDB()
+    await db.delete('pending_products', id)
 }
 
 // === SALES (WRITE STORE) ===
