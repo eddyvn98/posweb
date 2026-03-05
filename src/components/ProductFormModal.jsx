@@ -5,7 +5,12 @@ import { useSync } from '../contexts/SyncContext'
 import { saveProductLocal, findProductByBarcode } from '../lib/db'
 import { useNotification } from '../contexts/NotificationContext'
 import api from '../lib/api'
-import BarcodeScanner from './BarcodeScanner'
+import ProductCamera from './ProductCamera'
+import ProductImage from './ProductForm/ProductImage'
+import BarcodeSection from './ProductForm/BarcodeSection'
+import UnitSection from './ProductForm/UnitSection'
+import CategorySection from './ProductForm/CategorySection'
+import PriceStockSection from './ProductForm/PriceStockSection'
 
 const DEFAULT_UNIT = 'Cái'
 
@@ -18,359 +23,304 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     const scanLock = useRef(false)
     const [isClosed, setIsClosed] = useState(false)
     const [units, setUnits] = useState([])
-
+    const [categories, setCategories] = useState([])
     const [formData, setFormData] = useState({
-        name: '',
-        barcode: '',
-        unit: DEFAULT_UNIT,
-        price: '',
-        cost_price: '',
-        stock_quantity: 0,
-        image_url: null
+        name: '', barcode: '', unit: DEFAULT_UNIT, category: '',
+        price: '', cost_price: '', stock_quantity: 1, image_url: null
     })
 
-    const [isContinuous] = useState(true)
+    const draftId = useRef(uuidv4())
 
-    useEffect(() => {
-        return () => {
-            setIsClosed(true)
-        }
-    }, [])
 
-    const loadUnits = async () => {
+
+    const handleAutoSave = async (currentData = formData) => {
+        // Only save if there's at least one piece of data to identify the product
+        if (!currentData.name?.trim() && !currentData.barcode?.trim() && !currentData.image_url) return
+
         try {
-            const response = await api.get('/units')
-            const data = Array.isArray(response.data) ? response.data : []
-            setUnits(data)
-            if (data.length > 0 && !formData.unit) {
-                setFormData((prev) => ({ ...prev, unit: data[0].name }))
+            const data = {
+                ...currentData,
+                id: product?.id || draftId.current,
+                shop_id: shop.id,
+                price: currentData.price ? Number(currentData.price) : 0,
+                cost_price: currentData.cost_price ? Number(currentData.cost_price) : 0,
+                stock_quantity: currentData.stock_quantity ? Number(currentData.stock_quantity) : 0,
+                is_active: true,
+                created_at: product?.created_at || new Date().toISOString()
             }
-        } catch (err) {
-            console.error('Load units error:', err)
-            setUnits([])
-        }
+            await saveProductLocal(data)
+            console.log('[AutoSave] Local data saved')
+        } catch (err) { console.error('Autosave error:', err) }
     }
+
+
 
     useEffect(() => {
         loadUnits()
+        loadCategories()
+        return () => setIsClosed(true)
     }, [])
 
-    const handleCreateUnit = async () => {
-        const name = prompt('Nhập tên đơn vị mới')
-        if (!name?.trim()) return
-        try {
-            const response = await api.post('/units', { name: name.trim() })
-            const created = response.data
-            setUnits((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
-            setFormData((prev) => ({ ...prev, unit: created.name }))
-            showNotification('Đã tạo đơn vị mới', 'success')
-        } catch (err) {
-            showNotification(err.response?.data?.error || 'Không thể tạo đơn vị', 'error')
+    useEffect(() => {
+        if (product) {
+            setFormData(prev => ({
+                ...prev,
+                ...product,
+                unit: product.unit || prev.unit || DEFAULT_UNIT
+            }))
+        } else {
+            // Reset form for truly new product (not a scanned draft)
+            setFormData({
+                name: '', barcode: '', unit: DEFAULT_UNIT, category: '',
+                price: '', cost_price: '', stock_quantity: 1, image_url: null
+            })
+            draftId.current = uuidv4()
         }
+    }, [product])
+
+    const loadUnits = async () => {
+        try {
+            const res = await api.get('/units')
+            const data = Array.isArray(res.data) ? res.data : []
+            setUnits(data)
+            if (data.length > 0 && !formData.unit) setFormData(p => ({ ...p, unit: data[0].name }))
+        } catch (err) { console.error('Load units error:', err); setUnits([]) }
     }
 
-    const handleEditUnit = async () => {
-        const selected = units.find((u) => u.name === formData.unit)
-        if (!selected) {
-            showNotification('Vui lòng chọn đơn vị trước', 'info')
-            return
-        }
-
-        const name = prompt('Sửa tên đơn vị', selected.name)
-        if (!name?.trim() || name.trim() === selected.name) return
-
+    const loadCategories = async () => {
         try {
-            await api.patch(`/units/${selected.id}`, { name: name.trim() })
+            const res = await api.get('/categories')
+            const data = Array.isArray(res.data) ? res.data : []
+            setCategories(data)
+        } catch (err) { console.error('Load categories error:', err); setCategories([]) }
+    }
+
+    const handleEditUnit = async (unit, newName) => {
+        try {
+            await api.patch(`/units/${unit.id}`, { name: newName.trim() })
             await loadUnits()
-            setFormData((prev) => ({ ...prev, unit: name.trim() }))
+            if (formData.unit === unit.name) setFormData(p => ({ ...p, unit: newName.trim() }))
             showNotification('Đã cập nhật đơn vị', 'success')
+        } catch (err) { showNotification('Lỗi khi sửa đơn vị', 'error') }
+    }
+
+    const handleDeleteUnit = async (unit) => {
+        try {
+            await api.delete(`/units/${unit.id}`)
+            await loadUnits()
+            if (formData.unit === unit.name) setFormData(p => ({ ...p, unit: DEFAULT_UNIT }))
+            showNotification('Đã xóa đơn vị', 'success')
         } catch (err) {
-            showNotification(err.response?.data?.error || 'Không thể sửa đơn vị', 'error')
+            showNotification(err.response?.data?.error || 'Lỗi khi xóa đơn vị', 'error')
         }
     }
 
-    const handleImageChange = (e) => {
-        const file = e.target.files[0]
-        if (file) {
-            if (file.size > 500000) {
-                alert('Ảnh quá lớn! Vui lòng chọn ảnh < 500KB')
-                return
-            }
+    const handleEditCategory = async (cat, newName) => {
+        try {
+            await api.patch(`/categories/${cat.id}`, { name: newName.trim() })
+            await loadCategories()
+            if (formData.category === cat.name) setFormData(p => ({ ...p, category: newName.trim() }))
+            showNotification('Đã cập nhật nhóm hàng', 'success')
+        } catch (err) { showNotification('Lỗi khi sửa nhóm', 'error') }
+    }
 
-            const reader = new FileReader()
-            reader.onloadend = () => {
-                setFormData((prev) => ({ ...prev, image_url: reader.result }))
-            }
-            reader.readAsDataURL(file)
+    const handleDeleteCategory = async (cat) => {
+        try {
+            await api.delete(`/categories/${cat.id}`)
+            await loadCategories()
+            if (formData.category === cat.name) setFormData(p => ({ ...p, category: '' }))
+            showNotification('Đã xóa nhóm hàng', 'success')
+        } catch (err) {
+            showNotification(err.response?.data?.error || 'Lỗi khi xóa nhóm', 'error')
         }
     }
 
     const handleScan = async (code) => {
-        if (product) return
-        if (scanLock.current) return
+        if (product || scanLock.current) return
         scanLock.current = true
-
         try {
-            const existingProduct = await findProductByBarcode(code)
-            if (existingProduct) {
-                setFormKey((k) => k + 1)
-                setFormData({
-                    ...existingProduct,
-                    unit: existingProduct.unit || DEFAULT_UNIT
-                })
-                showNotification(`Tải: ${existingProduct.name}`, 'info')
-                return
+            const existing = await findProductByBarcode(code)
+            if (existing) {
+                setFormData({ ...existing, unit: existing.unit || DEFAULT_UNIT })
+                showNotification(`Đã tìm thấy: ${existing.name}`, 'info')
+            } else {
+                setFormData(p => ({ ...p, barcode: code }))
             }
-
-            if (isContinuous && formData.barcode && formData.barcode !== code) {
-                if (formData.name?.trim() && formData.price) {
-                    await handleAutoSave()
-                }
-
-                setFormKey((k) => k + 1)
-                setFormData({
-                    name: '',
-                    barcode: '',
-                    unit: DEFAULT_UNIT,
-                    price: '',
-                    cost_price: '',
-                    stock_quantity: 0,
-                    image_url: null
-                })
-
-                requestAnimationFrame(() => {
-                    document.getElementById('barcode-input')?.focus()
-                })
-            }
-
-            setFormData((prev) => ({
-                ...prev,
-                barcode: code
-            }))
-        } finally {
-            setTimeout(() => {
-                scanLock.current = false
-            }, 500)
-        }
+        } finally { setTimeout(() => { scanLock.current = false }, 500) }
     }
-
-    const handleAutoSave = async () => {
-        if (!isContinuous) return
-
-        try {
-            const newProduct = {
-                id: uuidv4(),
-                shop_id: shop.id,
-                ...formData,
-                unit: formData.unit || DEFAULT_UNIT,
-                price: Number(formData.price),
-                cost_price: Number(formData.cost_price),
-                stock_quantity: Number(formData.stock_quantity),
-                is_active: true,
-                created_at: new Date().toISOString()
-            }
-
-            await saveProductLocal(newProduct)
-            await pushProducts(newProduct)
-            showNotification(`Lưu: ${newProduct.name}`, 'success')
-        } catch (err) {
-            console.error('Auto-save error:', err)
-            showNotification('Lỗi lưu sản phẩm', 'error')
-        }
-    }
-
-    useEffect(() => {
-        if (product) {
-            setFormKey((k) => k + 1)
-            setFormData({
-                ...product,
-                unit: product.unit || DEFAULT_UNIT
-            })
-        }
-    }, [product])
 
     const handleSubmit = async (e) => {
-        e.preventDefault()
+        if (e) e.preventDefault()
         setLoading(true)
-
         try {
-            const newProduct = {
-                id: product?.id || uuidv4(),
-                shop_id: shop.id,
+            let finalImageUrl = formData.image_url
+            // If image is base64 (newly uploaded), upload to Telegram
+            if (formData.image_url && formData.image_url.startsWith('data:image')) {
+                try {
+                    const uploadRes = await api.post('/products/upload-image', { image: formData.image_url })
+                    if (uploadRes.data.success) {
+                        finalImageUrl = `tg_file_id:${uploadRes.data.file_id}`
+                    }
+                } catch (uploadErr) {
+                    console.error('Telegram Upload Failed:', uploadErr)
+                    // Fallback to local base64 or show warning? 
+                    // Let's proceed with base64 if TG fails as backup
+                }
+            }
+
+            const data = {
                 ...formData,
-                unit: formData.unit || DEFAULT_UNIT,
+                image_url: finalImageUrl,
+                id: product?.id || draftId.current,
+                shop_id: shop.id,
                 price: Number(formData.price),
                 cost_price: Number(formData.cost_price),
                 stock_quantity: Number(formData.stock_quantity),
                 is_active: true,
                 created_at: product?.created_at || new Date().toISOString()
             }
-
-            await saveProductLocal(newProduct)
-            await pushProducts(newProduct)
-
-            onFinish()
-            onClose()
+            await saveProductLocal(data)
+            await pushProducts(data)
+            if (e) {
+                onFinish()
+                onClose()
+            }
         } catch (err) {
-            console.error(err)
-            alert(`Lỗi: ${err.message}`)
+            if (e) alert(`Lỗi: ${err.message}`)
         } finally {
             setLoading(false)
         }
     }
 
-    const generateBarcode = () => {
-        setFormData((prev) => ({
-            ...prev,
-            barcode: `${Math.floor(Date.now() / 1000)}`
-        }))
-    }
-
     const handlePriceBlur = (field, value) => {
-        const numeric = Number(value)
-        if (!Number.isNaN(numeric) && numeric > 0 && numeric < 1000) {
-            setFormData((prev) => ({ ...prev, [field]: numeric * 1000 }))
-        }
+        const num = Number(value)
+        if (num > 0 && num < 1000) setFormData(p => ({ ...p, [field]: num * 1000 }))
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white w-full max-w-md rounded-xl shadow-2xl animate-fade-in-up max-h-[90vh] overflow-y-auto">
-                <form key={formKey} onSubmit={handleSubmit}>
-                    <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 sm:p-4">
+            <div className="bg-white w-full max-w-md rounded-none sm:rounded-xl shadow-2xl flex flex-col h-full sm:h-auto max-h-screen sm:max-h-[90vh] overflow-hidden">
+                <form key={formKey} onSubmit={handleSubmit} className="flex flex-col h-full">
+                    <div className="p-4 border-b flex justify-between items-center bg-white sticky top-0 z-10">
                         <h2 className="text-lg font-bold">{product ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}</h2>
-                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-red-500">✕</button>
+                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-red-500 text-xl p-2">✕</button>
                     </div>
 
-                    <div className="p-4 space-y-3">
-                        <BarcodeScanner onDetected={handleScan} active={!product && !isClosed} />
-
-                        <div className="flex bg-gray-50 p-2 rounded items-center gap-3">
-                            <div className="w-16 h-16 bg-white border rounded flex items-center justify-center overflow-hidden shrink-0">
-                                {formData.image_url ? (
-                                    <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="text-2xl opacity-20">📷</span>
-                                )}
-                            </div>
-                            <div className="flex-1">
-                                <label className="block text-xs font-bold text-gray-500 mb-1">ẢNH SẢN PHẨM</label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleImageChange}
-                                    className="text-xs w-full file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                    <div className="p-4 space-y-4 overflow-y-auto flex-1 pb-24 sm:pb-4">
+                        {!product ? (
+                            <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
+                                <ProductCamera
+                                    onCapture={base64 => {
+                                        const newData = { ...formData, image_url: base64 };
+                                        setFormData(newData);
+                                        handleAutoSave(newData);
+                                    }}
                                 />
+                                <div className="flex-1">
+                                    <ProductImage imageUrl={formData.image_url} onChange={url => {
+                                        const newData = { ...formData, image_url: url };
+                                        setFormData(newData);
+                                        handleAutoSave(newData);
+                                    }} />
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <ProductImage imageUrl={formData.image_url} onChange={url => {
+                                const newData = { ...formData, image_url: url };
+                                setFormData(newData);
+                                handleAutoSave(newData);
+                            }} />
+                        )}
 
+                        {/* 1. Barcode */}
+                        <BarcodeSection
+                            barcode={formData.barcode}
+                            onChange={val => setFormData(p => ({ ...p, barcode: val }))}
+                            onGenerate={() => {
+                                const newBarcode = `${Math.floor(Date.now() / 1000)}`;
+                                const newData = { ...formData, barcode: newBarcode };
+                                setFormData(newData);
+                                handleAutoSave(newData);
+                            }}
+                            onBlur={() => handleAutoSave()}
+                        />
+
+                        {/* 2. Name */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Tên sản phẩm *</label>
+                            <label className="block text-sm font-medium text-gray-700">Tên sản phẩm</label>
                             <input
-                                autoFocus
-                                required
                                 className="input w-full"
+                                placeholder="Ví dụ: Bia Heineken..."
                                 value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                onBlur={() => handleAutoSave()}
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Mã vạch</label>
-                            <div className="flex gap-2">
-                                <input
-                                    id="barcode-input"
-                                    className="input flex-1"
-                                    value={formData.barcode}
-                                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={generateBarcode}
-                                    className="btn bg-gray-100 text-xs px-2"
-                                >
-                                    Auto
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Đơn vị</label>
-                            <div className="flex gap-2">
-                                <select
-                                    className="input flex-1"
-                                    value={formData.unit || DEFAULT_UNIT}
-                                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                                >
-                                    {units.length === 0 && <option value={DEFAULT_UNIT}>{DEFAULT_UNIT}</option>}
-                                    {units.map((unit) => (
-                                        <option key={unit.id} value={unit.name}>{unit.name}</option>
-                                    ))}
-                                </select>
-                                <button type="button" onClick={handleCreateUnit} className="btn bg-green-50 text-green-700 text-xs px-2">
-                                    + ĐV
-                                </button>
-                                <button type="button" onClick={handleEditUnit} className="btn bg-amber-50 text-amber-700 text-xs px-2">
-                                    Sửa
-                                </button>
-                            </div>
-                        </div>
+                        {/* 3. Price & 4. Stock */}
+                        <PriceStockSection
+                            price={formData.price} costPrice={formData.cost_price} stockQuantity={formData.stock_quantity}
+                            onChange={(f, v) => setFormData(p => ({ ...p, [f]: v }))}
+                            onPriceBlur={(f, v) => {
+                                handlePriceBlur(f, v);
+                                handleAutoSave();
+                            }}
+                        />
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Giá bán *</label>
-                                <input
-                                    type="number" required min="0" step="1000"
-                                    className="input w-full font-mono text-lg font-bold text-primary"
-                                    value={formData.price}
-                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                    onBlur={(e) => handlePriceBlur('price', e.target.value)}
-                                    placeholder="0"
+                                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Đơn vị</label>
+                                <UnitSection
+                                    units={units} selectedUnit={formData.unit}
+                                    onChange={val => {
+                                        const newData = { ...formData, unit: val };
+                                        setFormData(newData);
+                                        handleAutoSave(newData);
+                                    }}
+                                    onCreate={async (n) => {
+                                        if (n) {
+                                            const r = await api.post('/units', { name: n });
+                                            setUnits(p => [...p, r.data]);
+                                            const newData = { ...formData, unit: r.data.name };
+                                            setFormData(newData);
+                                            handleAutoSave(newData);
+                                        }
+                                    }}
+                                    onEdit={handleEditUnit}
+                                    onDelete={handleDeleteUnit}
                                 />
-                                <div className="text-[10px] text-gray-500 mt-1">
-                                    {Number(formData.price) > 0 ? new Intl.NumberFormat('vi-VN').format(formData.price) : '0'} đ
-                                </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Giá vốn</label>
-                                <input
-                                    type="number" min="0" step="1000"
-                                    className="input w-full"
-                                    value={formData.cost_price}
-                                    onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
-                                    onBlur={(e) => handlePriceBlur('cost_price', e.target.value)}
+                                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Nhóm hàng</label>
+                                <CategorySection
+                                    categories={categories} selectedCategory={formData.category}
+                                    onChange={val => {
+                                        const newData = { ...formData, category: val };
+                                        setFormData(newData);
+                                        handleAutoSave(newData);
+                                    }}
+                                    onCreate={async (n) => {
+                                        if (n) {
+                                            try {
+                                                const r = await api.post('/categories', { name: n });
+                                                setCategories(p => [...p, r.data]);
+                                                const newData = { ...formData, category: r.data.name };
+                                                setFormData(newData);
+                                                handleAutoSave(newData);
+                                            } catch (err) { showNotification('Lỗi khi tạo nhóm', 'error') }
+                                        }
+                                    }}
+                                    onEdit={handleEditCategory}
+                                    onDelete={handleDeleteCategory}
                                 />
                             </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Tồn kho ban đầu</label>
-                            <input
-                                type="number" required
-                                className="input w-full"
-                                value={formData.stock_quantity}
-                                onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
-                            />
                         </div>
                     </div>
 
-                    <div className="p-4 border-t bg-gray-50">
+                    <div className="p-4 border-t bg-gray-50 sticky bottom-0 z-10">
                         <div className="flex gap-3">
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                disabled={loading}
-                                className="flex-1 btn bg-gray-200"
-                            >
-                                Hủy
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="flex-1 btn-primary"
-                            >
-                                {loading ? 'Đang lưu...' : 'LƯU SẢN PHẨM'}
-                            </button>
+                            <button type="button" onClick={onClose} disabled={loading} className="flex-1 btn bg-white border-gray-300">Hủy</button>
+                            <button type="submit" disabled={loading} className="flex-1 btn-primary">{loading ? 'Đang lưu...' : 'LƯU SẢN PHẨM'}</button>
                         </div>
                     </div>
                 </form>

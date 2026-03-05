@@ -1,4 +1,4 @@
-export default function CartItem({ item, onUpdateQty, onRemove }) {
+export default function CartItem({ item, onUpdateQty, onSetQty, onRemove }) {
     const handleUpdate = (delta) => {
         const currentId = item.product_id || item.id
         if (item.quantity + delta <= 0) {
@@ -11,49 +11,65 @@ export default function CartItem({ item, onUpdateQty, onRemove }) {
     }
 
     return (
-        <div className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0 group">
-            <div className="flex-1 pr-4">
-                <div className="font-bold text-sm text-gray-800 line-clamp-1 mb-0.5">
+        <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 group gap-2">
+            {/* Left side: Name and unit details - Compact */}
+            <div className="flex-1 min-w-0 pr-1">
+                <div className="font-bold text-sm text-gray-800 leading-tight truncate-2-lines break-words">
                     {item.name}
                 </div>
-                <div className="text-xs text-gray-400 font-mono">
-                    {new Intl.NumberFormat('vi-VN').format(item.price)} đ
-                </div>
-                <div className="text-[10px] text-gray-400">
-                    Đơn vị: {item.unit || 'Cái'}
+                <div className="text-[10px] text-gray-400 font-medium leading-none mt-0.5">
+                    {new Intl.NumberFormat('vi-VN').format(item.price)}đ
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
-                <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-9 bg-gray-50/50 shadow-sm">
+            {/* Right side: Everything else in a single compact row */}
+            <div className="flex items-center gap-2 shrink-0">
+                {/* Quantity Controls - Compact h-7 */}
+                <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-7 bg-white shadow-sm">
                     <button
                         onClick={() => handleUpdate(-1)}
-                        className="w-10 h-full flex items-center justify-center text-lg hover:bg-white active:bg-gray-200 transition-colors text-gray-500"
+                        className="w-6 h-full flex items-center justify-center text-sm active:bg-gray-100 text-gray-400"
                     >
                         −
                     </button>
-                    <div className="w-8 h-full flex items-center justify-center text-sm font-bold text-primary select-none">
-                        {item.quantity}
-                    </div>
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        className="w-7 h-full text-center text-xs font-black text-primary bg-transparent border-0 focus:ring-0 p-0 outline-none"
+                        value={item.quantity}
+                        onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '')
+                            onSetQty(item.product_id || item.id, parseInt(val) || 0)
+                        }}
+                        onBlur={() => {
+                            if (item.quantity === 0) {
+                                if (confirm(`Xóa "${item.name}" khỏi giỏ hàng?`)) {
+                                    onRemove(item.product_id || item.id)
+                                } else {
+                                    onSetQty(item.product_id || item.id, 1)
+                                }
+                            }
+                        }}
+                    />
                     <button
                         onClick={() => handleUpdate(1)}
-                        className="w-10 h-full flex items-center justify-center text-lg hover:bg-white active:bg-gray-200 transition-colors text-gray-500"
+                        className="w-6 h-full flex items-center justify-center text-sm active:bg-gray-100 text-gray-400"
                     >
                         +
                     </button>
                 </div>
 
-                <div className="min-w-[80px] text-right">
-                    <div className="font-bold text-sm text-primary">
-                        {new Intl.NumberFormat('vi-VN').format(item.price * item.quantity)}
-                    </div>
+                {/* Total Price - Bold & Primary */}
+                <div className="min-w-[55px] text-right font-black text-sm text-primary leading-none">
+                    {new Intl.NumberFormat('vi-VN').format(item.price * item.quantity)}
                 </div>
 
+                {/* Delete - Minimal */}
                 <button
                     onClick={() => onRemove(item.product_id || item.id)}
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                    className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-500 transition-all opacity-40 group-hover:opacity-100"
                 >
-                    ✕
+                    <span className="text-sm">✕</span>
                 </button>
             </div>
         </div>

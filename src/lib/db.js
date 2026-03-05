@@ -1,4 +1,5 @@
 import { openDB } from 'idb'
+import { matchProduct, sortSearchResults } from './searchUtils'
 
 const DB_NAME = 'pos_db'
 const DB_VERSION = 2
@@ -66,11 +67,8 @@ export const searchLocalProducts = async (query) => {
         return all.slice(0, 50)
     }
 
-    const normalizeQuery = query.toLowerCase().trim()
-    return all.filter(p =>
-        (p.name && p.name.toLowerCase().includes(normalizeQuery)) ||
-        (p.barcode && p.barcode.includes(normalizeQuery))
-    ).slice(0, 50)
+    const results = all.filter(p => matchProduct(p, query))
+    return sortSearchResults(results, query).slice(0, 50)
 }
 
 export const saveProductLocal = async (product) => {

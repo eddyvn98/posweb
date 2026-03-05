@@ -80,7 +80,7 @@ export default function Layout({ children }) {
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 overflow-x-hidden pb-24 md:pb-0">
+            <main className="flex-1 flex flex-col overflow-hidden md:pb-0">
                 {children}
             </main>
 
@@ -102,7 +102,7 @@ export default function Layout({ children }) {
                             {item.icon}
                         </span>
                         <span className="text-[10px] font-bold uppercase tracking-tighter">
-                            {item.label.split(' ')[0]}
+                            {item.label}
                         </span>
                         {isActive(item.path) && (
                             <div className="w-1 h-1 rounded-full bg-primary mt-0.5"></div>
@@ -124,17 +124,17 @@ export default function Layout({ children }) {
             {mobileMenuOpen && (
                 <div className="md:hidden fixed inset-0 z-40">
                     {/* Backdrop */}
-                    <div 
+                    <div
                         className="absolute inset-0 bg-black/40"
                         onClick={() => setMobileMenuOpen(false)}
                     />
-                    
+
                     {/* Sidebar */}
                     <div className="absolute bottom-24 left-0 right-0 mx-2 bg-white rounded-3xl shadow-2xl overflow-hidden z-50">
                         <div className="p-4 border-b border-pink-100">
                             <h2 className="font-black text-gray-800">MENU</h2>
                         </div>
-                        
+
                         <nav className="p-2 space-y-1">
                             {mobileMenuItems.map(item => (
                                 <button

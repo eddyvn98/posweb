@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS products (
   barcode TEXT NOT NULL,
   name TEXT NOT NULL,
   unit TEXT NOT NULL DEFAULT 'Cái',
+  category TEXT,
   price REAL NOT NULL DEFAULT 0,
   cost_price REAL NOT NULL DEFAULT 0,
   stock_quantity INTEGER NOT NULL DEFAULT 0,
@@ -34,6 +35,16 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 CREATE TABLE IF NOT EXISTS units (
+  id TEXT PRIMARY KEY,
+  shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME,
+  UNIQUE(shop_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS categories (
   id TEXT PRIMARY KEY,
   shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
   name TEXT NOT NULL,

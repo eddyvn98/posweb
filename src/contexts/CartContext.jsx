@@ -59,6 +59,16 @@ export function CartProvider({ children }) {
         }).filter(item => item.quantity > 0)) // Remove if 0
     }, [])
 
+    const setQuantity = useCallback((productId, quantity) => {
+        setCart(currentCart => currentCart.map(item => {
+            const currentId = item.product_id || item.id
+            if (currentId === productId) {
+                return { ...item, quantity: Math.max(0, quantity) }
+            }
+            return item
+        }).filter(item => item.quantity > 0))
+    }, [])
+
     const clearCart = useCallback(() => {
         setCart([])
     }, [])
@@ -71,6 +81,7 @@ export function CartProvider({ children }) {
         addToCart,
         removeFromCart,
         updateQuantity,
+        setQuantity,
         clearCart,
         totalAmount,
         totalItems

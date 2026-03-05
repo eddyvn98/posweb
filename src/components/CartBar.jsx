@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
+import CartItem from './CartItem'
 
 export default function CartBar() {
     const navigate = useNavigate()
     const location = useLocation()
-    const { cart, totalAmount, totalItems } = useCart()
+    const { cart, totalAmount, totalItems, removeFromCart, updateQuantity, setQuantity } = useCart()
     const [expanded, setExpanded] = useState(false)
     const [animate, setAnimate] = useState(false)
 
@@ -35,20 +36,15 @@ export default function CartBar() {
                         <span className="font-bold text-gray-700">Chi tiết giỏ hàng</span>
                         <button onClick={() => setExpanded(false)} className="text-gray-400 font-bold text-xl">&times;</button>
                     </div>
-                    <div className="max-h-[300px] overflow-y-auto p-4 space-y-3">
-                        {cart.map((item, idx) => (
-                            <div key={item.product_id || item.id || idx} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0 last:pb-0">
-                                <div className="flex-1">
-                                    <div className="font-bold text-gray-800 line-clamp-1">{item.name}</div>
-                                    <div className="text-[10px] text-gray-400">{new Intl.NumberFormat('vi-VN').format(item.price)}đ</div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <span className="font-bold text-primary">x{item.quantity}</span>
-                                    <span className="font-bold text-gray-800 min-w-[70px] text-right">
-                                        {new Intl.NumberFormat('vi-VN').format(item.price * item.quantity)}
-                                    </span>
-                                </div>
-                            </div>
+                    <div className="max-h-[350px] overflow-y-auto px-4 py-2 space-y-1 custom-scrollbar">
+                        {cart.map((item) => (
+                            <CartItem
+                                key={item.product_id || item.id}
+                                item={item}
+                                onUpdateQty={updateQuantity}
+                                onSetQty={setQuantity}
+                                onRemove={removeFromCart}
+                            />
                         ))}
                     </div>
                 </div>

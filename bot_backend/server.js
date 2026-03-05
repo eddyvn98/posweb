@@ -10,6 +10,7 @@ const salesRoutes = require('./routes/sales');
 const reportsRoutes = require('./routes/reports');
 const importsRoutes = require('./routes/imports');
 const unitsRoutes = require('./routes/units');
+const categoriesRoutes = require('./routes/categories');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -28,6 +29,7 @@ app.use('/api/sales', salesRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/imports', importsRoutes);
 app.use('/api/units', unitsRoutes);
+app.use('/api/categories', categoriesRoutes);
 
 // Telegram Bot Setup
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -49,9 +51,21 @@ if (BOT_TOKEN) {
         .then(() => console.log('🤖 Telegram Bot is running...'))
         .catch(err => console.error('Bot launch error:', err));
 
-    // Get current WebApp URL (for debugging)
     app.get('/api/admin/config/webapp-url', (req, res) => {
         res.json({ url: WEB_APP_URL });
+    });
+
+    // Image Proxy for Telegram file_id
+    app.get('/api/images/tg/:fileId', async (req, res) => {
+        const { fileId } = req.params;
+        try {
+            const file = await bot.telegram.getFile(fileId);
+            const fileLink = `https://api.telegram.org/file/bot${BOT_TOKEN}/${file.file_path}`;
+            res.redirect(fileLink);
+        } catch (error) {
+            console.error('File Proxy Error:', error);
+            res.status(404).send('Image not found');
+        }
     });
 
     // Admin endpoint to update URL on the fly

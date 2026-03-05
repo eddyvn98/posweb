@@ -14,22 +14,24 @@ export function useScanBarcode({ onScan, enabled = true }) {
             const now = Date.now()
             const char = e.key
 
+            // Barcode scanners usually end with 'Enter'
             if (char === 'Enter') {
-                if (buffer.current.length > 2) { // Min valid barcode length
+                if (buffer.current.length >= 3) {
                     onScan(buffer.current)
                     buffer.current = ''
+                    e.preventDefault()
                 } else {
-                    // Treat as normal enter if buffer too short
+                    buffer.current = ''
                 }
                 return
             }
 
-            // Ignore special keys
-            if (char.length > 1) return
+            // Ignore system/control keys
+            if (!char || char.length > 1) return
 
             // Logic: Manual typing is slow, scanner is fast.
-            // Reset buffer if too slow (likely manual typing)
-            if (now - lastKeyTime.current > 100) {
+            // Bluetooth scanners might have slight jitter, so 200ms is safer than 50ms-100ms
+            if (now - lastKeyTime.current > 200) {
                 buffer.current = ''
             }
 
