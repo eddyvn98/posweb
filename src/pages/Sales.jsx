@@ -18,6 +18,7 @@ export default function Sales() {
     const [products, setProducts] = useState([])
     const [showCheckout, setShowCheckout] = useState(false)
     const [showQuickSale, setShowQuickSale] = useState(false)
+    const [quickSalePreset, setQuickSalePreset] = useState({ barcode: '', name: '' })
     const [lastSale, setLastSale] = useState(null)
     const [lastScanned, setLastScanned] = useState(null)
     const [scanError, setScanError] = useState(null)
@@ -82,9 +83,12 @@ export default function Sales() {
             playBeep('success')
             setTimeout(() => setLastScanned(null), 2000)
         } else {
-            setScanError(`Mã "${code}" chưa có`)
+            setQuickSalePreset({
+                barcode: code,
+                name: `SP ${code}`
+            })
+            setShowQuickSale(true)
             playBeep('error')
-            setTimeout(() => setScanError(null), 3000)
         }
     }
 
@@ -250,8 +254,9 @@ export default function Sales() {
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             onKeyDown={(e) => {
-                                if (e.key === 'Enter' && query.trim()) {
-                                    handleScanResult(query.trim())
+                                const scanCode = e.currentTarget.value.trim()
+                                if (e.key === 'Enter' && scanCode) {
+                                    handleScanResult(scanCode)
                                     e.preventDefault()
                                 }
                             }}
@@ -267,7 +272,10 @@ export default function Sales() {
 
                     {/* Quick Sale Button - Compact */}
                     <button
-                        onClick={() => setShowQuickSale(true)}
+                        onClick={() => {
+                            setQuickSalePreset({ barcode: '', name: '' })
+                            setShowQuickSale(true)
+                        }}
                         className="h-10 px-3 bg-primary text-white font-bold rounded-xl shadow-sm active:scale-95 transition-all text-[10px] flex items-center gap-1 shrink-0 uppercase"
                     >
                         <span>⚡</span> <span className="hidden xs:inline">BÁN NHANH</span><span className="xs:hidden">NHANH</span>
@@ -295,8 +303,13 @@ export default function Sales() {
 
             {showQuickSale && (
                 <QuickSaleModal
-                    onClose={() => setShowQuickSale(false)}
+                    onClose={() => {
+                        setShowQuickSale(false)
+                        setQuickSalePreset({ barcode: '', name: '' })
+                    }}
                     onAddToCart={addToCart}
+                    presetBarcode={quickSalePreset.barcode}
+                    presetName={quickSalePreset.name}
                 />
             )}
 

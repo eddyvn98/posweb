@@ -3,11 +3,11 @@ import { v4 as uuidv4 } from 'uuid'
 import { useAuth } from '../contexts/AuthContext'
 import { saveProductLocal } from '../lib/db'
 
-export default function QuickSaleModal({ onClose, onAddToCart }) {
+export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '', presetName = '' }) {
     const { shop } = useAuth()
     const [step, setStep] = useState(1) // 1: Price, 2: Note, 3: Quantity
     const [price, setPrice] = useState('')
-    const [name, setName] = useState('')
+    const [name, setName] = useState(presetName)
     const [quantity, setQuantity] = useState(1)
     const [saveToCatalog, setSaveToCatalog] = useState(true)
 
@@ -62,7 +62,7 @@ export default function QuickSaleModal({ onClose, onAddToCart }) {
             unit: 'Cái',
             price: actualPrice,
             sku: 'QUICK',
-            barcode: `QUICK-${Date.now().toString().slice(-6)}`,
+            barcode: presetBarcode || `QUICK-${Date.now().toString().slice(-6)}`,
             stock_quantity: 9999,
             is_active: true,
             created_at: new Date().toISOString()
@@ -146,6 +146,9 @@ export default function QuickSaleModal({ onClose, onAddToCart }) {
                             onChange={e => setName(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && nextStep()}
                         />
+                        {presetBarcode && (
+                            <div className="text-[10px] text-gray-400 font-mono">Mã quét: {presetBarcode}</div>
+                        )}
                     </div>
 
                     {/* Step 3: Quantity */}

@@ -24,6 +24,7 @@ export const SyncProvider = ({ children }) => {
     useEffect(() => {
         const handleOnline = () => {
             setIsOnline(true)
+            pullProducts()
             pushSales()
             pushPendingProducts()
         }
@@ -50,6 +51,7 @@ export const SyncProvider = ({ children }) => {
         if (!user || !shop) return
         const interval = setInterval(() => {
             if (navigator.onLine) {
+                pullProducts()
                 pushSales()
                 pushPendingProducts()
             }
@@ -108,6 +110,11 @@ export const SyncProvider = ({ children }) => {
             return { queued: true, error: err }
         }
     }
+
+    useEffect(() => {
+        if (!user || !shop || !navigator.onLine) return
+        pullProducts()
+    }, [user, shop])
 
     const deleteProduct = async (productId) => {
         if (!user) return
