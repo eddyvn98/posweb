@@ -1,7 +1,6 @@
-const { v4: uuidv4 } = require('uuid');
-const db = require('../../db/connection');
+const { getUnitsRepo } = require('../../repositories/units.repo');
 
-function createUnit(req, res) {
+async function createUnit(req, res) {
     try {
         const { shop_id } = req.user;
         const name = (req.body?.name || '').trim();
@@ -10,31 +9,12 @@ function createUnit(req, res) {
             return res.status(400).json({ error: 'Unit name is required' });
         }
 
-        const exists = db.prepare(`
-            SELECT id FROM units
-            WHERE shop_id = ?
-              AND lower(name) = lower(?)
-              AND is_active = 1
-            LIMIT 1
-        `).get(shop_id, name);
-
-        if (exists) {
-            return res.status(409).json({ error: 'Unit already exists' });
-        }
-
-        const newUnit = {
-            id: uuidv4(),
-            shop_id,
-            name
-        };
-
-        db.prepare(`
-            INSERT INTO units (id, shop_id, name, is_active)
-            VALUES (@id, @shop_id, @name, 1)
-        `).run(newUnit);
-
+        const newUnit = await getUnitsRepo().createUnit(shop_id, name);
         res.status(201).json(newUnit);
     } catch (error) {
+        if (error.message === 'Unit already exists') {
+            return res.status(409).json({ error: 'Unit already exists' });
+        }
         console.error('Create Unit Error:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }

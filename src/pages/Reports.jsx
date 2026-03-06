@@ -138,7 +138,7 @@ export default function Reports() {
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+            <div className="flex gap-2 mb-4 sm:mb-6 overflow-x-auto pb-2">
                 {[
                     { id: 'revenue', label: '📈 Doanh thu', icon: '💰' },
                     { id: 'cashbook', label: '📊 Sổ quỹ', icon: '💵' },
@@ -148,7 +148,7 @@ export default function Reports() {
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`
-                            px-6 py-3 rounded-2xl font-black text-sm whitespace-nowrap transition-all
+                            px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm whitespace-nowrap transition-all
                             ${activeTab === tab.id
                                 ? 'bg-primary text-white shadow-lg shadow-pink-200'
                                 : 'bg-white text-gray-700 border border-pink-100 hover:border-pink-300'
@@ -161,43 +161,55 @@ export default function Reports() {
             </div>
 
             {/* Month Navigation */}
-            <div className="bg-white rounded-3xl p-4 mb-6 border border-pink-50 shadow-sm">
-                <div className="flex items-center justify-between gap-4">
+            <div className="bg-white rounded-3xl p-3 sm:p-4 mb-6 border border-pink-50 shadow-sm">
+                <div className="flex items-center justify-between gap-2 sm:gap-4">
                     <button
                         onClick={handlePreviousMonth}
-                        className="btn bg-pink-100 text-pink-600 font-black px-4 h-10 rounded-xl hover:bg-pink-200 transition"
+                        className="btn bg-pink-100 text-pink-600 font-black px-2 sm:px-4 h-8 sm:h-10 rounded-lg sm:rounded-xl hover:bg-pink-200 transition text-xs sm:text-base min-w-[90px] sm:min-w-0"
                     >
-                        ← Tháng trước
+                        <span className="sm:hidden">← Trước</span>
+                        <span className="hidden sm:inline">← Tháng trước</span>
                     </button>
 
                     <div className="text-center flex-1">
-                        <p className="text-gray-500 text-sm font-bold">THÁNG</p>
-                        <p className="text-2xl font-black text-gray-800 capitalize">{monthName}</p>
+                        <p className="text-gray-500 text-[11px] sm:text-sm font-bold">THÁNG</p>
+                        <p className="text-lg sm:text-2xl font-black text-gray-800 capitalize leading-tight">{monthName}</p>
                     </div>
 
                     <button
                         onClick={handleNextMonth}
-                        className="btn bg-pink-100 text-pink-600 font-black px-4 h-10 rounded-xl hover:bg-pink-200 transition"
+                        className="btn bg-pink-100 text-pink-600 font-black px-2 sm:px-4 h-8 sm:h-10 rounded-lg sm:rounded-xl hover:bg-pink-200 transition text-xs sm:text-base min-w-[90px] sm:min-w-0"
                     >
-                        Tháng sau →
+                        <span className="sm:hidden">Sau →</span>
+                        <span className="hidden sm:inline">Tháng sau →</span>
                     </button>
                 </div>
 
                 {/* Export Buttons */}
-                <div className="w-full mt-4 flex gap-3 flex-wrap">
+                <div className="w-full mt-3 sm:mt-4 grid grid-cols-2 gap-2 sm:gap-3">
                     <button
                         onClick={handleExportMonthlyReport}
                         disabled={exporting || !revenueData}
-                        className="flex-1 btn bg-blue-500 text-white font-black rounded-2xl hover:bg-blue-600 disabled:opacity-50 transition"
+                        className="w-full btn bg-blue-500 text-white font-black rounded-lg sm:rounded-2xl hover:bg-blue-600 disabled:opacity-50 transition text-xs sm:text-base px-2 sm:px-4 h-11 sm:h-12"
                     >
-                        {exporting ? '⏳ Đang xuất...' : '📊 Xuất báo cáo tháng'}
+                        {exporting ? '⏳ Đang xuất...' : (
+                            <>
+                                <span className="sm:hidden">📊 Xuất tháng</span>
+                                <span className="hidden sm:inline">📊 Xuất báo cáo tháng</span>
+                            </>
+                        )}
                     </button>
                     <button
                         onClick={handleExportAllData}
                         disabled={exporting}
-                        className="flex-1 btn bg-green-500 text-white font-black rounded-2xl hover:bg-green-600 disabled:opacity-50 transition"
+                        className="w-full btn bg-green-500 text-white font-black rounded-lg sm:rounded-2xl hover:bg-green-600 disabled:opacity-50 transition text-xs sm:text-base px-2 sm:px-4 h-11 sm:h-12"
                     >
-                        {exporting ? '⏳ Đang xuất...' : '💾 Sao lưu toàn bộ'}
+                        {exporting ? '⏳ Đang xuất...' : (
+                            <>
+                                <span className="sm:hidden">💾 Sao lưu</span>
+                                <span className="hidden sm:inline">💾 Sao lưu toàn bộ</span>
+                            </>
+                        )}
                     </button>
                 </div>
 
@@ -281,3 +293,4 @@ export default function Reports() {
         </div>
     )
 }
+

@@ -32,6 +32,7 @@ export default function BulkImportModal({ onClose, onFinish }) {
 
         try {
             const existing = await findProductByBarcode(code)
+            const itemId = existing?.id || uuidv4()
 
             // 1. Update UI List (History - Newest on top)
             setScannedItems(prev => {
@@ -43,7 +44,7 @@ export default function BulkImportModal({ onClose, onFinish }) {
                     return [updated, ...next]
                 }
                 return [{
-                    id: existing?.id || uuidv4(),
+                    id: itemId,
                     barcode: code,
                     name: existing?.name || `SP mới (${code})`,
                     quantity: 1,
@@ -57,7 +58,7 @@ export default function BulkImportModal({ onClose, onFinish }) {
             // 2. Save immediately to DB
             const productData = {
                 ...(existing || {}),
-                id: existing?.id || uuidv4(),
+                id: itemId,
                 shop_id: shop.id,
                 barcode: code,
                 name: existing?.name || `SP mới (${code})`,
@@ -96,7 +97,7 @@ export default function BulkImportModal({ onClose, onFinish }) {
             const existing = await findProductByBarcode(item.barcode)
             const productData = {
                 ...(existing || {}),
-                id: item.id,
+                id: existing?.id || item.id,
                 shop_id: shop.id,
                 barcode: item.barcode,
                 name: item.name,

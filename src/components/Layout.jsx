@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from 'react-router-dom'
+﻿import { useNavigate, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
@@ -21,6 +21,7 @@ export default function Layout({ children }) {
         { path: '/sales', label: 'Bán hàng', icon: '🛒' },
         { path: '/products', label: 'Sản phẩm', icon: '📦' },
         { path: '/imports', label: 'Nhập hàng', icon: '📥' },
+        { path: '/imports-sheet', label: 'Nhập sheet', icon: '🧾' },
         { path: '/reports', label: 'Thống kê', icon: '📊' },
         { path: '/cashbook', label: 'Sổ quỹ', icon: '📈' },
         { path: '/history', label: 'Lịch sử', icon: '📜' },
@@ -30,6 +31,7 @@ export default function Layout({ children }) {
     const mobileMenuItems = [
         { path: '/dashboard', label: 'Tổng quan', icon: '⛺' },
         { path: '/imports', label: 'Nhập hàng', icon: '📥' },
+        { path: '/imports-sheet', label: 'Nhập sheet', icon: '🧾' },
         { path: '/cashbook', label: 'Sổ quỹ', icon: '📈' },
         { path: '/history', label: 'Lịch sử', icon: '📜' },
         { path: '/settings', label: 'Cài đặt', icon: '⚙️' },
@@ -115,7 +117,11 @@ export default function Layout({ children }) {
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                     className={`flex-1 flex flex-col items-center gap-1 py-2 transition-all ${mobileMenuOpen ? 'text-primary' : 'text-gray-400'}`}
                 >
-                    <span className="text-2xl">☰</span>
+                    <span className="flex h-6 w-6 items-center justify-center" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" className="h-6 w-6 fill-none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                            <path d="M4 7h16M4 12h16M4 17h16" />
+                        </svg>
+                    </span>
                     <span className="text-[10px] font-bold uppercase tracking-tighter">Thêm</span>
                 </button>
             </nav>
@@ -179,3 +185,4 @@ export default function Layout({ children }) {
         </div>
     )
 }
+

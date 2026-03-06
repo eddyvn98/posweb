@@ -72,9 +72,46 @@ CREATE TABLE IF NOT EXISTS imports (
   shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
   import_date TEXT NOT NULL,
   supplier_name TEXT NOT NULL,
+  supplier_tax_code TEXT,
+  invoice_number TEXT,
+  invoice_date TEXT,
+  invoice_type TEXT DEFAULT 'no_invoice',
+  payment_method TEXT DEFAULT 'unpaid',
+  payment_date TEXT,
+  paid_amount REAL NOT NULL DEFAULT 0,
+  total_goods_amount REAL NOT NULL DEFAULT 0,
+  total_vat_amount REAL NOT NULL DEFAULT 0,
+  attachment_files TEXT,
+  status TEXT DEFAULT 'draft',
   total_cost REAL NOT NULL DEFAULT 0,
   note TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS import_items (
+  id TEXT PRIMARY KEY,
+  import_id TEXT NOT NULL REFERENCES imports(id) ON DELETE CASCADE,
+  product_id TEXT REFERENCES products(id) ON DELETE SET NULL,
+  product_name TEXT NOT NULL,
+  quantity REAL NOT NULL DEFAULT 0,
+  unit_price REAL NOT NULL DEFAULT 0,
+  vat_amount REAL NOT NULL DEFAULT 0,
+  total_amount REAL NOT NULL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS suppliers (
+  id TEXT PRIMARY KEY,
+  shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+  name TEXT NOT NULL DEFAULT '',
+  phone TEXT,
+  address TEXT,
+  tax_code TEXT,
+  bank_account TEXT,
+  bank_name TEXT,
+  note TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- BACKUP LOGS

@@ -1,9 +1,9 @@
-const db = require('../../db/connection');
+const { getCategoriesRepo } = require('../../repositories/categories.repo');
 
-function getCategories(req, res) {
+async function getCategories(req, res) {
     try {
         const { shop_id } = req.user;
-        const categories = db.prepare('SELECT * FROM categories WHERE shop_id = ? ORDER BY name ASC').all(shop_id);
+        const categories = await getCategoriesRepo().getCategories(shop_id);
         res.json(categories);
     } catch (error) {
         console.error('Get Categories Error:', error);

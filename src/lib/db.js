@@ -71,12 +71,32 @@ export const searchLocalProducts = async (query) => {
     return sortSearchResults(results, query).slice(0, 50)
 }
 
+export const getAllLocalProducts = async () => {
+    const db = await initDB()
+    return db.getAll('products')
+}
+
 export const saveProductLocal = async (product) => {
     const db = await initDB()
     const tx = db.transaction('products', 'readwrite')
+    const nextProduct = { ...product }
+    const barcode = String(nextProduct.barcode || '').trim()
+
+    // IndexedDB enforces unique barcode. If an old draft with another id exists,
+    // replace it so "save from edit modal" does not crash on constraint errors.
+    if (barcode) {
+        const existingKey = await tx.store.index('barcode').getKey(barcode)
+        if (!nextProduct.id && existingKey) {
+            nextProduct.id = existingKey
+        }
+        if (existingKey && nextProduct.id && existingKey !== nextProduct.id) {
+            await tx.store.delete(existingKey)
+        }
+    }
+
     await tx.store.put({
-        ...product,
-        search_normalize: product.name.toLowerCase()
+        ...nextProduct,
+        search_normalize: String(nextProduct.name || '').toLowerCase()
     })
     await tx.done
 }

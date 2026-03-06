@@ -1,7 +1,7 @@
-const db = require('../../db/connection');
 const bcrypt = require('bcryptjs');
+const { getAuthRepo } = require('../../repositories/auth.repo');
 
-function changePassword(req, res) {
+async function changePassword(req, res) {
     try {
         const userId = req.user.id;
         const { currentPassword, newPassword } = req.body;
@@ -14,7 +14,7 @@ function changePassword(req, res) {
             return res.status(400).json({ error: 'New password must be at least 8 characters' });
         }
 
-        const user = db.prepare('SELECT id, password FROM users WHERE id = ?').get(userId);
+        const user = await getAuthRepo().getUserById(userId);
         if (!user || !user.password) {
             return res.status(404).json({ error: 'User not found or password auth unavailable' });
         }
@@ -30,7 +30,7 @@ function changePassword(req, res) {
         }
 
         const newHash = bcrypt.hashSync(newPassword, 10);
-        db.prepare('UPDATE users SET password = ? WHERE id = ?').run(newHash, userId);
+        await getAuthRepo().updateUserPassword(userId, newHash);
 
         return res.json({ success: true, message: 'Password changed successfully' });
     } catch (error) {

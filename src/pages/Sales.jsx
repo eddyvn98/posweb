@@ -99,7 +99,7 @@ export default function Sales() {
     }
 
     return (
-        <div className="h-[100dvh] flex flex-col overflow-hidden bg-white">
+        <div className="h-[100dvh] flex flex-col overflow-hidden bg-white md:flex-col-reverse">
             {/* Main Content: Products + Cart */}
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 bg-gray-50">
                 {/* --- LEFT: MAIN LOGIC AREA --- */}
@@ -172,11 +172,11 @@ export default function Sales() {
             </div>
 
             {/* Search Bar + Action Buttons - Combined Single Row */}
-            <div className="p-2 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.1)] z-30 border-t pb-[100px] md:pb-3 transition-all relative">
+            <div className="p-2 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.1)] z-30 border-t pb-[100px] md:pb-3 transition-all relative md:border-t-0 md:border-b md:shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
 
                 {/* 🚀 INTEGRATED SEARCH RESULTS - Pops up from the bar */}
                 {isSearching && (
-                    <div className="absolute bottom-full left-0 right-0 z-40 px-2 pb-2 animate-in slide-in-from-bottom-5 duration-200">
+                    <div className="absolute bottom-full left-0 right-0 z-40 px-2 pb-2 animate-in slide-in-from-bottom-5 duration-200 md:bottom-auto md:top-full md:pb-0 md:pt-2">
                         <div className="bg-white rounded-t-[28px] shadow-[0_-25px_60px_rgba(0,0,0,0.2)] border-x border-t border-gray-100 flex flex-col max-h-[50vh] overflow-hidden">
                             <div className="p-3 border-b flex items-center justify-between bg-white/95 backdrop-blur-md sticky top-0 z-10">
                                 <span className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] px-2">Kết quả</span>

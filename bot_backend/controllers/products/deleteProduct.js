@@ -1,17 +1,13 @@
-const db = require('../../db/connection');
+const { getProductsRepo } = require('../../repositories/products.repo');
 
-function deleteProduct(req, res) {
+async function deleteProduct(req, res) {
     try {
         const { shop_id } = req.user;
         const { id } = req.params;
 
-        const result = db.prepare(`
-            UPDATE products
-            SET is_active = 0
-            WHERE id = ? AND shop_id = ?
-        `).run(id, shop_id);
+        const ok = await getProductsRepo().softDeleteProduct(shop_id, id);
 
-        if (result.changes === 0) {
+        if (!ok) {
             return res.status(404).json({ error: 'Product not found' });
         }
 

@@ -4,6 +4,8 @@ const { Telegraf, Markup } = require('telegraf');
 require('dotenv').config();
 
 const { initSchema } = require('./db/schema');
+const { getDbProvider, isMongoEnabled, isSqliteEnabled } = require('./db/provider');
+const { connectMongo, getMongoHealth } = require('./db/mongo');
 const authRoutes = require('./routes/auth');
 const productsRoutes = require('./routes/products');
 const salesRoutes = require('./routes/sales');
@@ -11,16 +13,20 @@ const reportsRoutes = require('./routes/reports');
 const importsRoutes = require('./routes/imports');
 const unitsRoutes = require('./routes/units');
 const categoriesRoutes = require('./routes/categories');
+const suppliersRoutes = require('./routes/suppliers');
+const filesRoutes = require('./routes/files');
 
 const app = express();
 const port = process.env.PORT || 3001;
+const dbProvider = getDbProvider();
 
-// Initialize Database
-initSchema();
+if (isSqliteEnabled()) {
+    initSchema({ seedDefaults: dbProvider === 'sqlite' });
+}
 
 // Middlewares
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '12mb' }));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -28,6 +34,8 @@ app.use('/api/products', productsRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/imports', importsRoutes);
+app.use('/api/suppliers', suppliersRoutes);
+app.use('/api/files', filesRoutes);
 app.use('/api/units', unitsRoutes);
 app.use('/api/categories', categoriesRoutes);
 
@@ -86,18 +94,43 @@ if (BOT_TOKEN) {
     console.warn('⚠️ TELEGRAM_BOT_TOKEN missing. Bot will not run.');
 }
 
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
-
-app.listen(port, () => {
-    console.log(`🌐 API Server listening at http://localhost:${port}`);
-
-    // Tự động backup khi khởi động (chạy sau 5s để đảm bảo DB đã sẵn sàng)
-    setTimeout(async () => {
-        try {
-            const { sendBackupToTelegram } = require('./services/backupService');
-            await sendBackupToTelegram();
-        } catch (e) {
-            console.error('Auto backup failed:', e.message);
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        provider: dbProvider,
+        sqlite: {
+            enabled: isSqliteEnabled(),
+            connected: isSqliteEnabled()
+        },
+        mongo: {
+            enabled: isMongoEnabled(),
+            ...getMongoHealth()
         }
-    }, 5000);
+    });
+});
+
+async function startServer() {
+    if (isMongoEnabled()) {
+        await connectMongo();
+        console.log('MongoDB connected');
+    }
+
+    app.listen(port, () => {
+        console.log(`🌐 API Server listening at http://localhost:${port}`);
+
+        // Tự động backup khi khởi động (chạy sau 5s để đảm bảo DB đã sẵn sàng)
+        setTimeout(async () => {
+            try {
+                const { sendBackupToTelegram } = require('./services/backupService');
+                await sendBackupToTelegram();
+            } catch (e) {
+                console.error('Auto backup failed:', e.message);
+            }
+        }, 5000);
+    });
+}
+
+startServer().catch((error) => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
 });

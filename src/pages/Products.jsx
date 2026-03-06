@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import { matchProduct } from '../lib/searchUtils'
+import { getAllLocalProducts } from '../lib/db'
 import ProductFormModal from '../components/ProductFormModal'
 import BulkImportModal from '../components/BulkImportModal'
 import { useCart } from '../contexts/CartContext'
 import { useNotification } from '../contexts/NotificationContext'
 import { useScanBarcode } from '../hooks/useScanBarcode'
+import { useSync } from '../contexts/SyncContext'
 
 export default function Products() {
     const { addToCart } = useCart()
     const { showNotification } = useNotification()
+    const { deleteProduct } = useSync()
 
     const [query, setQuery] = useState('')
     const [allProducts, setAllProducts] = useState([])
@@ -22,20 +24,24 @@ export default function Products() {
     const [selectedProducts, setSelectedProducts] = useState([])
     const [isSelectionMode, setIsSelectionMode] = useState(false)
     const longPressTimer = useRef(null)
+    const longPressTriggered = useRef(false)
 
     const [filter, setFilter] = useState('all')
     const [sortBy, setSortBy] = useState('name_asc')
 
     const toggleSelect = (id) => {
-        setSelectedProducts(prev => {
-            const next = prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        setSelectedProducts((prev) => {
+            const next = prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
             if (next.length === 0) setIsSelectionMode(false)
             return next
         })
     }
 
     const startLongPress = (id) => {
+        clearLongPress()
+        longPressTriggered.current = false
         longPressTimer.current = setTimeout(() => {
+            longPressTriggered.current = true
             setIsSelectionMode(true)
             toggleSelect(id)
         }, 500)
@@ -43,20 +49,21 @@ export default function Products() {
 
     const clearLongPress = () => {
         if (longPressTimer.current) clearTimeout(longPressTimer.current)
+        longPressTimer.current = null
     }
 
     const handleScan = async (code) => {
         if (showModal || showBulkModal) return
 
-        const existing = allProducts.find(p => p.barcode === code)
+        const existing = allProducts.find((product) => product.barcode === code)
         if (existing) {
             setEditingProduct(existing)
             setShowModal(true)
-            showNotification(`Đã tìm thấy: ${existing.name}`, 'info')
+            showNotification(`Da tim thay: ${existing.name}`, 'info')
         } else {
             setEditingProduct({ barcode: code, name: '', price: '', stock_quantity: 1 })
             setShowModal(true)
-            showNotification(`Mã mới: ${code}. Đang tạo nháp...`, 'info')
+            showNotification(`Ma moi: ${code}. Dang tao nhap...`, 'info')
         }
     }
 
@@ -64,11 +71,27 @@ export default function Products() {
 
     const fetchProducts = async () => {
         try {
-            const res = await api.get('/products')
-            setAllProducts(res.data)
+            const [apiRes, localProducts] = await Promise.all([
+                api.get('/products'),
+                getAllLocalProducts()
+            ])
+
+            const merged = new Map()
+
+            ;(apiRes.data || []).forEach((product) => {
+                const key = product.barcode || product.id
+                if (key) merged.set(key, product)
+            })
+
+            ;(localProducts || []).forEach((product) => {
+                const key = product.barcode || product.id
+                if (key) merged.set(key, product)
+            })
+
+            setAllProducts(Array.from(merged.values()))
         } catch (error) {
-            console.error("Failed to fetch products", error)
-            showNotification("Lỗi tải sản phẩm", "error")
+            console.error('Failed to fetch products', error)
+            showNotification('Loi tai san pham', 'error')
         }
     }
 
@@ -77,9 +100,9 @@ export default function Products() {
     useEffect(() => {
         let processed = [...allProducts]
         if (query && query.trim()) {
-            processed = processed.filter(p => matchProduct(p, query))
+            processed = processed.filter((product) => matchProduct(product, query))
         }
-        if (filter === 'low_stock') processed = processed.filter(p => p.stock_quantity < 10)
+        if (filter === 'low_stock') processed = processed.filter((product) => product.stock_quantity < 10)
         processed.sort((a, b) => {
             if (sortBy === 'name_asc') return a.name.localeCompare(b.name)
             if (sortBy === 'price_asc') return a.price - b.price
@@ -90,62 +113,113 @@ export default function Products() {
         setProducts(processed)
     }, [allProducts, query, filter, sortBy])
 
-    const handleCreate = () => { setEditingProduct(null); setShowModal(true) }
-    const handleEdit = (p) => { setEditingProduct(p); setShowModal(true) }
-
-    const handleDeleteSelected = async () => {
-        if (confirm(`Bạn chắc chắn muốn xoá ${selectedProducts.length} sản phẩm đã chọn?`)) {
-            let successCount = 0;
-            for (const id of selectedProducts) {
-                try {
-                    await api.delete(`/products/${id}`)
-                    successCount++;
-                } catch (error) {
-                    console.error("Failed to delete", id)
-                }
-            }
-            setSelectedProducts([])
-            setIsSelectionMode(false)
-            fetchProducts()
-            showNotification(`Đã xóa ${successCount} sản phẩm`, 'info')
-        }
+    const handleCreate = () => {
+        setEditingProduct(null)
+        setShowModal(true)
     }
 
-    const handleAddToCart = (e, product) => { e.stopPropagation(); addToCart(product) }
+    const handleEdit = (product) => {
+        setEditingProduct(product)
+        setShowModal(true)
+    }
+
+    const handleCardClick = (product) => {
+        if (longPressTriggered.current) {
+            longPressTriggered.current = false
+            return
+        }
+        if (isSelectionMode) {
+            toggleSelect(product.id)
+            return
+        }
+        handleEdit(product)
+    }
+
+    const handleDeleteSelected = async () => {
+        if (!selectedProducts.length) return
+        if (!confirm(`Ban chac chan muon xoa ${selectedProducts.length} san pham da chon?`)) return
+
+        const idsToDelete = [...selectedProducts]
+        let successCount = 0
+
+        setAllProducts((prev) => prev.filter((product) => !idsToDelete.includes(product.id)))
+        setSelectedProducts([])
+        setIsSelectionMode(false)
+
+        for (const id of idsToDelete) {
+            try {
+                await deleteProduct(id)
+                successCount++
+            } catch (error) {
+                console.error('Failed to delete', id, error)
+            }
+        }
+
+        await fetchProducts()
+        showNotification(`Da xoa ${successCount} san pham`, 'info')
+    }
+
+    const handleAddToCart = (event, product) => {
+        event.stopPropagation()
+        addToCart(product)
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             <div className="bg-white shadow-sm p-4 sticky top-0 z-10 flex flex-col gap-3 border-b">
                 <div className="flex gap-3 items-center">
                     <h1 className="text-xl font-black flex-1 text-gray-800 uppercase tracking-tighter">
-                        {isSelectionMode ? `${selectedProducts.length} Đang chọn` : 'SẢN PHẨM'}
+                        {isSelectionMode ? `${selectedProducts.length} Dang chon` : 'SAN PHAM'}
                     </h1>
                     <div className="flex gap-2">
                         {isSelectionMode ? (
                             <>
-                                <button onClick={() => { setIsSelectionMode(false); setSelectedProducts([]); }} className="btn bg-gray-100 text-gray-600 px-3 text-xs font-bold h-10 rounded-xl">Hủy</button>
-                                <button onClick={handleDeleteSelected} className="btn bg-red-500 text-white px-4 shadow-lg text-sm font-bold h-10 rounded-xl">Xóa hết</button>
+                                <button
+                                    onClick={() => {
+                                        setIsSelectionMode(false)
+                                        setSelectedProducts([])
+                                    }}
+                                    className="btn bg-gray-100 text-gray-600 px-3 text-xs font-bold h-10 rounded-xl"
+                                >
+                                    Huy
+                                </button>
+                                <button onClick={handleDeleteSelected} className="btn bg-red-500 text-white px-4 shadow-lg text-sm font-bold h-10 rounded-xl">
+                                    Xoa het
+                                </button>
                             </>
                         ) : (
                             <>
-                                <button onClick={() => setShowBulkModal(true)} className="btn bg-orange-50 text-orange-600 px-3 text-xs font-bold h-10 rounded-xl border border-orange-100">📦 Quét lô</button>
-                                <button onClick={handleCreate} className="btn-primary px-4 shadow-lg text-sm font-bold h-10 rounded-xl">+ Tạo mới</button>
+                                <button onClick={() => setShowBulkModal(true)} className="btn bg-orange-50 text-orange-600 px-3 text-xs font-bold h-10 rounded-xl border border-orange-100">
+                                    Quet lo
+                                </button>
+                                <button onClick={handleCreate} className="btn-primary px-4 shadow-lg text-sm font-bold h-10 rounded-xl">
+                                    + Tao moi
+                                </button>
                             </>
                         )}
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <input type="text" className="input flex-1" placeholder="Tìm kiếm sản phẩm..." value={query} onChange={(e) => setQuery(e.target.value)} />
+                    <input
+                        type="text"
+                        className="input flex-1"
+                        placeholder="Tim kiem san pham..."
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                    />
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                    <select className="input py-1 px-2 text-sm w-auto border-gray-200 min-h-[36px] bg-white font-medium" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                        <option value="name_asc">Tên A-Z</option>
-                        <option value="price_asc">Giá tăng dần</option>
-                        <option value="price_desc">Giá giảm dần</option>
-                        <option value="stock_asc">Tồn kho ít</option>
+                    <select className="input py-1 px-2 text-sm w-auto border-gray-200 min-h-[36px] bg-white font-medium" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                        <option value="name_asc">Ten A-Z</option>
+                        <option value="price_asc">Gia tang dan</option>
+                        <option value="price_desc">Gia giam dan</option>
+                        <option value="stock_asc">Ton kho it</option>
                     </select>
-                    <button onClick={() => setFilter(filter === 'all' ? 'low_stock' : 'all')} className={`btn text-xs px-3 min-h-[36px] border font-bold transition-all ${filter === 'low_stock' ? 'bg-orange-100 border-orange-200 text-orange-700' : 'bg-white border-gray-200 text-gray-600'}`}>
-                        {filter === 'low_stock' ? '🧹 Sắp hết hàng' : '📦 Tất cả'}
+                    <button
+                        onClick={() => setFilter(filter === 'all' ? 'low_stock' : 'all')}
+                        className={`btn text-xs px-3 min-h-[36px] border font-bold transition-all ${filter === 'low_stock' ? 'bg-orange-100 border-orange-200 text-orange-700' : 'bg-white border-gray-200 text-gray-600'}`}
+                    >
+                        {filter === 'low_stock' ? 'Sap het hang' : 'Tat ca'}
                     </button>
                 </div>
             </div>
@@ -153,40 +227,50 @@ export default function Products() {
             <div className="p-3">
                 {products.length === 0 ? (
                     <div className="text-center py-16">
-                        <p className="text-5xl mb-4">{query ? '🔍' : '📦'}</p>
-                        <p className="text-gray-600 font-bold text-lg">{query ? 'Không tìm thấy sản phẩm' : 'Chưa có sản phẩm nào'}</p>
+                        <p className="text-gray-600 font-bold text-lg">{query ? 'Khong tim thay san pham' : 'Chua co san pham nao'}</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {products.map(p => (
+                        {products.map((product) => (
                             <div
-                                key={p.id}
-                                onMouseDown={() => startLongPress(p.id)}
-                                onMouseUp={clearLongPress}
-                                onTouchStart={() => startLongPress(p.id)}
-                                onTouchEnd={clearLongPress}
-                                onClick={() => isSelectionMode ? toggleSelect(p.id) : handleEdit(p)}
-                                className={`card p-3 relative group active:scale-[0.98] transition-all flex flex-col h-full border overflow-hidden ${selectedProducts.includes(p.id) ? 'border-primary ring-2 ring-primary bg-primary/5' : 'border-gray-100 bg-white hover:border-primary/50 shadow-sm'} rounded-2xl`}
+                                key={product.id}
+                                onPointerDown={(event) => {
+                                    if (event.pointerType === 'mouse' && event.button !== 0) return
+                                    startLongPress(product.id)
+                                }}
+                                onPointerUp={clearLongPress}
+                                onPointerLeave={clearLongPress}
+                                onPointerCancel={clearLongPress}
+                                onClick={() => handleCardClick(product)}
+                                className={`card p-3 relative group active:scale-[0.98] transition-all flex flex-col h-full border overflow-hidden ${selectedProducts.includes(product.id) ? 'border-primary ring-2 ring-primary bg-primary/5' : 'border-gray-100 bg-white hover:border-primary/50 shadow-sm'} rounded-2xl`}
                             >
-                                {selectedProducts.includes(p.id) && (
+                                {selectedProducts.includes(product.id) && (
                                     <div className="absolute top-2 right-2 z-20 bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg animate-in zoom-in duration-200">
                                         ✓
                                     </div>
                                 )}
 
-                                <div className={`absolute top-3 left-3 z-10 text-[10px] px-2 py-0.5 rounded-full font-black ${p.stock_quantity < 10 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>KHO: {p.stock_quantity}</div>
+                                <div className={`absolute top-3 left-3 z-10 text-[10px] px-2 py-0.5 rounded-full font-black ${product.stock_quantity < 10 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                                    KHO: {product.stock_quantity}
+                                </div>
                                 <div className="h-32 w-full bg-gray-50 rounded-xl mb-3 flex items-center justify-center text-4xl overflow-hidden border">
-                                    {p.image_url ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" /> : <span className="opacity-10">📦</span>}
+                                    {product.image_url ? (
+                                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                                    ) : (
+                                        <span className="opacity-10">SP</span>
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-sm text-gray-800 line-clamp-2 leading-tight mb-1 uppercase tracking-tight">{p.name}</h3>
-                                    <p className="text-[10px] text-gray-400 truncate font-mono">{p.barcode}</p>
+                                    <h3 className="font-bold text-sm text-gray-800 line-clamp-2 leading-tight mb-1 uppercase tracking-tight">{product.name}</h3>
+                                    <p className="text-[10px] text-gray-400 truncate font-mono">{product.barcode}</p>
                                 </div>
                                 <div className="mt-3 flex justify-between items-end">
-                                    <div className="font-black text-primary text-lg">{new Intl.NumberFormat('vi-VN').format(p.price)}</div>
-                                    <div className="flex gap-1.5" onClick={e => e.stopPropagation()}>
+                                    <div className="font-black text-primary text-lg">{new Intl.NumberFormat('vi-VN').format(product.price)}</div>
+                                    <div className="flex gap-1.5" onClick={(event) => event.stopPropagation()}>
                                         {!isSelectionMode && (
-                                            <button onClick={(e) => handleAddToCart(e, p)} className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center active:scale-90 transition-transform">🛒</button>
+                                            <button onClick={(event) => handleAddToCart(event, product)} className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center active:scale-90 transition-transform">
+                                                +
+                                            </button>
                                         )}
                                     </div>
                                 </div>
@@ -196,7 +280,16 @@ export default function Products() {
                 )}
             </div>
 
-            {showModal && <ProductFormModal product={editingProduct} onClose={() => setShowModal(false)} onFinish={fetchProducts} />}
+            {showModal && (
+                <ProductFormModal
+                    product={editingProduct}
+                    onClose={() => {
+                        setShowModal(false)
+                        fetchProducts()
+                    }}
+                    onFinish={fetchProducts}
+                />
+            )}
             {showBulkModal && <BulkImportModal onClose={() => setShowBulkModal(false)} onFinish={fetchProducts} />}
         </div>
     )

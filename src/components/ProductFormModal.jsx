@@ -62,6 +62,19 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     }, [])
 
     useEffect(() => {
+        const previousBodyOverflow = document.body.style.overflow
+        const previousHtmlOverflow = document.documentElement.style.overflow
+
+        document.body.style.overflow = 'hidden'
+        document.documentElement.style.overflow = 'hidden'
+
+        return () => {
+            document.body.style.overflow = previousBodyOverflow
+            document.documentElement.style.overflow = previousHtmlOverflow
+        }
+    }, [])
+
+    useEffect(() => {
         if (product) {
             setFormData(prev => ({
                 ...prev,
@@ -180,13 +193,19 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                 created_at: product?.created_at || new Date().toISOString()
             }
             await saveProductLocal(data)
-            await pushProducts(data)
+            const syncResult = await pushProducts(data)
+            if (syncResult?.queued) {
+                showNotification('Đã lưu cục bộ, sẽ tự đồng bộ khi mạng ổn định', 'info')
+            } else {
+                showNotification('Đã lưu sản phẩm', 'success')
+            }
             if (e) {
                 onFinish()
                 onClose()
             }
         } catch (err) {
-            if (e) alert(`Lỗi: ${err.message}`)
+            const message = err?.response?.data?.error || err?.message || 'Khong the luu san pham'
+            showNotification(`Loi luu san pham: ${message}`, 'error')
         } finally {
             setLoading(false)
         }
@@ -198,15 +217,24 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 sm:p-4">
-            <div className="bg-white w-full max-w-md rounded-none sm:rounded-xl shadow-2xl flex flex-col h-full sm:h-auto max-h-screen sm:max-h-[90vh] overflow-hidden">
-                <form key={formKey} onSubmit={handleSubmit} className="flex flex-col h-full">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-stretch sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-white w-full max-w-md rounded-none sm:rounded-xl shadow-2xl flex flex-col h-screen sm:h-[90vh] max-h-screen sm:max-h-[90vh] overflow-hidden">
+                <form key={formKey} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
                     <div className="p-4 border-b flex justify-between items-center bg-white sticky top-0 z-10">
                         <h2 className="text-lg font-bold">{product ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}</h2>
-                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-red-500 text-xl p-2">✕</button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold uppercase tracking-wide disabled:opacity-50"
+                            >
+                                {loading ? 'Đang lưu...' : 'Lưu'}
+                            </button>
+                            <button type="button" onClick={onClose} className="text-gray-400 hover:text-red-500 text-xl p-2">✕</button>
+                        </div>
                     </div>
 
-                    <div className="p-4 space-y-4 overflow-y-auto flex-1 pb-24 sm:pb-4">
+                    <div className="p-4 space-y-4 overflow-y-auto overscroll-contain flex-1 min-h-0 pb-24 sm:pb-4">
                         {!product ? (
                             <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
                                 <ProductCamera
@@ -328,3 +356,4 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
         </div>
     )
 }
+

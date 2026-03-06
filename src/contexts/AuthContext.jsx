@@ -16,8 +16,14 @@ export const AuthProvider = ({ children }) => {
         const savedShop = localStorage.getItem('pos_shop')
 
         if (token && savedUser && savedShop) {
-            setUser(JSON.parse(savedUser))
-            setShop(JSON.parse(savedShop))
+            try {
+                setUser(JSON.parse(savedUser))
+                setShop(JSON.parse(savedShop))
+            } catch {
+                localStorage.removeItem('pos_token')
+                localStorage.removeItem('pos_user')
+                localStorage.removeItem('pos_shop')
+            }
         }
         setLoading(false)
     }, [])

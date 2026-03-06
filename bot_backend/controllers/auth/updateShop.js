@@ -1,6 +1,6 @@
-const db = require('../../db/connection');
+const { getAuthRepo } = require('../../repositories/auth.repo');
 
-function updateShop(req, res) {
+async function updateShop(req, res) {
     try {
         const { shop_id } = req.user;
         const { name, address } = req.body;
@@ -9,12 +9,8 @@ function updateShop(req, res) {
             return res.status(400).json({ error: 'Name is required' });
         }
 
-        const result = db.prepare(`
-            UPDATE shops SET name = ?, address = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        `).run(name, address, shop_id);
-
-        if (result.changes === 0) {
+        const updated = await getAuthRepo().updateShop(shop_id, name, address);
+        if (!updated) {
             return res.status(404).json({ error: 'Shop not found' });
         }
 

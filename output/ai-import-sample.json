@@ -1,0 +1,27 @@
+{
+  "supplier_name": "AI Test Supplier",
+  "supplier_tax_code": "0123456789",
+  "invoice_number": "AI-JSON-001",
+  "invoice_date": "2026-03-06",
+  "import_date": "2026-03-06",
+  "invoice_type": "retail_invoice",
+  "payment_method": "cash",
+  "paid_amount": 12000,
+  "note": "Tao tu JSON AI",
+  "items": [
+    {
+      "product_id": "f25020c5-56c3-4462-84aa-79ebde51b1ec",
+      "product_name": "Coca Cola 330ml",
+      "quantity": 1,
+      "unit_price": 7000,
+      "vat_amount": 0
+    },
+    {
+      "product_id": "457eafe7-6123-485b-9b40-31d75cc6fded",
+      "product_name": "Bánh mì Sài Gòn",
+      "quantity": 1,
+      "unit_price": 5000,
+      "vat_amount": 0
+    }
+  ]
+}

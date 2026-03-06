@@ -7,6 +7,13 @@ function columnExists(tableName, columnName) {
     return columns.some((column) => column.name === columnName);
 }
 
+function addColumnIfMissing(tableName, columnName, definition) {
+    if (!columnExists(tableName, columnName)) {
+        db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+        console.log(`Migrated: ${tableName}.${columnName}`);
+    }
+}
+
 function runMigrations() {
     try {
         if (!columnExists('products', 'unit')) {
@@ -18,6 +25,18 @@ function runMigrations() {
             db.exec("ALTER TABLE products ADD COLUMN category TEXT");
             console.log('Migrated: products.category');
         }
+
+        addColumnIfMissing('imports', 'supplier_tax_code', 'TEXT');
+        addColumnIfMissing('imports', 'invoice_number', 'TEXT');
+        addColumnIfMissing('imports', 'invoice_date', 'TEXT');
+        addColumnIfMissing('imports', 'invoice_type', "TEXT DEFAULT 'no_invoice'");
+        addColumnIfMissing('imports', 'payment_method', "TEXT DEFAULT 'unpaid'");
+        addColumnIfMissing('imports', 'payment_date', 'TEXT');
+        addColumnIfMissing('imports', 'paid_amount', 'REAL NOT NULL DEFAULT 0');
+        addColumnIfMissing('imports', 'total_goods_amount', 'REAL NOT NULL DEFAULT 0');
+        addColumnIfMissing('imports', 'total_vat_amount', 'REAL NOT NULL DEFAULT 0');
+        addColumnIfMissing('imports', 'attachment_files', 'TEXT');
+        addColumnIfMissing('imports', 'status', "TEXT DEFAULT 'draft'");
 
         // Migration: Make sale_items.product_id nullable for Quick Sales
         const saleItemsInfo = db.prepare("PRAGMA table_info(sale_items)").all();
@@ -62,6 +81,32 @@ function runMigrations() {
               updated_at DATETIME,
               UNIQUE(shop_id, name)
             );
+
+            CREATE TABLE IF NOT EXISTS suppliers (
+              id TEXT PRIMARY KEY,
+              shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+              name TEXT NOT NULL DEFAULT '',
+              phone TEXT,
+              address TEXT,
+              tax_code TEXT,
+              bank_account TEXT,
+              bank_name TEXT,
+              note TEXT,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS import_items (
+              id TEXT PRIMARY KEY,
+              import_id TEXT NOT NULL REFERENCES imports(id) ON DELETE CASCADE,
+              product_id TEXT REFERENCES products(id) ON DELETE SET NULL,
+              product_name TEXT NOT NULL,
+              quantity REAL NOT NULL DEFAULT 0,
+              unit_price REAL NOT NULL DEFAULT 0,
+              vat_amount REAL NOT NULL DEFAULT 0,
+              total_amount REAL NOT NULL DEFAULT 0,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
         `);
     } catch (err) {
         console.error('Error running migrations:', err.message);
@@ -95,14 +140,17 @@ function seedDefaults() {
     }
 }
 
-function initSchema() {
+function initSchema(options = {}) {
+    const shouldSeedDefaults = options.seedDefaults !== false;
     const initSqlPath = path.resolve(__dirname, 'init.sql');
     const initSql = fs.readFileSync(initSqlPath, 'utf8');
 
     try {
         db.exec(initSql);
         runMigrations();
-        seedDefaults();
+        if (shouldSeedDefaults) {
+            seedDefaults();
+        }
         console.log('Database schema initialized successfully');
     } catch (err) {
         console.error('Error initializing schema:', err.message);

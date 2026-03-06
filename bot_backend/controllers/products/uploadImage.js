@@ -1,16 +1,14 @@
 const axios = require('axios');
 const FormData = require('form-data');
-const db = require('../../db/connection');
+const { getAuthRepo } = require('../../repositories/auth.repo');
 
 async function uploadImage(req, res) {
-    const { image } = req.body; // Expecting base64 string
+    const { image } = req.body;
     const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-    // Get chat ID (owner's chat)
     let chatId = process.env.ADMIN_TELEGRAM_ID;
     if (!chatId) {
-        const owner = db.prepare("SELECT telegram_id FROM users WHERE role = 'owner' LIMIT 1").get();
-        chatId = owner ? owner.telegram_id : null;
+        chatId = await getAuthRepo().getOwnerTelegramId();
     }
 
     if (!BOT_TOKEN || !chatId) {
@@ -18,8 +16,7 @@ async function uploadImage(req, res) {
     }
 
     try {
-        // Convert base64 to buffer
-        const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+        const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
         const buffer = Buffer.from(base64Data, 'base64');
 
         const formData = new FormData();
@@ -31,13 +28,12 @@ async function uploadImage(req, res) {
         });
 
         if (response.data.ok) {
-            // Telegram returns an array of photos, the last one is the largest
             const photos = response.data.result.photo;
             const fileId = photos[photos.length - 1].file_id;
             return res.json({ success: true, file_id: fileId });
-        } else {
-            throw new Error(response.data.description);
         }
+
+        throw new Error(response.data.description || 'Telegram upload failed');
     } catch (error) {
         console.error('Telegram Upload Error:', error);
         res.status(500).json({ error: error.message || 'Failed to upload to Telegram' });

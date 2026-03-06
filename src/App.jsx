@@ -13,6 +13,7 @@ import Products from './pages/Products'
 import History from './pages/History'
 import Reports from './pages/Reports'
 import Imports from './pages/Imports'
+import SheetImport from './pages/SheetImport'
 import Cashbook from './pages/Cashbook'
 import Settings from './pages/Settings'
 import CartBar from './components/CartBar'
@@ -68,6 +69,12 @@ function App() {
                                     <Route path="/imports" element={
                                         <ProtectedRoute>
                                             <Layout><Imports /></Layout>
+                                        </ProtectedRoute>
+                                    } />
+
+                                    <Route path="/imports-sheet" element={
+                                        <ProtectedRoute>
+                                            <Layout><SheetImport /></Layout>
                                         </ProtectedRoute>
                                     } />
 

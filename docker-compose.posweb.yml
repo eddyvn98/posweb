@@ -17,10 +17,10 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        VITE_API_URL: https://api-posweb.vivutrade.io.vn/api
+        VITE_API_URL: /api
     container_name: posweb-frontend
     depends_on:
       - backend
     ports:
-      - "5173:80"
+      - "80:80"
     restart: unless-stopped

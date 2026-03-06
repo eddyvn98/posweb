@@ -12,7 +12,6 @@ export default function SelectionModal({
     onDelete,
     emptyText = "Chưa có dữ liệu"
 }) {
-    const [search, setSearch] = useState('');
     const [isAdding, setIsAdding] = useState(false);
     const [newItemName, setNewItemName] = useState('');
     const [editingId, setEditingId] = useState(null);
@@ -28,9 +27,7 @@ export default function SelectionModal({
 
     if (!isOpen) return null;
 
-    const filteredOptions = options.filter(opt =>
-        opt.name.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredOptions = options;
 
     const handleCreate = async () => {
         if (!newItemName.trim()) return;
@@ -54,21 +51,8 @@ export default function SelectionModal({
                 {/* Header */}
                 <div className="p-4 border-b flex justify-between items-center bg-gray-50/50">
                     <h3 className="font-bold text-gray-800">{title}</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-red-500 text-xl p-1">✕</button>
+                    <button type="button" onClick={onClose} className="text-gray-400 hover:text-red-500 text-xl p-1">✕</button>
                 </div>
-
-                {/* Search */}
-                <div className="p-3 border-b">
-                    <input
-                        type="text"
-                        placeholder="Tìm nhanh..."
-                        className="input w-full p-2 h-10 text-sm bg-gray-50 border-gray-200 focus:bg-white"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        autoFocus={!isAdding && !editingId}
-                    />
-                </div>
-
                 {/* List */}
                 <div className="overflow-y-auto flex-1 p-2">
                     {filteredOptions.length === 0 && !isAdding ? (
@@ -92,20 +76,22 @@ export default function SelectionModal({
                                                 onChange={e => setEditName(e.target.value)}
                                                 onKeyDown={e => e.key === 'Enter' && handleUpdate(opt)}
                                             />
-                                            <button onClick={() => handleUpdate(opt)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg font-bold">Lưu</button>
-                                            <button onClick={() => setEditingId(null)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg">✕</button>
+                                            <button type="button" onClick={() => handleUpdate(opt)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg font-bold">Lưu</button>
+                                            <button type="button" onClick={() => setEditingId(null)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg">✕</button>
                                         </div>
                                     ) : deletingId === opt.id ? (
                                         <div className="flex-1 flex items-center justify-between p-2 bg-red-50 rounded-lg animate-in fade-in slide-in-from-right-2">
                                             <span className="text-xs font-bold text-red-600 truncate">Xóa "{opt.name}"?</span>
                                             <div className="flex gap-1 shrink-0">
                                                 <button
+                                                    type="button"
                                                     onClick={() => { onDelete(opt); setDeletingId(null); }}
                                                     className="bg-red-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm"
                                                 >
                                                     Xóa
                                                 </button>
                                                 <button
+                                                    type="button"
                                                     onClick={() => setDeletingId(null)}
                                                     className="bg-white text-gray-500 px-3 py-1 rounded-md text-xs border border-gray-200"
                                                 >
@@ -131,7 +117,7 @@ export default function SelectionModal({
                                                 {selectedValue === opt.name && <span className="text-primary font-bold">✓</span>}
                                             </button>
 
-                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                 {onEdit && (
                                                     <button
                                                         type="button"
@@ -190,8 +176,8 @@ export default function SelectionModal({
                                 onKeyDown={e => e.key === 'Enter' && handleCreate()}
                             />
                             <div className="flex gap-1 pr-1">
-                                <button onClick={handleCreate} className="p-2 bg-primary text-white rounded-lg shadow-sm hover:bg-primary-dark font-bold px-4">Lưu</button>
-                                <button onClick={() => setIsAdding(false)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg">✕</button>
+                                <button type="button" onClick={handleCreate} className="p-2 bg-primary text-white rounded-lg shadow-sm hover:bg-primary-dark font-bold px-4">Lưu</button>
+                                <button type="button" onClick={() => setIsAdding(false)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg">✕</button>
                             </div>
                         </div>
                     ) : (

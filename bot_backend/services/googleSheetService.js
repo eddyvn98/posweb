@@ -4,17 +4,53 @@ const fs = require('fs');
 const path = require('path');
 
 const VI = {
-    banHang: '\u0042\u00e1\u006e\u0020\u0068\u00e0\u006e\u0067',
-    sanPham: '\u0053\u1ea3\u006e\u0020\u0070\u0068\u1ea9\u006d',
-    nhapKho: '\u004e\u0068\u1ead\u0070\u0020\u006b\u0068\u006f',
-    soQuy: '\u0053\u1ed5\u0020\u0071\u0169\u0079',
-    donDaHuy: '\u0110\u01a1\u006e\u0020\u0111\u00e3\u0020\u0068\u1ee7\u0079',
+    banHang: 'Bán hàng',
+    sanPham: 'Sản phẩm',
+    nhapKho: 'Nhập hàng',
+    chiTietNhapKho: 'Chi tiết nhập kho',
+    soQuy: 'Sổ quỹ',
+    donDaHuy: 'Đơn đã hủy',
     headers: {
-        sales: ['\u004e\u0067\u00e0\u0079\u0020\u0067\u0068\u0069\u0020\u0073\u1ed5', '\u0053\u1ed1\u0020\u0068\u0069\u1ec7\u0075\u0020\u0063\u0068\u1ee9\u006e\u0067\u0020\u0074\u1eeb', '\u0044\u0069\u1ec5\u006e\u0020\u0067\u0069\u1ea3\u0069', 'Doanh thu (+)', '\u0048\u00ec\u006e\u0068\u0020\u0074\u0068\u1ee9\u0063\u0020\u0074\u0068\u0061\u006e\u0068\u0020\u0074\u006f\u00e1\u006e', '\u0043\u0068\u0069\u0020\u0074\u0069\u1ebf\u0074'],
-        products: ['\u004e\u0067\u00e0\u0079\u0020\u0043\u1ead\u0070\u0020\u004e\u0068\u1ead\u0074', 'Barcode', '\u004d\u00e3\u0020\u0053\u1ea3\u006e\u0020\u0050\u0068\u1ea9\u006d', '\u0054\u00ea\u006e\u0020\u0053\u1ea3\u006e\u0020\u0050\u0068\u1ea9\u006d', '\u0110\u01a1\u006e\u0020\u0076\u1ecb', '\u0044\u0061\u006e\u0068\u0020\u006d\u1ee5\u0063', '\u0047\u0069\u00e1\u0020\u0042\u00e1\u006e', '\u0047\u0069\u00e1\u0020\u0056\u1ed1\u006e', '\u0054\u1ed3\u006e\u0020\u004b\u0068\u006f', '\u0054\u0072\u1ea1\u006e\u0067\u0020\u0054\u0068\u00e1\u0069'],
-        imports: ['\u004e\u0067\u00e0\u0079\u0020\u0067\u0068\u0069\u0020\u0073\u1ed5', '\u0053\u1ed1\u0020\u0068\u0069\u1ec7\u0075\u0020\u0063\u0068\u1ee9\u006e\u0067\u0020\u0074\u1eeb', '\u004e\u0068\u00e0\u0020\u0063\u0075\u006e\u0067\u0020\u0063\u1ea5\u0070', '\u0047\u0069\u00e1\u0020\u0074\u0072\u1ecb\u0020\u006e\u0068\u1ead\u0070\u0020\u0028\u002b\u0029', '\u0047\u0068\u0069\u0020\u0063\u0068\u00fa'],
-        cashbook: ['\u004e\u0067\u00e0\u0079', '\u0048\u1ea1\u006e\u0067\u0020\u006d\u1ee5\u0063', '\u0044\u0069\u1ec5\u006e\u0020\u0067\u0069\u1ea3\u0069', '\u0054\u0068\u0075\u0020\u0028\u002b\u0029', '\u0043\u0068\u0069\u0020\u0028\u002d\u0029', '\u004d\u00e3\u0020\u0063\u0068\u1ee9\u006e\u0067\u0020\u0074\u1eeb'],
-        voids: ['\u004e\u0067\u00e0\u0079\u0020\u0048\u1ee7\u0079', '\u0053\u1ed1\u0020\u0068\u0069\u1ec7\u0075\u0020\u0111\u01a1\u006e', '\u004c\u00fd\u0020\u0064\u006f\u0020\u0068\u1ee7\u0079', 'Shop']
+        sales: ['Ngày ghi sổ', 'Số hiệu chứng từ', 'Diễn giải', 'Doanh thu (+)', 'Hình thức thanh toán', 'Chi tiết'],
+        products: ['Ngày Cập Nhật', 'Barcode', 'Mã Sản Phẩm', 'Tên Sản Phẩm', 'Đơn vị', 'Danh mục', 'Giá Bán', 'Giá Vốn', 'Tồn Kho', 'Trạng Thái'],
+        imports: [
+            'Mã phiếu nhập',
+            'Ngày nhập',
+            'Số chứng từ',
+            'Ngày chứng từ',
+            'Nhà cung cấp',
+            'Mã số thuế NCC',
+            'Số hóa đơn',
+            'Loại hóa đơn',
+            'Phương thức thanh toán',
+            'Ngày thanh toán',
+            'Số tiền đã thanh toán',
+            'Tổng tiền hàng',
+            'Tổng VAT',
+            'Tổng cộng',
+            'Còn nợ',
+            'Số lượng mặt hàng',
+            'Số file đính kèm',
+            'Trạng thái',
+            'Ghi chú'
+        ],
+        importItems: [
+            'Mã phiếu nhập',
+            'Ngày nhập',
+            'Nhà cung cấp',
+            'Số hóa đơn',
+            'Mã sản phẩm',
+            'Tên hàng',
+            'Đơn vị tính',
+            'Số lượng nhập',
+            'Đơn giá nhập',
+            'VAT',
+            'Thành tiền',
+            'Trạng thái',
+            'Ghi chú'
+        ],
+        cashbook: ['Ngày', 'Hạng mục', 'Diễn giải', 'Thu (+)', 'Chi (-)', 'Mã chứng từ'],
+        voids: ['Ngày Hủy', 'Số hiệu đơn', 'Lý do hủy', 'Shop']
     }
 };
 
@@ -25,27 +61,125 @@ const log = (msg) => {
     console.log(msg);
 };
 
-async function appendToSheet(tabName, rowData, headers) {
+function getSheetConfig() {
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
     const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    if (!spreadsheetId || !clientEmail || !privateKey) return;
+
+    if (!spreadsheetId || !clientEmail || !privateKey) {
+        return null;
+    }
+
+    return { spreadsheetId, clientEmail, privateKey };
+}
+
+async function createDocClient() {
+    const config = getSheetConfig();
+    if (!config) return null;
+
+    const auth = new JWT({
+        email: config.clientEmail,
+        key: config.privateKey,
+        scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+
+    const doc = new GoogleSpreadsheet(config.spreadsheetId, auth);
+    await doc.loadInfo();
+    return doc;
+}
+
+async function ensureSheet(doc, tabName, headers) {
+    let sheet = doc.sheetsByTitle[tabName];
+    if (!sheet) {
+        sheet = await doc.addSheet({ title: tabName, headerValues: headers });
+    } else {
+        await sheet.setHeaderRow(headers);
+    }
+    return sheet;
+}
+
+async function appendToSheet(tabName, rowData, headers) {
+    const config = getSheetConfig();
+    if (!config) return;
 
     try {
-        const auth = new JWT({ email: clientEmail, key: privateKey, scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
-        const doc = new GoogleSpreadsheet(spreadsheetId, auth);
-        await doc.loadInfo();
-
-        let sheet = doc.sheetsByTitle[tabName];
-        if (!sheet) {
-            sheet = await doc.addSheet({ title: tabName, headerValues: headers });
-        } else {
-            await sheet.setHeaderRow(headers);
-        }
+        const doc = await createDocClient();
+        const sheet = await ensureSheet(doc, tabName, headers);
         await sheet.addRow(rowData);
     } catch (error) {
         log(`Sync error ${tabName}: ${error.message}`);
         console.error(`[Sync Detail] ${tabName} Error:`, error);
+    }
+}
+
+async function upsertSheetRow(tabName, headers, keyHeader, keyValue, rowData) {
+    const config = getSheetConfig();
+    if (!config) return;
+
+    try {
+        const doc = await createDocClient();
+        const sheet = await ensureSheet(doc, tabName, headers);
+        const rows = await sheet.getRows();
+        const existingRow = rows.find((row) => String(row.get(keyHeader) || '') === String(keyValue));
+
+        if (existingRow) {
+            headers.forEach((header) => existingRow.set(header, rowData[header] ?? ''));
+            await existingRow.save();
+            return;
+        }
+
+        await sheet.addRow(rowData);
+    } catch (error) {
+        log(`Upsert error ${tabName}: ${error.message}`);
+        console.error(`[Sync Detail] ${tabName} Upsert Error:`, error);
+    }
+}
+
+async function replaceSheetRows(tabName, headers, keyHeader, keyValue, rowsData) {
+    const config = getSheetConfig();
+    if (!config) return;
+
+    try {
+        const doc = await createDocClient();
+        const sheet = await ensureSheet(doc, tabName, headers);
+        const rows = await sheet.getRows();
+
+        const matchedRows = rows.filter((row) => String(row.get(keyHeader) || '') === String(keyValue));
+        await Promise.all(matchedRows.map((row) => row.delete()));
+
+        if (rowsData.length > 0) {
+            await sheet.addRows(rowsData);
+        }
+    } catch (error) {
+        log(`Replace rows error ${tabName}: ${error.message}`);
+        console.error(`[Sync Detail] ${tabName} Replace Rows Error:`, error);
+    }
+}
+
+function formatDateTime(value) {
+    if (!value) return '';
+    return new Date(value).toLocaleString('vi-VN');
+}
+
+function formatDateOnly(value) {
+    if (!value) return '';
+    return new Date(`${value}T00:00:00`).toLocaleDateString('vi-VN');
+}
+
+function getInvoiceTypeLabel(type) {
+    switch (type) {
+        case 'vat_invoice': return 'Hóa đơn VAT';
+        case 'retail_invoice': return 'Hóa đơn bán lẻ';
+        default: return 'Không có hóa đơn';
+    }
+}
+
+function getPaymentMethodLabel(method) {
+    switch (method) {
+        case 'cash': return 'Tiền mặt';
+        case 'transfer': return 'Chuyển khoản';
+        case 'mixed': return 'Kết hợp';
+        default: return 'Chưa thanh toán';
     }
 }
 
@@ -55,7 +189,7 @@ async function syncSale(sale, shopName) {
     try {
         const itemsStr = sale.items ? sale.items.map((i) => `${i.product_name} (x${i.quantity})`).join(', ') : '';
         const rowData = {
-            [headers[0]]: new Date(sale.sale_date || Date.now()).toLocaleString('vi-VN'),
+            [headers[0]]: formatDateTime(sale.sale_date || Date.now()),
             [headers[1]]: sale.code,
             [headers[2]]: `Doanh thu - ${shopName}${sale.note ? ' - ' + sale.note : ''}`,
             [headers[3]]: Number(sale.total_amount),
@@ -74,18 +208,17 @@ async function syncSale(sale, shopName) {
 async function syncProduct(product) {
     const headers = VI.headers.products;
     log(`[Sync] Starting product sync for: ${product.name} (Barcode: ${product.barcode})`);
-    log(`[Sync] Headers count: ${headers.length}, Headers index 5: ${headers[5]}`);
     const rowData = {
-        [headers[0]]: new Date().toLocaleString('vi-VN'),
+        [headers[0]]: formatDateTime(new Date()),
         [headers[1]]: product.barcode,
         [headers[2]]: product.id,
         [headers[3]]: product.name,
-        [headers[4]]: product.unit || '\u0043\u00e1\u0069',
+        [headers[4]]: product.unit || 'Cái',
         [headers[5]]: product.category || '',
         [headers[6]]: Number(product.price),
         [headers[7]]: Number(product.cost_price || 0),
         [headers[8]]: Number(product.stock_quantity || 0),
-        [headers[9]]: product.is_active ? '\u0110\u0061\u006e\u0067\u0020\u0062\u00e1\u006e' : '\u004e\u0067\u1eeb\u006e\u0067\u0020\u0062\u00e1\u006e'
+        [headers[9]]: product.is_active ? 'Đang bán' : 'Ngừng bán'
     };
     const result = await appendToSheet(VI.sanPham, rowData, headers);
     log(`[Sync] Finished product sync for: ${product.name}`);
@@ -93,22 +226,59 @@ async function syncProduct(product) {
 }
 
 async function syncImport(importData) {
-    const headers = VI.headers.imports;
-    const rowData = {
-        [headers[0]]: new Date(importData.import_date).toLocaleString('vi-VN'),
-        [headers[1]]: importData.id || 'N/A',
-        [headers[2]]: importData.supplier_name,
-        [headers[3]]: Number(importData.total_cost),
-        [headers[4]]: importData.note || ''
+    const importHeaders = VI.headers.imports;
+    const itemHeaders = VI.headers.importItems;
+    const debtAmount = Math.max(0, Number(importData.total_cost || 0) - Number(importData.paid_amount || 0));
+    const items = Array.isArray(importData.items) ? importData.items : [];
+    const attachmentCount = Array.isArray(importData.attachment_files) ? importData.attachment_files.length : 0;
+
+    const importRow = {
+        [importHeaders[0]]: importData.id,
+        [importHeaders[1]]: formatDateOnly(importData.import_date),
+        [importHeaders[2]]: importData.id,
+        [importHeaders[3]]: formatDateOnly(importData.invoice_date),
+        [importHeaders[4]]: importData.supplier_name || '',
+        [importHeaders[5]]: importData.supplier_tax_code || '',
+        [importHeaders[6]]: importData.invoice_number || '',
+        [importHeaders[7]]: getInvoiceTypeLabel(importData.invoice_type),
+        [importHeaders[8]]: getPaymentMethodLabel(importData.payment_method),
+        [importHeaders[9]]: formatDateOnly(importData.payment_date),
+        [importHeaders[10]]: Number(importData.paid_amount || 0),
+        [importHeaders[11]]: Number(importData.total_goods_amount || 0),
+        [importHeaders[12]]: Number(importData.total_vat_amount || 0),
+        [importHeaders[13]]: Number(importData.total_cost || 0),
+        [importHeaders[14]]: debtAmount,
+        [importHeaders[15]]: items.length,
+        [importHeaders[16]]: attachmentCount,
+        [importHeaders[17]]: String(importData.status || 'draft').toUpperCase(),
+        [importHeaders[18]]: importData.note || ''
     };
-    return appendToSheet(VI.nhapKho, rowData, headers);
+
+    const itemRows = items.map((item) => ({
+        [itemHeaders[0]]: importData.id,
+        [itemHeaders[1]]: formatDateOnly(importData.import_date),
+        [itemHeaders[2]]: importData.supplier_name || '',
+        [itemHeaders[3]]: importData.invoice_number || '',
+        [itemHeaders[4]]: item.product_id || '',
+        [itemHeaders[5]]: item.product_name || '',
+        [itemHeaders[6]]: item.unit || '',
+        [itemHeaders[7]]: Number(item.quantity || 0),
+        [itemHeaders[8]]: Number(item.unit_price || 0),
+        [itemHeaders[9]]: Number(item.vat_amount || 0),
+        [itemHeaders[10]]: Number(item.total_amount || 0),
+        [itemHeaders[11]]: String(importData.status || 'draft').toUpperCase(),
+        [itemHeaders[12]]: importData.note || ''
+    }));
+
+    await upsertSheetRow(VI.nhapKho, importHeaders, importHeaders[0], importData.id, importRow);
+    await replaceSheetRows(VI.chiTietNhapKho, itemHeaders, itemHeaders[0], importData.id, itemRows);
 }
 
 async function syncCashFlow(cashFlow) {
     const headers = VI.headers.cashbook;
     const rowData = {
-        [headers[0]]: new Date(cashFlow.created_at || Date.now()).toLocaleString('vi-VN'),
-        [headers[1]]: cashFlow.category || '\u004b\u0068\u00e1\u0063',
+        [headers[0]]: formatDateTime(cashFlow.created_at || Date.now()),
+        [headers[1]]: cashFlow.category || 'Khác',
         [headers[2]]: cashFlow.description,
         [headers[3]]: cashFlow.type === 'in' ? Number(cashFlow.amount) : 0,
         [headers[4]]: cashFlow.type === 'out' ? Number(cashFlow.amount) : 0,
@@ -120,7 +290,7 @@ async function syncCashFlow(cashFlow) {
 async function syncVoidSale(saleId, reason, shopName) {
     const headers = VI.headers.voids;
     const rowData = {
-        [headers[0]]: new Date().toLocaleString('vi-VN'),
+        [headers[0]]: formatDateTime(new Date()),
         [headers[1]]: saleId,
         [headers[2]]: reason,
         [headers[3]]: shopName

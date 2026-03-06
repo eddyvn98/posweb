@@ -7,7 +7,8 @@ import {
     markSaleSynced,
     queuePendingProduct,
     getPendingProducts,
-    removePendingProduct
+    removePendingProduct,
+    deleteProductLocal
 } from '../lib/db'
 
 const SyncContext = createContext({})
@@ -106,6 +107,11 @@ export const SyncProvider = ({ children }) => {
             return { queued: false }
         } catch (err) {
             console.error('[Sync] Product Push Error:', err)
+            const status = err?.response?.status
+            // 4xx usually means invalid payload/business error; surface it immediately.
+            if (status >= 400 && status < 500) {
+                throw err
+            }
             await queuePendingProduct({ ...product, op: 'upsert' })
             return { queued: true, error: err }
         }
@@ -118,6 +124,7 @@ export const SyncProvider = ({ children }) => {
 
     const deleteProduct = async (productId) => {
         if (!user) return
+        await deleteProductLocal(productId)
         if (!navigator.onLine) {
             await queuePendingProduct({ id: productId, op: 'delete' })
             return { queued: true }
@@ -141,6 +148,7 @@ export const SyncProvider = ({ children }) => {
             try {
                 if (product.op === 'delete') {
                     await api.delete(`/products/${product.id}`)
+                    await deleteProductLocal(product.id)
                 } else {
                     await api.post('/products/upsert', product)
                 }
