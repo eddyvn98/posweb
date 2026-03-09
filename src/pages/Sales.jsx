@@ -43,8 +43,11 @@ export default function Sales() {
     }
 
     // 🚀 Enable Bluetooth/External Scanner
+    // Disabled when input is focused to avoid double-fire:
+    // input's onKeyDown also handles Enter when focused.
     useScanBarcode({
-        onScan: (code) => handleScanResult(code)
+        onScan: (code) => handleScanResult(code),
+        enabled: !isSearchInputFocused,
     })
 
     // Auto-focus search input only on mount

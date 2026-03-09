@@ -12,6 +12,15 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove }) {
 
     return (
         <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 group gap-2">
+            {/* Thumbnail */}
+            <div className="w-9 h-9 rounded-lg overflow-hidden bg-gray-50 border border-gray-100 shrink-0">
+                {item.image_url ? (
+                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-base">📦</div>
+                )}
+            </div>
+
             {/* Left side: Name and unit details - Compact */}
             <div className="flex-1 min-w-0 pr-1">
                 <div className="font-bold text-sm text-gray-800 leading-tight truncate-2-lines break-words">

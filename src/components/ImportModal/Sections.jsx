@@ -147,28 +147,119 @@ export function ProductItemsSection({ formData, products, onAddItem, onRemoveIte
                     </div>
                 ) : (
                     formData.items.map((item, index) => (
-                        <div key={item.id} className="rounded-2xl border border-gray-200 bg-white px-4 py-3">
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className="truncate font-black text-gray-800">{item.product_name || `Sản phẩm ${index + 1}`}</p>
-                                    <p className="text-xs text-gray-500">#{index + 1}</p>
-                                </div>
-                                <button type="button" onClick={() => onRemoveItem(item.id)} className="shrink-0 text-sm font-bold text-red-500">
-                                    Xóa
-                                </button>
-                            </div>
-
-                            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_140px_150px_120px]">
-                                <Field label="Tên sản phẩm" value={item.product_name} onChange={() => {}} readOnly />
-                                <Field label="Số lượng" type="number" value={item.quantity} onChange={(e) => onItemChange(item.id, 'quantity', e.target.value)} />
-                                <Field label="Đơn giá" type="number" value={item.unit_price} onChange={(e) => onItemChange(item.id, 'unit_price', e.target.value)} />
-                                <Field label="VAT" type="number" value={item.vat_amount} onChange={(e) => onItemChange(item.id, 'vat_amount', e.target.value)} />
-                            </div>
-                        </div>
+                        <ItemRow
+                            key={item.id}
+                            item={item}
+                            index={index}
+                            products={products}
+                            onRemove={onRemoveItem}
+                            onChange={onItemChange}
+                            onMatch={(product) => onItemChange(item.id, '_matchProduct', product)}
+                        />
                     ))
                 )}
             </div>
         </section>
+    )
+}
+
+function ItemRow({ item, index, products, onRemove, onChange, onMatch }) {
+    const [showMatchPicker, setShowMatchPicker] = useState(false)
+    const [matchQuery, setMatchQuery] = useState(item.product_name || '')
+    const isUnmatched = !item.product_id && item.product_name
+
+    const filteredMatchProducts = useMemo(() => {
+        const q = String(matchQuery || '').trim().toLowerCase()
+        return products
+            .filter((p) =>
+                !q ||
+                String(p.name || '').toLowerCase().includes(q) ||
+                String(p.barcode || '').toLowerCase().includes(q)
+            )
+            .slice(0, 8)
+    }, [products, matchQuery])
+
+    return (
+        <div className={`rounded-2xl border px-4 py-3 ${isUnmatched ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-white'}`}>
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                    <p className="font-black text-gray-800">{item.product_name || `Sản phẩm ${index + 1}`}</p>
+                    {isUnmatched && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 text-[11px] font-black whitespace-nowrap">
+                            ⚠ Chưa khớp SP
+                        </span>
+                    )}
+                    {item.product_id && (
+                        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[11px] font-black whitespace-nowrap">
+                            ✓ Đã khớp
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                    {isUnmatched && (
+                        <button
+                            type="button"
+                            onClick={() => setShowMatchPicker((v) => !v)}
+                            className="text-sm font-bold text-amber-700 bg-amber-100 px-3 py-1 rounded-lg hover:bg-amber-200"
+                        >
+                            Khớp SP
+                        </button>
+                    )}
+                    <button type="button" onClick={() => onRemove(item.id)} className="text-sm font-bold text-red-500">
+                        Xóa
+                    </button>
+                </div>
+            </div>
+
+            {showMatchPicker && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-white p-3">
+                    <p className="text-xs font-black text-gray-600 mb-2">
+                        Khớp <span className="text-amber-700">"{item.product_name}"</span> với sản phẩm trong hệ thống:
+                    </p>
+                    <input
+                        className="input w-full text-sm"
+                        placeholder="Gõ tên hoặc mã vạch..."
+                        value={matchQuery}
+                        onChange={(e) => setMatchQuery(e.target.value)}
+                        autoFocus
+                    />
+                    <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
+                        {filteredMatchProducts.length === 0 ? (
+                            <p className="text-xs text-gray-400 py-2 text-center">Không tìm thấy – sản phẩm có thể chưa có trong hệ thống</p>
+                        ) : (
+                            filteredMatchProducts.map((product) => (
+                                <button
+                                    key={product.id}
+                                    type="button"
+                                    onClick={() => {
+                                        onMatch(product)
+                                        setShowMatchPicker(false)
+                                    }}
+                                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left text-sm hover:border-primary/30 hover:bg-primary/5"
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <p className="truncate font-bold text-gray-800">{product.name}</p>
+                                            <p className="text-xs text-gray-400">{product.barcode || 'Không có mã vạch'}</p>
+                                        </div>
+                                        <p className="shrink-0 text-xs font-bold text-primary">
+                                            {new Intl.NumberFormat('vi-VN').format(numberValue(product.cost_price || product.price))} đ
+                                        </p>
+                                    </div>
+                                </button>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_140px_150px_120px]">
+                <Field label="Tên sản phẩm" value={item.product_name} onChange={() => { }} readOnly />
+                <Field label="Số lượng" type="number" value={item.quantity} onChange={(e) => onChange(item.id, 'quantity', e.target.value)} />
+                <Field label="Đơn giá" type="number" value={item.unit_price} onChange={(e) => onChange(item.id, 'unit_price', e.target.value)} />
+                <Field label="VAT" type="number" value={item.vat_amount} onChange={(e) => onChange(item.id, 'vat_amount', e.target.value)} />
+            </div>
+        </div>
     )
 }
 
@@ -231,16 +322,26 @@ export function AttachmentsSection({ attachments, onAttachmentChange, onRemoveAt
     )
 }
 
-export function ActionSection({ status, loading, onSaveDraft, onConfirm }) {
+export function ActionSection({ status, loading, unmatchedCount = 0, onSaveDraft, onConfirm }) {
     return (
         <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5">
             <p className="text-2xl font-black text-gray-800 mb-4">Trạng thái: {String(status || 'draft').toUpperCase()}</p>
+            {unmatchedCount > 0 && (
+                <div className="mb-4 rounded-2xl bg-amber-100 border border-amber-300 px-4 py-3 text-sm font-bold text-amber-800">
+                    ⚠ Còn {unmatchedCount} sản phẩm chưa khớp – hãy bấm "Khớp SP" trước khi Xác nhận. Lưu nháp vẫn được.
+                </div>
+            )}
             <div className="flex flex-col md:flex-row gap-3">
                 <button type="button" disabled={loading} onClick={onSaveDraft} className="flex-1 btn-primary h-12 rounded-xl disabled:opacity-50">
                     Lưu nháp
                 </button>
-                <button type="button" disabled={loading} onClick={onConfirm} className="flex-1 h-12 rounded-xl bg-stone-200 text-stone-700 font-black disabled:opacity-50">
-                    Xác nhận
+                <button
+                    type="button"
+                    disabled={loading || unmatchedCount > 0}
+                    onClick={onConfirm}
+                    className="flex-1 h-12 rounded-xl bg-stone-200 text-stone-700 font-black disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Xác nhận{unmatchedCount > 0 ? ` (còn ${unmatchedCount} chưa khớp)` : ''}
                 </button>
             </div>
         </section>

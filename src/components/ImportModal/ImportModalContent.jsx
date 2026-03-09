@@ -62,14 +62,23 @@ export default function ImportModalContent({ importRecord, onClose, onSuccess, s
     const handleItemChange = (id, field, value) => {
         setFormData((prev) => ({
             ...prev,
-            items: prev.items.map((item) => (
-                item.id === id
-                    ? {
+            items: prev.items.map((item) => {
+                if (item.id !== id) return item
+                // Special action: match an AI item to a real product
+                if (field === '_matchProduct') {
+                    return {
                         ...item,
-                        [field]: ['quantity', 'unit_price', 'vat_amount', 'total_amount'].includes(field) ? numberValue(value) : value
+                        product_id: value.id,
+                        product_name: value.name || item.product_name,
+                        search: value.name || item.product_name,
+                        unit_price: item.unit_price || numberValue(value.cost_price || value.price)
                     }
-                    : item
-            ))
+                }
+                return {
+                    ...item,
+                    [field]: ['quantity', 'unit_price', 'vat_amount', 'total_amount'].includes(field) ? numberValue(value) : value
+                }
+            })
         }))
     }
 
@@ -182,9 +191,12 @@ export default function ImportModalContent({ importRecord, onClose, onSuccess, s
     }
 
     const summary = summarize(formData.items, formData.paid_amount)
+    // Tính tổng từ toàn bộ items (kể cả chưa match product_id) để validation không bị chặn sai
+    const rawTotalCost = formData.items.reduce((sum, item) => sum + numberValue(item.quantity) * numberValue(item.unit_price) + numberValue(item.vat_amount), 0)
+    const unmatchedCount = formData.items.filter((item) => !item.product_id && item.product_name).length
 
     const handleSubmit = async (nextStatus = formData.status) => {
-        if (!formData.import_date || summary.totalCost <= 0) {
+        if (!formData.import_date || rawTotalCost <= 0) {
             showNotification('Cần nhập ngày và ít nhất một sản phẩm hợp lệ', 'error')
             return
         }
@@ -208,10 +220,12 @@ export default function ImportModalContent({ importRecord, onClose, onSuccess, s
                 status: nextStatus,
                 note: formData.note,
                 items: formData.items
-                    .filter((item) => item.product_id)
+                    // Khi lưu draft: giữ cả items chưa match product (chỉ có product_name từ AI)
+                    // Khi confirmed: chỉ lưu items đã được match với product_id
+                    .filter((item) => nextStatus === 'draft' ? item.product_name : item.product_id)
                     .map((item) => ({
                         id: item.id,
-                        product_id: item.product_id,
+                        product_id: item.product_id || '',
                         product_name: item.product_name,
                         quantity: numberValue(item.quantity),
                         unit_price: numberValue(item.unit_price),
@@ -291,6 +305,7 @@ export default function ImportModalContent({ importRecord, onClose, onSuccess, s
                         <ActionSection
                             status={formData.status}
                             loading={loading}
+                            unmatchedCount={unmatchedCount}
                             onSaveDraft={() => handleSubmit('draft')}
                             onConfirm={() => handleSubmit('confirmed')}
                         />
