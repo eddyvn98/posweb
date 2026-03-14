@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import api from '../lib/api'
 import { matchProduct } from '../lib/searchUtils'
 import { getAllLocalProducts } from '../lib/db'
@@ -59,11 +59,11 @@ export default function Products() {
         if (existing) {
             setEditingProduct(existing)
             setShowModal(true)
-            showNotification(`Da tim thay: ${existing.name}`, 'info')
+            showNotification(`Đã tìm thấy: ${existing.name}`, 'info')
         } else {
             setEditingProduct({ barcode: code, name: '', price: '', stock_quantity: 1 })
             setShowModal(true)
-            showNotification(`Ma moi: ${code}. Dang tao nhap...`, 'info')
+            showNotification(`Mã mới: ${code}. Đang tạo nháp...`, 'info')
         }
     }
 
@@ -91,7 +91,7 @@ export default function Products() {
             setAllProducts(Array.from(merged.values()))
         } catch (error) {
             console.error('Failed to fetch products', error)
-            showNotification('Loi tai san pham', 'error')
+            showNotification('Lỗi tải sản phẩm', 'error')
         }
     }
 
@@ -137,7 +137,7 @@ export default function Products() {
 
     const handleDeleteSelected = async () => {
         if (!selectedProducts.length) return
-        if (!confirm(`Ban chac chan muon xoa ${selectedProducts.length} san pham da chon?`)) return
+        if (!confirm(`Bạn chắc chắn muốn xóa ${selectedProducts.length} sản phẩm đã chọn?`)) return
 
         const idsToDelete = [...selectedProducts]
         let successCount = 0
@@ -156,7 +156,7 @@ export default function Products() {
         }
 
         await fetchProducts()
-        showNotification(`Da xoa ${successCount} san pham`, 'info')
+        showNotification(`Đã xóa ${successCount} sản phẩm`, 'info')
     }
 
     const handleAddToCart = (event, product) => {
@@ -169,7 +169,7 @@ export default function Products() {
             <div className="bg-white shadow-sm p-4 sticky top-0 z-10 flex flex-col gap-3 border-b">
                 <div className="flex gap-3 items-center">
                     <h1 className="text-xl font-black flex-1 text-gray-800 uppercase tracking-tighter">
-                        {isSelectionMode ? `${selectedProducts.length} Dang chon` : 'SAN PHAM'}
+                        {isSelectionMode ? `${selectedProducts.length} đang chọn` : 'SẢN PHẨM'}
                     </h1>
                     <div className="flex gap-2">
                         {isSelectionMode ? (
@@ -181,19 +181,19 @@ export default function Products() {
                                     }}
                                     className="btn bg-gray-100 text-gray-600 px-3 text-xs font-bold h-10 rounded-xl"
                                 >
-                                    Huy
+                                    Hủy
                                 </button>
                                 <button onClick={handleDeleteSelected} className="btn bg-red-500 text-white px-4 shadow-lg text-sm font-bold h-10 rounded-xl">
-                                    Xoa het
+                                    Xóa hết
                                 </button>
                             </>
                         ) : (
                             <>
                                 <button onClick={() => setShowBulkModal(true)} className="btn bg-orange-50 text-orange-600 px-3 text-xs font-bold h-10 rounded-xl border border-orange-100">
-                                    Quet lo
+                                    Quét lô
                                 </button>
                                 <button onClick={handleCreate} className="btn-primary px-4 shadow-lg text-sm font-bold h-10 rounded-xl">
-                                    + Tao moi
+                                    + Tạo mới
                                 </button>
                             </>
                         )}
@@ -203,23 +203,23 @@ export default function Products() {
                     <input
                         type="text"
                         className="input flex-1"
-                        placeholder="Tim kiem san pham..."
+                        placeholder="Tìm kiếm sản phẩm..."
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                     />
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                     <select className="input py-1 px-2 text-sm w-auto border-gray-200 min-h-[36px] bg-white font-medium" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-                        <option value="name_asc">Ten A-Z</option>
-                        <option value="price_asc">Gia tang dan</option>
-                        <option value="price_desc">Gia giam dan</option>
-                        <option value="stock_asc">Ton kho it</option>
+                        <option value="name_asc">Tên A-Z</option>
+                        <option value="price_asc">Giá tăng dần</option>
+                        <option value="price_desc">Giá giảm dần</option>
+                        <option value="stock_asc">Tồn kho ít</option>
                     </select>
                     <button
                         onClick={() => setFilter(filter === 'all' ? 'low_stock' : 'all')}
                         className={`btn text-xs px-3 min-h-[36px] border font-bold transition-all ${filter === 'low_stock' ? 'bg-orange-100 border-orange-200 text-orange-700' : 'bg-white border-gray-200 text-gray-600'}`}
                     >
-                        {filter === 'low_stock' ? 'Sap het hang' : 'Tat ca'}
+                        {filter === 'low_stock' ? 'Sắp hết hàng' : 'Tất cả'}
                     </button>
                 </div>
             </div>
@@ -227,7 +227,7 @@ export default function Products() {
             <div className="p-3">
                 {products.length === 0 ? (
                     <div className="text-center py-16">
-                        <p className="text-gray-600 font-bold text-lg">{query ? 'Khong tim thay san pham' : 'Chua co san pham nao'}</p>
+                        <p className="text-gray-600 font-bold text-lg">{query ? 'Không tìm thấy sản phẩm' : 'Chưa có sản phẩm nào'}</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">

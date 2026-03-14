@@ -1,4 +1,4 @@
-import { compressImage } from '../../lib/imageUtils'
+﻿import { compressImage } from '../../lib/imageUtils'
 import api from '../../lib/api'
 
 export default function ProductImage({ imageUrl, onChange }) {
@@ -7,7 +7,6 @@ export default function ProductImage({ imageUrl, onChange }) {
         if (!file) return
 
         try {
-            // Compress image to max 800px and 0.7 quality (approx < 200KB)
             const compressed = await compressImage(file, { maxWidth: 800, maxHeight: 800, quality: 0.7 })
             onChange(compressed)
         } catch (err) {

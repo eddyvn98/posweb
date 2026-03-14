@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchLocalProducts } from '../lib/db'
 import { useCart } from '../contexts/CartContext'
+import { useSync } from '../contexts/SyncContext'
 import { useScanBarcode } from '../hooks/useScanBarcode'
 
 import ProductCard from '../components/ProductCard'
@@ -13,6 +14,7 @@ import InvoiceModal from '../components/InvoiceModal'
 export default function Sales() {
     const navigate = useNavigate()
     const searchInputRef = useRef(null)
+    const lastHydrationRef = useRef(0)
     const [query, setQuery] = useState('')
     const [isSearchInputFocused, setIsSearchInputFocused] = useState(false)
     const [products, setProducts] = useState([])
@@ -24,6 +26,7 @@ export default function Sales() {
     const [scanError, setScanError] = useState(null)
 
     const { cart, addToCart, removeFromCart, updateQuantity, setQuantity, clearCart, totalAmount, totalItems } = useCart()
+    const { pullProducts, isOnline } = useSync()
 
     // 🔊 Beep sound utility
     const playBeep = (type = 'success') => {
@@ -65,11 +68,24 @@ export default function Sales() {
         }
 
         const timer = setTimeout(async () => {
-            const results = await searchLocalProducts(query)
+            let results = await searchLocalProducts(query)
+
+            // Fallback: cache local co the chua kip dong bo, thu hydrate 1 lan neu dang online.
+            const canHydrate =
+                results.length === 0 &&
+                isOnline &&
+                Date.now() - lastHydrationRef.current > 30000
+
+            if (canHydrate) {
+                lastHydrationRef.current = Date.now()
+                await pullProducts()
+                results = await searchLocalProducts(query)
+            }
+
             setProducts(results)
         }, 200)
         return () => clearTimeout(timer)
-    }, [query])
+    }, [isOnline, pullProducts, query])
 
     // Shared Scan Logic
     const handleScanResult = async (code) => {

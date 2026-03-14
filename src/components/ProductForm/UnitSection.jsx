@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import SelectionModal from '../Common/SelectionModal';
+﻿import React, { useState } from 'react'
+import SelectionModal from '../Common/SelectionModal'
 
 export default function UnitSection({ units, selectedUnit, onChange, onCreate, onEdit, onDelete }) {
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false)
     const DEFAULT_UNIT = 'Cái'
 
     return (

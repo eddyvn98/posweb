@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react'
+﻿import { useRef, useEffect, useState } from 'react'
 
 export default function ProductCamera({ onCapture }) {
     const videoRef = useRef(null)
@@ -21,7 +21,6 @@ export default function ProductCamera({ onCapture }) {
         }
     }
 
-    // Attach stream to video element once it's mounted
     useEffect(() => {
         if (isCameraActive && stream && videoRef.current) {
             videoRef.current.srcObject = stream
@@ -89,10 +88,8 @@ export default function ProductCamera({ onCapture }) {
                     className="w-full h-full object-cover"
                 />
 
-                {/* Overlay Circle for focus */}
                 <div className="absolute inset-0 border-[20px] border-black/20 pointer-events-none rounded-full scale-150"></div>
 
-                {/* Controls */}
                 <div className="absolute bottom-2 left-0 right-0 flex justify-around items-center px-4">
                     <button
                         type="button"

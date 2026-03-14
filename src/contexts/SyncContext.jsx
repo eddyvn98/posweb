@@ -16,7 +16,7 @@ const SyncContext = createContext({})
 export const useSync = () => useContext(SyncContext)
 
 export const SyncProvider = ({ children }) => {
-    const { user, shop } = useAuth()
+    const { user } = useAuth()
     const [isOnline, setIsOnline] = useState(navigator.onLine)
     const [isSyncing, setIsSyncing] = useState(false)
     const [pendingCount, setPendingCount] = useState(0)
@@ -49,7 +49,7 @@ export const SyncProvider = ({ children }) => {
     }, [])
 
     useEffect(() => {
-        if (!user || !shop) return
+        if (!user) return
         const interval = setInterval(() => {
             if (navigator.onLine) {
                 pullProducts()
@@ -58,10 +58,10 @@ export const SyncProvider = ({ children }) => {
             }
         }, 120000)
         return () => clearInterval(interval)
-    }, [user, shop])
+    }, [user])
 
     const pullProducts = async () => {
-        if (!shop || !navigator.onLine) return
+        if (!user || !navigator.onLine) return
         setIsSyncing(true)
         try {
             const response = await api.get('/products')
@@ -118,9 +118,9 @@ export const SyncProvider = ({ children }) => {
     }
 
     useEffect(() => {
-        if (!user || !shop || !navigator.onLine) return
+        if (!user || !navigator.onLine) return
         pullProducts()
-    }, [user, shop])
+    }, [user])
 
     const deleteProduct = async (productId) => {
         if (!user) return

@@ -1,4 +1,7 @@
 export default function CartItem({ item, onUpdateQty, onSetQty, onRemove }) {
+    const stockQuantity = Number(item.stock_quantity ?? 0)
+    const remainingAfterSale = stockQuantity - Number(item.quantity || 0)
+
     const handleUpdate = (delta) => {
         const currentId = item.product_id || item.id
         if (item.quantity + delta <= 0) {
@@ -12,7 +15,6 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove }) {
 
     return (
         <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 group gap-2">
-            {/* Thumbnail */}
             <div className="w-9 h-9 rounded-lg overflow-hidden bg-gray-50 border border-gray-100 shrink-0">
                 {item.image_url ? (
                     <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
@@ -21,7 +23,6 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove }) {
                 )}
             </div>
 
-            {/* Left side: Name and unit details - Compact */}
             <div className="flex-1 min-w-0 pr-1">
                 <div className="font-bold text-sm text-gray-800 leading-tight truncate-2-lines break-words">
                     {item.name}
@@ -29,11 +30,12 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove }) {
                 <div className="text-[10px] text-gray-400 font-medium leading-none mt-0.5">
                     {new Intl.NumberFormat('vi-VN').format(item.price)}đ
                 </div>
+                <div className={`text-[10px] font-semibold leading-none mt-1 ${remainingAfterSale < 0 ? 'text-amber-600' : 'text-gray-500'}`}>
+                    Tồn: {new Intl.NumberFormat('vi-VN').format(stockQuantity)} | Còn sau bán: {new Intl.NumberFormat('vi-VN').format(remainingAfterSale)}
+                </div>
             </div>
 
-            {/* Right side: Everything else in a single compact row */}
             <div className="flex items-center gap-2 shrink-0">
-                {/* Quantity Controls - Compact h-7 */}
                 <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-7 bg-white shadow-sm">
                     <button
                         onClick={() => handleUpdate(-1)}
@@ -68,12 +70,10 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove }) {
                     </button>
                 </div>
 
-                {/* Total Price - Bold & Primary */}
                 <div className="min-w-[55px] text-right font-black text-sm text-primary leading-none">
                     {new Intl.NumberFormat('vi-VN').format(item.price * item.quantity)}
                 </div>
 
-                {/* Delete - Minimal */}
                 <button
                     onClick={() => onRemove(item.product_id || item.id)}
                     className="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-500 transition-all opacity-40 group-hover:opacity-100"

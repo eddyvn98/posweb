@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react'
 
 export default function SelectionModal({
     isOpen,
@@ -10,50 +10,49 @@ export default function SelectionModal({
     onCreate,
     onEdit,
     onDelete,
-    emptyText = "Chưa có dữ liệu"
+    emptyText = 'Chưa có dữ liệu'
 }) {
-    const [isAdding, setIsAdding] = useState(false);
-    const [newItemName, setNewItemName] = useState('');
-    const [editingId, setEditingId] = useState(null);
-    const [editName, setEditName] = useState('');
-    const [deletingId, setDeletingId] = useState(null);
-    const inputRef = useRef(null);
+    const [isAdding, setIsAdding] = useState(false)
+    const [newItemName, setNewItemName] = useState('')
+    const [editingId, setEditingId] = useState(null)
+    const [editName, setEditName] = useState('')
+    const [deletingId, setDeletingId] = useState(null)
+    const inputRef = useRef(null)
 
     useEffect(() => {
         if ((isAdding || editingId) && inputRef.current) {
-            inputRef.current.focus();
+            inputRef.current.focus()
         }
-    }, [isAdding, editingId]);
+    }, [isAdding, editingId])
 
-    if (!isOpen) return null;
+    if (!isOpen) return null
 
-    const filteredOptions = options;
+    const filteredOptions = options
 
     const handleCreate = async () => {
-        if (!newItemName.trim()) return;
-        await onCreate(newItemName.trim());
-        setNewItemName('');
-        setIsAdding(false);
-    };
+        if (!newItemName.trim()) return
+        await onCreate(newItemName.trim())
+        setNewItemName('')
+        setIsAdding(false)
+    }
 
     const handleUpdate = async (opt) => {
         if (!editName.trim() || editName === opt.name) {
-            setEditingId(null);
-            return;
+            setEditingId(null)
+            return
         }
-        await onEdit(opt, editName.trim());
-        setEditingId(null);
-    };
+        await onEdit(opt, editName.trim())
+        setEditingId(null)
+    }
 
     return (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
             <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in fade-in zoom-in duration-200">
-                {/* Header */}
                 <div className="p-4 border-b flex justify-between items-center bg-gray-50/50">
                     <h3 className="font-bold text-gray-800">{title}</h3>
                     <button type="button" onClick={onClose} className="text-gray-400 hover:text-red-500 text-xl p-1">✕</button>
                 </div>
-                {/* List */}
+
                 <div className="overflow-y-auto flex-1 p-2">
                     {filteredOptions.length === 0 && !isAdding ? (
                         <div className="p-8 text-center text-gray-400 text-sm italic">{emptyText}</div>
@@ -62,10 +61,7 @@ export default function SelectionModal({
                             {filteredOptions.map((opt) => (
                                 <div
                                     key={opt.id || opt.name}
-                                    className={`group flex items-center gap-2 px-2 py-1 rounded-xl transition-all ${selectedValue === opt.name
-                                        ? 'bg-primary/5'
-                                        : 'hover:bg-gray-50'
-                                        }`}
+                                    className={`group flex items-center gap-2 px-2 py-1 rounded-xl transition-all ${selectedValue === opt.name ? 'bg-primary/5' : 'hover:bg-gray-50'}`}
                                 >
                                     {editingId === opt.id ? (
                                         <div className="flex-1 flex items-center gap-2 p-1">
@@ -85,7 +81,7 @@ export default function SelectionModal({
                                             <div className="flex gap-1 shrink-0">
                                                 <button
                                                     type="button"
-                                                    onClick={() => { onDelete(opt); setDeletingId(null); }}
+                                                    onClick={() => { onDelete(opt); setDeletingId(null) }}
                                                     className="bg-red-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm"
                                                 >
                                                     Xóa
@@ -105,13 +101,10 @@ export default function SelectionModal({
                                                 type="button"
                                                 disabled={deletingId || editingId}
                                                 onClick={() => {
-                                                    onSelect(opt.name);
-                                                    onClose();
+                                                    onSelect(opt.name)
+                                                    onClose()
                                                 }}
-                                                className={`flex-1 text-left px-2 py-2 rounded-lg transition-all flex items-center justify-between ${selectedValue === opt.name
-                                                    ? 'text-primary font-bold'
-                                                    : 'text-gray-700'
-                                                    }`}
+                                                className={`flex-1 text-left px-2 py-2 rounded-lg transition-all flex items-center justify-between ${selectedValue === opt.name ? 'text-primary font-bold' : 'text-gray-700'}`}
                                             >
                                                 <span>{opt.name}</span>
                                                 {selectedValue === opt.name && <span className="text-primary font-bold">✓</span>}
@@ -122,11 +115,11 @@ export default function SelectionModal({
                                                     <button
                                                         type="button"
                                                         onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setEditingId(opt.id);
-                                                            setEditName(opt.name);
-                                                            setDeletingId(null);
-                                                            setIsAdding(false);
+                                                            e.stopPropagation()
+                                                            setEditingId(opt.id)
+                                                            setEditName(opt.name)
+                                                            setDeletingId(null)
+                                                            setIsAdding(false)
                                                         }}
                                                         className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                                                         title="Sửa"
@@ -141,10 +134,10 @@ export default function SelectionModal({
                                                     <button
                                                         type="button"
                                                         onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setDeletingId(opt.id);
-                                                            setEditingId(null);
-                                                            setIsAdding(false);
+                                                            e.stopPropagation()
+                                                            setDeletingId(opt.id)
+                                                            setEditingId(null)
+                                                            setIsAdding(false)
                                                         }}
                                                         className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                                         title="Xóa"
@@ -163,7 +156,6 @@ export default function SelectionModal({
                     )}
                 </div>
 
-                {/* Footer/Actions */}
                 <div className="p-3 border-t bg-gray-100 flex flex-col gap-2">
                     {isAdding ? (
                         <div className="flex items-center gap-2 p-1 bg-white rounded-xl shadow-inner border border-primary/20">
@@ -184,9 +176,9 @@ export default function SelectionModal({
                         <button
                             type="button"
                             onClick={() => {
-                                setIsAdding(true);
-                                setEditingId(null);
-                                setDeletingId(null);
+                                setIsAdding(true)
+                                setEditingId(null)
+                                setDeletingId(null)
                             }}
                             className="flex-1 btn-primary h-11 text-sm rounded-xl font-bold tracking-wide shadow-md"
                         >
@@ -196,5 +188,5 @@ export default function SelectionModal({
                 </div>
             </div>
         </div>
-    );
+    )
 }

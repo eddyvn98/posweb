@@ -1,4 +1,4 @@
-export default function BarcodeSection({ barcode, onChange, onGenerate, onBlur }) {
+﻿export default function BarcodeSection({ barcode, onChange, onGenerate, onBlur }) {
     return (
         <div>
             <label className="block text-sm font-medium text-gray-700">Mã vạch</label>

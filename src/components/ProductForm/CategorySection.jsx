@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import SelectionModal from '../Common/SelectionModal';
+﻿import React, { useState } from 'react'
+import SelectionModal from '../Common/SelectionModal'
 
 export default function CategorySection({ categories, selectedCategory, onChange, onCreate, onEdit, onDelete }) {
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false)
 
     return (
         <>
