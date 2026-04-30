@@ -1,0 +1,2 @@
+FE=https://beside-write-lightweight-applied.trycloudflare.com
+BE=https://interview-hardcover-dealtime-focus.trycloudflare.com

@@ -1,0 +1,46 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: posweb-mongo
+    ports:
+      - "127.0.0.1:27028:27017"
+    volumes:
+      - posweb_mongo_data:/data/db
+    restart: unless-stopped
+    cpus: 1
+    mem_limit: 320m
+
+  backend:
+    build:
+      context: ./bot_backend
+      dockerfile: Dockerfile
+    container_name: posweb-backend
+    depends_on:
+      - mongo
+    env_file:
+      - ./bot_backend/.env
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./bot_backend/pos.db:/app/pos.db
+    restart: unless-stopped
+    cpus: 1
+    mem_limit: 256m
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_URL: /api
+    container_name: posweb-frontend
+    depends_on:
+      - backend
+    ports:
+      - "13002:80"
+    restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 256m
+
+volumes:
+  posweb_mongo_data:

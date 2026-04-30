@@ -1,0 +1,30 @@
+{
+    "name": "posweb-telegram-bot",
+    "version": "1.0.0",
+    "description": "Telegram Bot and Auth Endpoint for posweb",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node --watch server.js",
+        "migrate:mongo": "node scripts/migrate_sqlite_to_mongo.js",
+        "verify:mongo-counts": "node scripts/verify_mongo_counts.js",
+        "smoke:core": "node scripts/smoke_core_api.js",
+        "sync:sqlite-from-mongo": "node scripts/sync_sqlite_from_mongo.js"
+    },
+    "dependencies": {
+        "axios": "^1.13.6",
+        "bcryptjs": "^3.0.3",
+        "better-sqlite3": "^12.6.2",
+        "cors": "^2.8.5",
+        "crypto": "^1.0.1",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2",
+        "google-auth-library": "^10.6.1",
+        "google-spreadsheet": "^5.2.0",
+        "googleapis": "^171.4.0",
+        "jsonwebtoken": "^9.0.3",
+        "mongoose": "^8.23.0",
+        "telegraf": "^4.16.3",
+        "uuid": "^13.0.0"
+    }
+}
