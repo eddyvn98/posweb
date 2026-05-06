@@ -1,8 +1,11 @@
 const authService = require('../services/authService');
 
 function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    let token = req.cookies?.token;
+    if (!token) {
+        const authHeader = req.headers['authorization'];
+        token = authHeader && authHeader.split(' ')[1];
+    }
 
     if (!token) return res.sendStatus(401);
 
@@ -13,4 +16,12 @@ function authenticateToken(req, res, next) {
     next();
 }
 
-module.exports = authenticateToken;
+function ownerOnly(req, res, next) {
+    if (!req.user || req.user.role !== 'owner') {
+        return res.status(403).json({ error: 'Chi owner moi co quyen thuc hien thao tac nay' });
+    }
+    next();
+}
+
+module.exports = { authenticateToken, ownerOnly };
+

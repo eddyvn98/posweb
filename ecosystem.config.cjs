@@ -7,6 +7,9 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3011,
+        DB_PROVIDER: 'mongo',
+        MONGO_URI: 'mongodb://127.0.0.1:27017',
+        MONGO_DB_NAME: 'posweb_main',
       },
       watch: false,
       max_memory_restart: '300M',

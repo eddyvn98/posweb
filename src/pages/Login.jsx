@@ -3,6 +3,8 @@ import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../lib/api'
+import SEO from '../components/SEO'
+import { Store, MessageCircle, Send, X } from '../components/Icons'
 import './Login.css'
 
 export default function Login() {
@@ -13,6 +15,9 @@ export default function Login() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [isSignUp, setIsSignUp] = useState(false)
+    const [showForgot, setShowForgot] = useState(false)
+    const [forgotEmail, setForgotEmail] = useState('')
+    const [forgotStatus, setForgotStatus] = useState(null) // { type: 'success' | 'error', message: string }
     const [googleClientId, setGoogleClientId] = useState('')
     const [googleReady, setGoogleReady] = useState(false)
     const navigate = useNavigate()
@@ -85,8 +90,15 @@ export default function Login() {
                 ? await register(email.trim(), password, shopName.trim(), inviteCode.trim() || undefined)
                 : await login(email.trim(), password)
 
-            if (result.success) navigate('/app/sales')
-            else setError(result.error || 'Thao tác thất bại')
+            if (result.success) {
+                navigate('/app/sales')
+            } else {
+                let msg = result.error || 'Thao tác thất bại'
+                if (!isSignUp && (msg.includes('khong chinh xac') || msg.includes('không chính xác'))) {
+                    msg = 'Email hoặc mật khẩu không chính xác. Nếu bạn chưa có tài khoản, hãy nhấn "Đăng ký ngay" bên dưới.'
+                }
+                setError(msg)
+            }
         } catch (err) {
             setError(err.message)
         } finally {
@@ -108,10 +120,39 @@ export default function Login() {
         }
     }
 
+    const handleForgot = async (e) => {
+        e.preventDefault()
+        if (!forgotEmail.trim()) {
+            setForgotStatus({ type: 'error', message: 'Vui lòng nhập email' })
+            return
+        }
+        setLoading(true)
+        setForgotStatus(null)
+        try {
+            const response = await api.post('/auth/forgot-password', { email: forgotEmail.trim() })
+            if (response.data.success) {
+                setForgotStatus({ 
+                    type: 'success', 
+                    message: 'Một email chứa liên kết đặt lại mật khẩu đã được gửi đến bạn. Vui lòng kiểm tra hộp thư (và cả thư rác).' 
+                })
+            } else {
+                setForgotStatus({ type: 'error', message: response.data.error || 'Gửi yêu cầu thất bại' })
+            }
+        } catch (err) {
+            setForgotStatus({ 
+                type: 'error', 
+                message: err.response?.data?.error || 'Có lỗi xảy ra, vui lòng thử lại hoặc liên hệ hỗ trợ trực tiếp.' 
+            })
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const hasInvite = Boolean(inviteCode)
 
     return (
         <div className="auth-page">
+            <SEO title={isSignUp ? "Đăng ký" : "Đăng nhập"} noindex={true} />
             <div className="auth-bg" aria-hidden="true">
                 <div className="auth-blob auth-blob-1" />
                 <div className="auth-blob auth-blob-2" />
@@ -121,7 +162,7 @@ export default function Login() {
                 {/* Brand */}
                 <div className="auth-brand">
                     <Link to="/" className="auth-brand-link">
-                        🏪 <span>POSweb</span>
+                        <Store className="w-8 h-8 text-primary" /> <span>POSweb</span>
                     </Link>
                 </div>
 
@@ -158,6 +199,7 @@ export default function Login() {
                                         onChange={e => setInviteCode(e.target.value.toUpperCase())}
                                         placeholder="VD: A1B2C3D4"
                                         maxLength={8}
+                                        name="inviteCode"
                                         autoComplete="off"
                                     />
                                     {inviteCode && (
@@ -177,6 +219,7 @@ export default function Login() {
                                         value={shopName}
                                         onChange={e => setShopName(e.target.value)}
                                         placeholder="Cửa hàng của tôi"
+                                        name="shopName"
                                         autoComplete="organization"
                                     />
                                 </div>
@@ -193,6 +236,7 @@ export default function Login() {
                             value={email}
                             onChange={e => setEmail(e.target.value)}
                             placeholder="ten@example.com"
+                            name="email"
                             autoComplete="email"
                             inputMode="email"
                         />
@@ -208,8 +252,16 @@ export default function Login() {
                             onChange={e => setPassword(e.target.value)}
                             placeholder="••••••••"
                             minLength={6}
+                            name="password"
                             autoComplete={isSignUp ? 'new-password' : 'current-password'}
                         />
+                        {!isSignUp && (
+                            <div className="forgot-password-link">
+                                <button type="button" onClick={() => { setShowForgot(true); setForgotEmail(email); setForgotStatus(null) }}>
+                                    Quên mật khẩu?
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     <button type="submit" disabled={loading} className="auth-submit">
@@ -257,6 +309,53 @@ export default function Login() {
                     <Link to="/">← Về trang chủ</Link>
                 </div>
             </div>
+
+            {/* Forgot Password Modal */}
+            {showForgot && (
+                <div className="auth-overlay">
+                    <div className="auth-modal">
+                        <button className="modal-close" onClick={() => setShowForgot(false)}><X className="w-5 h-5" /></button>
+                        <h2 className="modal-title">Khôi phục mật khẩu</h2>
+                        <p className="modal-subtitle">
+                            Nhập email bạn đã đăng ký, chúng tôi sẽ gửi thông báo tới quản trị viên để hỗ trợ bạn.
+                        </p>
+
+                        {forgotStatus && (
+                            <div className={`auth-alert ${forgotStatus.type}`}>
+                                {forgotStatus.message}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleForgot}>
+                            <div className="form-group">
+                                <label>Email tài khoản</label>
+                                <input
+                                    type="email"
+                                    required
+                                    className="auth-input"
+                                    value={forgotEmail}
+                                    onChange={e => setForgotEmail(e.target.value)}
+                                    placeholder="ten@example.com"
+                                />
+                            </div>
+                            <button type="submit" disabled={loading} className="auth-submit">
+                                {loading ? 'Đang gửi...' : 'Gửi yêu cầu cấp lại'}
+                            </button>
+                        </form>
+
+                        <div className="modal-divider"><span>hoặc hỗ trợ trực tiếp</span></div>
+                        
+                        <div className="modal-support">
+                            <a href="https://zalo.me/0932690949" target="_blank" rel="noopener noreferrer" className="support-item zalo">
+                                <MessageCircle className="w-5 h-5" /> Chat Zalo: 0932.690.949
+                            </a>
+                            <a href="https://t.me/htt711" target="_blank" rel="noopener noreferrer" className="support-item telegram">
+                                <Send className="w-5 h-5" /> Telegram: @htt711
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

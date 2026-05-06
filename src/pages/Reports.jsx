@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotification } from '../contexts/NotificationContext'
-// import { useDriveAuth } from '../contexts/DriveContext' // TEMPORARY: Google Drive disabled
 import {
     getMonthlyRevenue,
     getYearlyRevenue,
@@ -11,15 +10,23 @@ import {
     formatDateVN
 } from '../lib/reports'
 import { exportAllData, exportMonthlyReportCompliant } from '../lib/export'
-// import { uploadToDrive } from '../lib/driveBackup' // TEMPORARY: Google Drive disabled
 import RevenueReport from '../components/RevenueReport'
 import CashbookReport from '../components/CashbookReport'
 import InventoryReport from '../components/InventoryReport'
+import { 
+    BarChart3, 
+    Save, 
+    TrendingUp, 
+    Package, 
+    Lightbulb, 
+    AlertTriangle,
+    ArrowLeft,
+    ArrowRight
+} from '../components/Icons'
 
 export default function Reports() {
-    const { user, shop } = useAuth()
+    const { shop } = useAuth()
     const { showNotification } = useNotification()
-    // const { isAuthed, accessToken } = useDriveAuth() // TEMPORARY: Google Drive disabled
     const [activeTab, setActiveTab] = useState('revenue')
     const [year, setYear] = useState(new Date().getFullYear())
     const [month, setMonth] = useState(new Date().getMonth() + 1)
@@ -31,6 +38,7 @@ export default function Reports() {
     const [revenueData, setRevenueData] = useState(null)
     const [cashbookData, setCashbookData] = useState(null)
     const [inventoryData, setInventoryData] = useState(null)
+    const [reportSource, setReportSource] = useState('server')
 
     useEffect(() => {
         if (!shop?.id) return
@@ -39,10 +47,11 @@ export default function Reports() {
             setLoading(true)
             setError('')
             try {
-                // Always load ALL reports for export, not just active tab
-                const revenue = await getMonthlyRevenue(shop.id, year, month)
-                const cashbook = await getCashbookReport(shop.id, year, month)
-                const inventory = await getInventorySnapshot(shop.id, year, month)
+                const [revenue, cashbook, inventory] = await Promise.all([
+                    getMonthlyRevenue(shop.id, year, month),
+                    getCashbookReport(shop.id, year, month),
+                    getInventorySnapshot(shop.id, year, month)
+                ])
 
                 if (!revenue) throw new Error('Không thể tải báo cáo doanh thu')
                 if (!cashbook) throw new Error('Không thể tải báo cáo sổ quỹ')
@@ -51,6 +60,13 @@ export default function Reports() {
                 setRevenueData(revenue)
                 setCashbookData(cashbook)
                 setInventoryData(inventory)
+                
+                // Set the most restricted source as the global source
+                const sources = [revenue.source, cashbook.source, inventory.source]
+                if (sources.includes('local')) setReportSource('local')
+                else if (sources.includes('cache')) setReportSource('cache')
+                else setReportSource('server')
+
             } catch (err) {
                 setError(err.message)
                 console.error('Error loading report:', err)
@@ -87,28 +103,22 @@ export default function Reports() {
         setExporting(true)
         try {
             await exportAllData(shop.id)
-            alert('✅ Đã xuất dữ liệu sao lưu thành công!')
+            showNotification('✅ Đã xuất dữ liệu sao lưu thành công!', 'success')
         } catch (err) {
-            alert('❌ Lỗi khi xuất: ' + err.message)
+            showNotification('❌ Lỗi khi xuất: ' + err.message, 'error')
         } finally {
             setExporting(false)
         }
     }
 
     const handleExportMonthlyReport = async () => {
-        if (!shop?.id) {
-            alert('❌ Vui lòng đợi cửa hàng tải xong')
-            return
-        }
-
-        if (!revenueData || !cashbookData || !inventoryData) {
-            alert('❌ Vui lòng đợi báo cáo tải xong')
+        if (!shop?.id || !revenueData || !cashbookData || !inventoryData) {
+            showNotification('❌ Vui lòng đợi báo cáo tải xong', 'warning')
             return
         }
 
         setExporting(true)
         try {
-            // Export Excel
             await exportMonthlyReportCompliant(
                 shop.id,
                 year,
@@ -118,10 +128,8 @@ export default function Reports() {
                 cashbookData,
                 inventoryData
             )
-
             showNotification('✅ Đã xuất báo cáo tháng thành công!', 'success')
         } catch (err) {
-            alert('❌ Lỗi khi xuất: ' + err.message)
             showNotification(`❌ ${err.message}`, 'error')
             console.error(err)
         } finally {
@@ -130,167 +138,193 @@ export default function Reports() {
     }
 
     return (
-        <div className="min-h-screen bg-transparent p-4 pb-20">
-            {/* Header */}
-            <div className="mb-6 mt-2">
-                <h1 className="text-3xl font-black text-gray-800 tracking-tight uppercase">Thống kê</h1>
-                <p className="text-gray-400 font-medium italic">Báo cáo doanh thu & sổ quỹ</p>
-            </div>
-
-            {/* Tab Navigation */}
-            <div className="flex gap-2 mb-4 sm:mb-6 overflow-x-auto pb-2">
-                {[
-                    { id: 'revenue', label: '📈 Doanh thu', icon: '💰' },
-                    { id: 'cashbook', label: '📊 Sổ quỹ', icon: '💵' },
-                    { id: 'inventory', label: '📦 Tồn kho', icon: '📦' }
-                ].map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`
-                            px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm whitespace-nowrap transition-all
-                            ${activeTab === tab.id
-                                ? 'bg-primary text-white shadow-lg shadow-pink-200'
-                                : 'bg-white text-gray-700 border border-pink-100 hover:border-pink-300'
-                            }
-                        `}
-                    >
-                        {tab.icon} {tab.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Month Navigation */}
-            <div className="bg-white rounded-3xl p-3 sm:p-4 mb-6 border border-pink-50 shadow-sm">
-                <div className="flex items-center justify-between gap-2 sm:gap-4">
-                    <button
-                        onClick={handlePreviousMonth}
-                        className="btn bg-pink-100 text-pink-600 font-black px-2 sm:px-4 h-8 sm:h-10 rounded-lg sm:rounded-xl hover:bg-pink-200 transition text-xs sm:text-base min-w-[90px] sm:min-w-0"
-                    >
-                        <span className="sm:hidden">← Trước</span>
-                        <span className="hidden sm:inline">← Tháng trước</span>
-                    </button>
-
-                    <div className="text-center flex-1">
-                        <p className="text-gray-500 text-[11px] sm:text-sm font-bold">THÁNG</p>
-                        <p className="text-lg sm:text-2xl font-black text-gray-800 capitalize leading-tight">{monthName}</p>
-                    </div>
-
-                    <button
-                        onClick={handleNextMonth}
-                        className="btn bg-pink-100 text-pink-600 font-black px-2 sm:px-4 h-8 sm:h-10 rounded-lg sm:rounded-xl hover:bg-pink-200 transition text-xs sm:text-base min-w-[90px] sm:min-w-0"
-                    >
-                        <span className="sm:hidden">Sau →</span>
-                        <span className="hidden sm:inline">Tháng sau →</span>
-                    </button>
+        <div className="min-h-screen bg-gray-50/30 p-4 pb-20">
+            {/* Header Section */}
+            <div className="mb-8 mt-2 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+                <div>
+                    <h1 className="text-4xl font-black text-gray-900 tracking-tighter uppercase leading-none">
+                        Báo cáo <span className="text-primary">&</span> Thống kê
+                    </h1>
+                    <p className="text-gray-400 font-bold mt-3 flex items-center gap-2">
+                        <span className="w-8 h-[2px] bg-primary/30"></span>
+                        Theo dõi hiệu quả kinh doanh & dòng tiền
+                    </p>
                 </div>
-
-                {/* Export Buttons */}
-                <div className="w-full mt-3 sm:mt-4 grid grid-cols-2 gap-2 sm:gap-3">
+                
+                {/* Global Actions */}
+                <div className="flex gap-3">
                     <button
                         onClick={handleExportMonthlyReport}
                         disabled={exporting || !revenueData}
-                        className="w-full btn bg-blue-500 text-white font-black rounded-lg sm:rounded-2xl hover:bg-blue-600 disabled:opacity-50 transition text-xs sm:text-base px-2 sm:px-4 h-11 sm:h-12"
+                        className="flex-1 lg:flex-none bg-white border-2 border-blue-100 text-blue-600 font-black px-6 py-4 rounded-[1.5rem] hover:bg-blue-50 transition-all flex items-center justify-center gap-2 text-sm shadow-sm active:scale-95 disabled:opacity-50"
                     >
-                        {exporting ? '⏳ Đang xuất...' : (
+                        {exporting ? 'Đang xuất...' : (
                             <>
-                                <span className="sm:hidden">📊 Xuất tháng</span>
-                                <span className="hidden sm:inline">📊 Xuất báo cáo tháng</span>
+                                <BarChart3 className="w-5 h-5" />
+                                <span>Xuất báo cáo tháng</span>
                             </>
                         )}
                     </button>
                     <button
                         onClick={handleExportAllData}
                         disabled={exporting}
-                        className="w-full btn bg-green-500 text-white font-black rounded-lg sm:rounded-2xl hover:bg-green-600 disabled:opacity-50 transition text-xs sm:text-base px-2 sm:px-4 h-11 sm:h-12"
+                        className="flex-1 lg:flex-none bg-gray-900 text-white font-black px-6 py-4 rounded-[1.5rem] hover:bg-black transition-all flex items-center justify-center gap-2 text-sm shadow-xl active:scale-95 disabled:opacity-50"
                     >
-                        {exporting ? '⏳ Đang xuất...' : (
+                        {exporting ? 'Đang xuất...' : (
                             <>
-                                <span className="sm:hidden">💾 Sao lưu</span>
-                                <span className="hidden sm:inline">💾 Sao lưu toàn bộ</span>
+                                <Save className="w-5 h-5" />
+                                <span>Sao lưu dữ liệu</span>
                             </>
                         )}
                     </button>
                 </div>
-
-                {/* Drive Status Info - DISABLED */}
-                {false && (
-                    <div className="w-full mt-3 bg-blue-50 border border-blue-200 rounded-2xl p-3">
-                        <p className="text-xs text-blue-700 font-bold">
-                            ✓ Google Drive đã kết nối - Báo cáo sẽ tự động sao lưu khi xuất
-                        </p>
-                    </div>
-                )}
-                {true && (
-                    <div className="w-full mt-3 bg-gray-50 border border-gray-200 rounded-2xl p-3">
-                        <p className="text-xs text-gray-600">
-                            💡 Google Drive backup tạm thời vô hiệu hóa. Xem GOOGLE_SETUP.md để bật lại.
-                        </p>
-                    </div>
-                )}
             </div>
 
-            {/* Error Message */}
-            {error && (
-                <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 text-red-700 font-bold text-sm">
-                    ⚠️ {error}
+            {/* Main Application Container */}
+            <div className="bg-white rounded-[3rem] border border-gray-100 shadow-2xl shadow-gray-200/40 overflow-hidden min-h-[60vh]">
+                {/* Navigation & Controls Bar */}
+                <div className="bg-gray-50/50 border-b border-gray-100 p-4 flex flex-col xl:flex-row items-center justify-between gap-6">
+                    {/* Primary Tabs */}
+                    <div className="flex bg-white p-1.5 rounded-3xl border border-gray-100 shadow-inner w-full xl:w-auto">
+                        {[
+                            { id: 'revenue', label: 'Doanh thu', icon: TrendingUp },
+                            { id: 'cashbook', label: 'Sổ quỹ', icon: BarChart3 },
+                            { id: 'inventory', label: 'Tồn kho', icon: Package }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`
+                                    flex-1 xl:flex-none px-2 sm:px-6 py-3 sm:py-4 rounded-2xl font-black text-[9px] sm:text-xs uppercase tracking-tight sm:tracking-widest transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3
+                                    ${activeTab === tab.id
+                                        ? 'bg-primary text-white shadow-xl shadow-pink-200'
+                                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                                    }
+                                `}
+                            >
+                                <tab.icon className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={activeTab === tab.id ? 3 : 2} />
+                                <span className="whitespace-nowrap">{tab.label}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Timeline Navigation */}
+                    <div className="flex items-center gap-6 bg-white px-6 py-3 rounded-[2rem] border border-gray-100 shadow-sm w-full xl:w-auto justify-between">
+                        <button
+                            onClick={handlePreviousMonth}
+                            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-gray-50 text-gray-800 hover:bg-primary hover:text-white transition-all font-black text-xl shadow-sm"
+                        >
+                            <ArrowLeft className="w-6 h-6" />
+                        </button>
+                        
+                        <div className="text-center min-w-[160px]">
+                            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] leading-none mb-1.5">Kỳ báo cáo</p>
+                            <p className="text-xl font-black text-gray-900 capitalize">{monthName}</p>
+                        </div>
+
+                        <button
+                            onClick={handleNextMonth}
+                            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-gray-50 text-gray-800 hover:bg-primary hover:text-white transition-all font-black text-xl shadow-sm"
+                        >
+                            <ArrowRight className="w-6 h-6" />
+                        </button>
+                    </div>
                 </div>
-            )}
 
-            {/* Loading State */}
-            {loading && (
-                <div className="bg-white rounded-3xl p-12 text-center">
-                    <p className="text-gray-500 font-bold">⏳ Đang tải báo cáo...</p>
+                {/* Content Area */}
+                <div className="p-8 lg:p-10">
+                    {/* Offline / Cache Banner */}
+                    {!loading && reportSource !== 'server' && shop?.id !== 'guest_shop' && (
+                        <div className={`mb-6 flex items-center gap-4 rounded-[2rem] p-5 border-2 ${
+                            reportSource === 'cache' 
+                            ? 'bg-amber-50 border-amber-100 text-amber-900' 
+                            : 'bg-red-50 border-red-100 text-red-900'
+                        }`}>
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${
+                                reportSource === 'cache' ? 'bg-white text-amber-500' : 'bg-white text-red-500'
+                            }`}>
+                                <AlertTriangle className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p className="font-black text-sm uppercase tracking-tight">
+                                    {reportSource === 'cache' ? 'Dữ liệu từ bộ nhớ đệm (Offline)' : 'Dữ liệu cục bộ (Chưa đầy đủ)'}
+                                </p>
+                                <p className="text-xs font-medium opacity-80 mt-0.5">
+                                    {reportSource === 'cache' 
+                                        ? 'Bạn đang xem bản lưu cuối cùng khi có mạng. Các thay đổi mới từ thiết bị khác có thể chưa hiển thị.' 
+                                        : 'Chỉ bao gồm các giao dịch chưa đồng bộ trên máy này. Kết quả có thể không chính xác so với thực tế.'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Compact Advice Banner */}
+                    <div className="mb-10 flex items-center gap-4 bg-blue-50/40 border border-blue-100 rounded-[2rem] p-5">
+                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                            <Lightbulb className="w-6 h-6 text-blue-500" />
+                        </div>
+                        <p className="text-xs text-blue-900 font-bold leading-relaxed max-w-2xl">
+                            Các chỉ số dưới đây được tổng hợp từ dữ liệu bán hàng và thu chi thực tế. 
+                            Sử dụng các tab phía trên để xem chi tiết từng mảng kinh doanh.
+                        </p>
+                    </div>
+
+                    {/* Dynamic Component Loader */}
+                    {loading ? (
+                        <div className="py-20 text-center">
+                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+                            <p className="text-gray-400 font-black uppercase tracking-widest text-xs">Đang xử lý dữ liệu...</p>
+                        </div>
+                    ) : error ? (
+                        <div className="bg-red-50 border border-red-100 rounded-3xl p-10 text-center">
+                            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                            <p className="text-red-700 font-black text-lg mb-2">Đã có lỗi xảy ra</p>
+                            <p className="text-red-500 text-sm font-medium">{error}</p>
+                        </div>
+                    ) : (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            {activeTab === 'revenue' && (
+                                revenueData?.totalSales > 0 ? (
+                                    <RevenueReport data={revenueData} />
+                                ) : (
+                                    <div className="py-20 text-center">
+                                        <TrendingUp className="w-20 h-20 mx-auto mb-6 text-gray-200 stroke-[1.5]" />
+                                        <p className="text-gray-400 font-black text-xl uppercase tracking-tighter">Chưa có dữ liệu doanh thu</p>
+                                        <p className="text-gray-300 text-sm mt-2">Bắt đầu bán hàng để thấy báo cáo tại đây</p>
+                                    </div>
+                                )
+                            )}
+                            {activeTab === 'cashbook' && (
+                                cashbookData?.transactions?.length > 0 ? (
+                                    <CashbookReport data={cashbookData} />
+                                ) : (
+                                    <div className="py-20 text-center">
+                                        <BarChart3 className="w-20 h-20 mx-auto mb-6 text-gray-200 stroke-[1.5]" />
+                                        <p className="text-gray-400 font-black text-xl uppercase tracking-tighter">Sổ quỹ đang trống</p>
+                                        <p className="text-gray-300 text-sm mt-2">Các giao dịch thu chi sẽ được liệt kê tại đây</p>
+                                    </div>
+                                )
+                            )}
+                            {activeTab === 'inventory' && (
+                                inventoryData?.inventory?.length > 0 ? (
+                                    <InventoryReport data={inventoryData} />
+                                ) : (
+                                    <div className="py-20 text-center">
+                                        <Package className="w-20 h-20 mx-auto mb-6 text-gray-200 stroke-[1.5]" />
+                                        <p className="text-gray-400 font-black text-xl uppercase tracking-tighter">Kho chưa có sản phẩm</p>
+                                        <p className="text-gray-300 text-sm mt-2">Nhập hàng hóa để theo dõi tồn kho</p>
+                                    </div>
+                                )
+                            )}
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
 
-            {/* Reports */}
-            {!loading && !error && (
-                <>
-                    {activeTab === 'revenue' && (
-                        revenueData && revenueData.totalSales > 0 ? (
-                            <RevenueReport data={revenueData} />
-                        ) : (
-                            <div className="bg-white rounded-3xl p-12 text-center border border-gray-100">
-                                <p className="text-6xl mb-4">📈</p>
-                                <p className="text-gray-600 font-bold text-lg">Không có dữ liệu doanh thu</p>
-                                <p className="text-gray-400 text-sm mt-2">Không có giao dịch nào được đồng bộ trong tháng này</p>
-                            </div>
-                        )
-                    )}
-                    {activeTab === 'cashbook' && (
-                        cashbookData && cashbookData.transactions && cashbookData.transactions.length > 0 ? (
-                            <CashbookReport data={cashbookData} />
-                        ) : (
-                            <div className="bg-white rounded-3xl p-12 text-center border border-gray-100">
-                                <p className="text-6xl mb-4">📊</p>
-                                <p className="text-gray-600 font-bold text-lg">Không có dữ liệu sổ quỹ</p>
-                                <p className="text-gray-400 text-sm mt-2">Không có giao dịch nào được ghi nhận trong tháng này</p>
-                            </div>
-                        )
-                    )}
-                    {activeTab === 'inventory' && (
-                        inventoryData && inventoryData.items && inventoryData.items.length > 0 ? (
-                            <InventoryReport data={inventoryData} />
-                        ) : (
-                            <div className="bg-white rounded-3xl p-12 text-center border border-gray-100">
-                                <p className="text-6xl mb-4">📦</p>
-                                <p className="text-gray-600 font-bold text-lg">Không có dữ liệu tồn kho</p>
-                                <p className="text-gray-400 text-sm mt-2">Chưa có sản phẩm nào trong kho</p>
-                            </div>
-                        )
-                    )}
-                </>
-            )}
-
-            {/* Tip Card */}
-            <div className="mt-8 bg-pink-500/5 border border-pink-100 p-6 rounded-3xl">
-                <div className="text-pink-600 font-black text-xs uppercase tracking-[0.2em] mb-2">💡 Mẹo</div>
-                <p className="text-pink-800 text-sm font-medium">
-                    Những báo cáo này có thể được xuất ra PDF hoặc Excel để trình thuế. Dữ liệu được tính từ các giao dịch đã được đồng bộ.
-                </p>
+            {/* Footer Attribution */}
+            <div className="mt-12 text-center">
+                <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.5em]">POSWeb Free Edition &copy; 2026</p>
             </div>
         </div>
     )
 }
-

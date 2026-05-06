@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import api from '../lib/api'
-import { setCurrentShopId, clearCurrentShopId } from '../lib/db'
+import { setCurrentShopId, clearCurrentShopId, seedGuestData } from '../lib/db'
 
 const AuthContext = createContext({})
 
@@ -12,31 +12,37 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        const token = localStorage.getItem('pos_token')
-        const savedUser = localStorage.getItem('pos_user')
-        const savedShop = localStorage.getItem('pos_shop')
+        const init = async () => {
+            const savedUser = localStorage.getItem('pos_user')
+            const savedShop = localStorage.getItem('pos_shop')
 
-        if (token && savedUser && savedShop) {
-            try {
-                const parsedUser = JSON.parse(savedUser)
-                const parsedShop = JSON.parse(savedShop)
-                setUser(parsedUser)
-                setShop(parsedShop)
-                // Restore IndexedDB scope on page reload
-                if (parsedUser?.shop_id) {
-                    setCurrentShopId(parsedUser.shop_id)
+            if (savedUser && savedShop) {
+                try {
+                    const parsedUser = JSON.parse(savedUser)
+                    const parsedShop = JSON.parse(savedShop)
+                    setUser(parsedUser)
+                    setShop(parsedShop)
+                    if (parsedUser?.shop_id) {
+                        setCurrentShopId(parsedUser.shop_id)
+                    }
+                } catch {
+                    localStorage.removeItem('pos_user')
+                    localStorage.removeItem('pos_shop')
+                    setCurrentShopId('guest_shop')
                 }
-            } catch {
-                localStorage.removeItem('pos_token')
-                localStorage.removeItem('pos_user')
-                localStorage.removeItem('pos_shop')
+            } else {
+                setCurrentShopId('guest_shop')
+                setShop({ id: 'guest_shop', name: 'Shop Tham Quan', currency: 'VND' })
             }
+            
+            // Populate mock data if in guest mode
+            await seedGuestData()
+            setLoading(false)
         }
-        setLoading(false)
+        init()
     }, [])
 
-    const _persistSession = (token, user, shop) => {
-        localStorage.setItem('pos_token', token)
+    const _persistSession = (user, shop) => {
         localStorage.setItem('pos_user', JSON.stringify(user))
         localStorage.setItem('pos_shop', JSON.stringify(shop))
         setUser(user)
@@ -50,8 +56,8 @@ export const AuthProvider = ({ children }) => {
     const loginWithTelegram = async (initData) => {
         try {
             const response = await api.post('/auth/telegram-auth', { initData })
-            const { token, user, shop } = response.data
-            _persistSession(token, user, shop)
+            const { user, shop } = response.data
+            _persistSession(user, shop)
             return { success: true }
         } catch (error) {
             console.error('Login Error:', error)
@@ -62,8 +68,8 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         try {
             const response = await api.post('/auth/login', { email, password })
-            const { token, user, shop } = response.data
-            _persistSession(token, user, shop)
+            const { user, shop } = response.data
+            _persistSession(user, shop)
             return { success: true }
         } catch (error) {
             return { success: false, error: error.response?.data?.error || error.message }
@@ -73,8 +79,8 @@ export const AuthProvider = ({ children }) => {
     const loginWithGoogle = async (credential) => {
         try {
             const response = await api.post('/auth/google', { credential })
-            const { token, user, shop } = response.data
-            _persistSession(token, user, shop)
+            const { user, shop } = response.data
+            _persistSession(user, shop)
             return { success: true }
         } catch (error) {
             return { success: false, error: error.response?.data?.error || error.message }
@@ -84,16 +90,20 @@ export const AuthProvider = ({ children }) => {
     const register = async (email, password, shopName, inviteCode) => {
         try {
             const response = await api.post('/auth/register', { email, password, shopName, inviteCode })
-            const { token, user, shop } = response.data
-            _persistSession(token, user, shop)
+            const { user, shop } = response.data
+            _persistSession(user, shop)
             return { success: true }
         } catch (error) {
             return { success: false, error: error.response?.data?.error || error.message }
         }
     }
 
-    const signOut = () => {
-        localStorage.removeItem('pos_token')
+    const signOut = async () => {
+        try {
+            await api.post('/auth/logout')
+        } catch (error) {
+            console.error('Logout Error:', error)
+        }
         localStorage.removeItem('pos_user')
         localStorage.removeItem('pos_shop')
         // Clear IndexedDB scope on logout
@@ -111,6 +121,7 @@ export const AuthProvider = ({ children }) => {
     const value = {
         user,
         shop,
+        isGuest: !user,
         loading,
         loginWithTelegram,
         login,

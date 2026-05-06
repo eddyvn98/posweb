@@ -7,6 +7,7 @@ const InviteCodeSchema = new Schema({
   created_by: { type: String, required: true },
   used_by: { type: String, default: null },
   is_used: { type: Boolean, default: false },
+  role: { type: String, default: 'staff' },
   expires_at: { type: Date, required: true },
   created_at: { type: Date, default: Date.now },
 }, {

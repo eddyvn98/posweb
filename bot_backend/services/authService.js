@@ -1,5 +1,9 @@
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
+const axios = require('axios');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const bcrypt = require('bcryptjs');
 const { getAuthRepo } = require('../repositories/auth.repo');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
@@ -73,6 +77,88 @@ async function loginWithGoogleCredential(credential) {
   return { user, profile };
 }
 
+async function requestPasswordReset(email) {
+  const repo = getAuthRepo();
+  const user = await repo.getUserByEmail(email);
+
+  if (!user) {
+    throw new Error('Email khong ton tai trong he thong');
+  }
+
+  // 1. Generate Token
+  const token = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 3600000); // 1 hour
+
+  // 2. Save Token
+  await repo.setUserResetToken(email, token, expires);
+
+  // 3. Send Email
+  const resetLink = `${process.env.WEB_APP_URL}/reset-password?token=${token}`;
+  
+  const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.EMAIL_PORT || '587'),
+    secure: process.env.EMAIL_PORT === '465',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: `"POSweb Support" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'Khoi phuc mat khau POSweb',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #db2777;">Yeu cau khoi phuc mat khau</h2>
+        <p>Chao ban,</p>
+        <p>Chung toi nhan duoc yeu cau khoi phuc mat khau cho tai khoan POSweb cua ban. Vui long nhan vao nut duoi day de tao mat khau moi:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetLink}" style="background-color: #db2777; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Dat lai mat khau</a>
+        </div>
+        <p>Lien ket nay se het han trong 1 gio.</p>
+        <p>Neu ban khong thuc hien yeu cau nay, vui long bo qua email nay.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #888;">Day la email tu dong, vui long khong tra loi.</p>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (err) {
+    console.error('Error sending reset email:', err.message);
+    // Notify admin via Telegram if email fails
+    const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+    const ADMIN_ID = process.env.ADMIN_TELEGRAM_ID;
+    if (BOT_TOKEN && ADMIN_ID) {
+      const message = `⚠️ *LOI GUI EMAIL RESET MAT KHAU*\n\n` +
+        `📧 *Email:* ${email}\n` +
+        `❌ *Loi:* ${err.message}\n` +
+        `🔗 *Link reset:* ${resetLink}`;
+      await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: ADMIN_ID, text: message, parse_mode: 'Markdown' });
+    }
+    throw new Error('Khong the gui email luc nay. Vui long lien he support qua Zalo/Telegram.');
+  }
+
+  return { success: true, message: 'Email khoi phuc da duoc gui' };
+}
+
+async function resetPasswordWithToken(token, newPassword) {
+  const repo = getAuthRepo();
+  const user = await repo.getUserByResetToken(token);
+
+  if (!user) {
+    throw new Error('Lien ket khong hop le hoac da het han');
+  }
+
+  const passwordHash = bcrypt.hashSync(newPassword, 10);
+  await repo.updateUserPassword(user.id, passwordHash);
+
+  return { success: true };
+}
+
 module.exports = {
   generateToken,
   verifyToken,
@@ -81,4 +167,6 @@ module.exports = {
   loginWithEmail,
   getGoogleClientId,
   loginWithGoogleCredential,
+  requestPasswordReset,
+  resetPasswordWithToken,
 };

@@ -1,9 +1,12 @@
 import { useMemo, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../lib/api'
 import ImportModal from '../components/ImportModal'
 import SupplierManagerModal from '../components/SupplierManagerModal'
 import { useNotification } from '../contexts/NotificationContext'
+import { Brain, Copy, Camera, Zap, X, LinkIcon, Package } from '../components/Icons'
+import { FEATURE_KEYS, hasFeatureEnabled } from '../lib/featureFlags'
 
 function getSupplierLabel(name) {
     return name?.trim() || 'Không có nhà cung cấp'
@@ -101,7 +104,8 @@ const AI_IMPORT_TEMPLATE = `Dán hóa đơn mua hàng này và trả về đúng
 }`
 
 export default function Imports() {
-    const { shop } = useAuth()
+    const navigate = useNavigate()
+    const { shop, isGuest } = useAuth()
     const { showNotification } = useNotification()
     const [imports, setImports] = useState([])
     const [suppliers, setSuppliers] = useState([])
@@ -111,9 +115,15 @@ export default function Imports() {
     const [editingImport, setEditingImport] = useState(null)
     const [showSupplierModal, setShowSupplierModal] = useState(false)
     const [aiDraftText, setAiDraftText] = useState('')
+    const isSupplierDebtEnabled = hasFeatureEnabled(shop?.feature_flags, FEATURE_KEYS.SUPPLIER_DEBT)
 
     const loadImports = async () => {
         if (!shop?.id) return
+        if (isGuest) {
+            setImports([])
+            setLoading(false)
+            return
+        }
 
         setLoading(true)
         try {
@@ -129,6 +139,10 @@ export default function Imports() {
 
     const loadSuppliers = async () => {
         if (!shop?.id) return
+        if (isGuest) {
+            setSuppliers([])
+            return
+        }
 
         try {
             const response = await api.get('/suppliers')
@@ -207,16 +221,22 @@ export default function Imports() {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
-            <div className="bg-white shadow-sm p-4 sticky top-0 z-10 border-b">
-                <div className="flex gap-3 items-center justify-between">
+            <div className="bg-white shadow-sm px-4 py-3 md:py-4 sticky top-0 z-10 border-b">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
                     <div>
                         <h1 className="text-xl font-black text-gray-800 uppercase tracking-tighter">Nhập hàng</h1>
-                        <p className="text-sm text-gray-500 font-medium">Theo dõi nhanh phiếu nhập và dữ liệu còn thiếu ngay trong web</p>
+                        <p className="hidden md:block text-sm text-gray-500 font-medium mt-0.5">Theo dõi nhanh phiếu nhập và dữ liệu còn thiếu ngay trong web</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-hide -mx-1 px-1">
+                        <button
+                            onClick={() => navigate('/app/imports-sheet')}
+                            className="shrink-0 px-4 shadow-sm text-xs font-bold h-10 rounded-xl bg-blue-50 text-blue-700 whitespace-nowrap active:scale-95 transition-transform"
+                        >
+                            Nhập file/sheet
+                        </button>
                         <button
                             onClick={() => setShowSupplierModal(true)}
-                            className="px-4 shadow-sm text-sm font-bold h-10 rounded-xl bg-gray-100 text-gray-700"
+                            className="shrink-0 px-4 shadow-sm text-xs font-bold h-10 rounded-xl bg-gray-100 text-gray-700 whitespace-nowrap active:scale-95 transition-transform"
                         >
                             Nhà cung cấp
                         </button>
@@ -225,7 +245,7 @@ export default function Imports() {
                                 setEditingImport(null)
                                 setShowModal(true)
                             }}
-                            className="btn-primary px-4 shadow-lg text-sm font-bold h-10 rounded-xl"
+                            className="shrink-0 btn-primary px-4 shadow-lg text-xs font-bold h-10 rounded-xl whitespace-nowrap active:scale-95 transition-transform"
                         >
                             + Ghi nhận
                         </button>
@@ -234,53 +254,116 @@ export default function Imports() {
             </div>
 
             <div className="p-4 space-y-4">
-                <section className="rounded-3xl border border-primary/15 bg-white p-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="max-w-2xl">
-                            <h2 className="text-lg font-black text-gray-900">Dán dữ liệu từ GPT / Gemini</h2>
-                            <p className="mt-1 text-sm text-gray-500">
-                                Khi đi mua hàng về, bạn chỉ cần đưa ảnh/PDF hóa đơn cho AI web, yêu cầu nó trả về JSON đúng mẫu rồi dán vào đây.
-                                Hệ thống sẽ mở sẵn phiếu nhập để bạn chỉnh nhẹ và lưu, không cần nhập từng món bằng tay.
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => navigator.clipboard.writeText(AI_IMPORT_TEMPLATE)}
-                            className="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 font-bold"
-                        >
-                            Copy mẫu prompt
-                        </button>
+                {/* ✨ REDESIGNED AI IMPORT SECTION */}
+                <section className="rounded-3xl border border-primary/10 bg-white p-4 md:p-6 shadow-sm overflow-hidden relative group">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none transition-opacity group-hover:opacity-10">
+                        <Brain className="w-24 h-24 md:w-32 md:h-32 text-primary" />
                     </div>
-
-                    <div className="mt-4 grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-4">
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Kết quả JSON từ AI</label>
-                            <textarea
-                                value={aiDraftText}
-                                onChange={(e) => setAiDraftText(e.target.value)}
-                                rows="12"
-                                className="input w-full resize-y font-mono text-sm"
-                                placeholder={`Ví dụ:\n${AI_IMPORT_TEMPLATE}`}
-                            />
-                            <div className="flex gap-3 mt-3">
-                                <button type="button" onClick={handleCreateDraftFromAi} className="btn-primary h-11 px-5 rounded-xl font-bold">
-                                    Tạo nháp từ AI
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setAiDraftText('')}
-                                    className="h-11 px-5 rounded-xl bg-gray-100 text-gray-700 font-bold"
-                                >
-                                    Xóa nội dung
-                                </button>
+                    
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                                <Brain className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black text-gray-900 tracking-tight">Dán dữ liệu từ GPT / Gemini</h2>
+                                <p className="text-sm text-gray-500 font-medium">Chụp ảnh hóa đơn và để AI soạn phiếu giúp bạn</p>
                             </div>
                         </div>
 
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                            <p className="text-sm font-black text-gray-800 mb-2">Prompt nên dùng với GPT/Gemini</p>
-                            <pre className="text-xs leading-6 text-gray-600 whitespace-pre-wrap break-words">
-                                {AI_IMPORT_TEMPLATE}
-                            </pre>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mt-6">
+                            {/* Step 1: Get data from AI */}
+                            <div className="flex flex-col">
+                                <div className="bg-gray-50 rounded-2xl p-4 md:p-5 border border-gray-100 flex-1 flex flex-col">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                        BƯỚC 1: LẤY DỮ LIỆU TỪ AI
+                                    </p>
+                                    
+                                    <div className="space-y-4 flex-1">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-6 h-6 rounded-full bg-gray-900 text-white flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5 shadow-sm">1</div>
+                                            <div className="space-y-2">
+                                                <p className="text-sm text-gray-600 leading-relaxed font-bold">
+                                                    Mở trang web AI và gửi ảnh hóa đơn/PDF:
+                                                </p>
+                                                <div className="flex flex-wrap gap-2 py-1">
+                                                    <a href="https://chatgpt.com" target="_blank" rel="noreferrer" className="h-9 px-3 rounded-xl bg-white border border-gray-200 text-xs font-bold flex items-center gap-2 hover:border-primary/30 hover:shadow-md transition-all">
+                                                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span> ChatGPT
+                                                        <LinkIcon className="w-3 h-3 opacity-30" />
+                                                    </a>
+                                                    <a href="https://gemini.google.com" target="_blank" rel="noreferrer" className="h-9 px-3 rounded-xl bg-white border border-gray-200 text-xs font-bold flex items-center gap-2 hover:border-primary/30 hover:shadow-md transition-all">
+                                                        <span className="w-2 h-2 rounded-full bg-blue-500"></span> Gemini
+                                                        <LinkIcon className="w-3 h-3 opacity-30" />
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-6 h-6 rounded-full bg-gray-900 text-white flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5 shadow-sm">2</div>
+                                            <div className="space-y-3 flex-1">
+                                                <p className="text-sm text-gray-600 leading-relaxed font-bold">
+                                                    Copy mẫu Prompt và dán kèm theo ảnh:
+                                                </p>
+                                                <button 
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(AI_IMPORT_TEMPLATE);
+                                                        showNotification('Đã copy mẫu Prompt', 'success');
+                                                    }}
+                                                    className="w-full h-11 bg-gray-900 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg hover:bg-black"
+                                                >
+                                                    <Copy className="w-4 h-4" /> Copy mẫu Prompt
+                                                </button>
+                                                <div className="flex items-center gap-2 text-[10px] text-orange-500 font-black uppercase tracking-tighter bg-orange-50 p-2 rounded-lg border border-orange-100">
+                                                    <Camera className="w-3.5 h-3.5" /> Quan trọng: Phải đính kèm ảnh hóa đơn
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Step 2: Paste and Create */}
+                            <div className="flex flex-col">
+                                <div className="bg-primary/[0.03] rounded-2xl p-4 md:p-5 border border-primary/10 flex-1 flex flex-col">
+                                    <p className="text-[10px] font-black text-primary/50 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-primary/30"></span>
+                                        BƯỚC 2: DÁN KẾT QUẢ VÀO ĐÂY
+                                    </p>
+                                    
+                                    <div className="relative flex-1 flex flex-col">
+                                        <textarea
+                                            value={aiDraftText}
+                                            onChange={(e) => setAiDraftText(e.target.value)}
+                                            className="flex-1 w-full min-h-[160px] bg-white border-2 border-dashed border-gray-200 rounded-2xl p-4 text-xs font-mono focus:border-primary/40 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none shadow-inner"
+                                            placeholder="Kết quả AI (JSON) dán vào đây..."
+                                        />
+                                        {aiDraftText && (
+                                            <button 
+                                                onClick={() => setAiDraftText('')}
+                                                className="absolute top-2 right-2 p-1.5 bg-gray-100 text-gray-400 rounded-lg hover:bg-gray-200 transition-colors"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        
+                                        <div className="mt-4">
+                                            <button 
+                                                disabled={!aiDraftText.trim()}
+                                                onClick={handleCreateDraftFromAi}
+                                                className={`w-full h-12 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                                                    aiDraftText.trim() 
+                                                    ? 'bg-primary text-white shadow-primary/30 hover:shadow-primary/40' 
+                                                    : 'bg-gray-100 text-gray-300 cursor-not-allowed shadow-none'
+                                                }`}
+                                            >
+                                                <Zap className={`w-5 h-5 ${aiDraftText.trim() ? 'animate-pulse' : ''}`} /> Tạo phiếu nháp từ AI
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -373,9 +456,13 @@ export default function Imports() {
                         </div>
                     ) : imports.length === 0 ? (
                         <div className="text-center py-16">
-                            <p className="text-5xl mb-4">📥</p>
-                            <p className="text-gray-600 font-bold text-lg">Chưa có nhập hàng nào</p>
-                            <p className="text-gray-400 text-sm mt-2">Nhấn "+ Ghi nhận" để thêm phiếu nhập hàng</p>
+                            <div className="flex justify-center mb-6">
+                                <div className="w-24 h-24 bg-gray-50 rounded-[2.5rem] flex items-center justify-center text-gray-200 shadow-inner">
+                                    <Package className="w-12 h-12" strokeWidth={1.5} />
+                                </div>
+                            </div>
+                            <p className="text-gray-600 font-black text-xl tracking-tight">Chưa có nhập hàng nào</p>
+                            <p className="text-gray-400 text-sm mt-2 font-medium">Nhấn "+ Ghi nhận" để bắt đầu thêm phiếu nhập đầu tiên</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -445,6 +532,7 @@ export default function Imports() {
                     suppliers={suppliers}
                     onClose={() => setShowSupplierModal(false)}
                     onRefresh={loadSuppliers}
+                    debtEnabled={isSupplierDebtEnabled}
                 />
             )}
         </div>

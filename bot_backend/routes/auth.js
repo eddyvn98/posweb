@@ -3,12 +3,20 @@ const router = express.Router();
 const crypto = require('crypto');
 const authService = require('../services/authService');
 const { getAuthRepo } = require('../repositories/auth.repo');
-const authenticateToken = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const updateShop = require('../controllers/auth/updateShop');
 const changePassword = require('../controllers/auth/changePassword');
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
+const setTokenCookie = (res, token) => {
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax', // Lax for cross-site navigation, strict can break oauth redirects sometimes, though this is an API.
+    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+  });
+};
 router.post('/telegram-auth', async (req, res) => {
   try {
     const { initData } = req.body;
@@ -45,6 +53,7 @@ router.post('/telegram-auth', async (req, res) => {
     const token = authService.generateToken(user);
     const shop = await getAuthRepo().getShopById(user.shop_id);
 
+    setTokenCookie(res, token);
     res.json({ success: true, token, user, shop });
   } catch (error) {
     console.error('Auth Error:', error);
@@ -71,6 +80,7 @@ router.post('/google', async (req, res) => {
     const token = authService.generateToken(user);
     const shop = await getAuthRepo().getShopById(user.shop_id);
 
+    setTokenCookie(res, token);
     res.json({ success: true, token, user, shop });
   } catch (error) {
     res.status(401).json({ error: error.message || 'Google login failed' });
@@ -88,6 +98,7 @@ router.post('/login', async (req, res) => {
     const token = authService.generateToken(user);
     const shop = await getAuthRepo().getShopById(user.shop_id);
 
+    setTokenCookie(res, token);
     res.json({ success: true, token, user, shop });
   } catch (error) {
     res.status(401).json({ error: error.message });
@@ -109,6 +120,7 @@ router.post('/register', async (req, res) => {
     const token = authService.generateToken(user);
     const shop = await getAuthRepo().getShopById(user.shop_id);
 
+    setTokenCookie(res, token);
     res.json({ success: true, token, user, shop });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -117,5 +129,31 @@ router.post('/register', async (req, res) => {
 
 router.patch('/shop', authenticateToken, updateShop);
 router.patch('/change-password', authenticateToken, changePassword);
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Vui long nhap email' });
+    const result = await authService.requestPasswordReset(email);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ error: 'Thieu thong tin' });
+    const result = await authService.resetPasswordWithToken(token, newPassword);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/logout', (req, res) => {
+  res.clearCookie('token');
+  res.json({ success: true });
+});
 
 module.exports = router;

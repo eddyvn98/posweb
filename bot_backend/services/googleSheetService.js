@@ -298,4 +298,33 @@ async function syncVoidSale(saleId, reason, shopName) {
     return appendToSheet(VI.donDaHuy, rowData, headers);
 }
 
-module.exports = { syncSale, syncProduct, syncImport, syncCashFlow, syncVoidSale };
+async function pullProductsFromSheet(spreadsheetId) {
+    try {
+        const auth = new JWT({
+            email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+            scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
+        });
+
+        const doc = new GoogleSpreadsheet(spreadsheetId, auth);
+        await doc.loadInfo();
+
+        const sheet = doc.sheetsByTitle[VI.sanPham] || doc.sheetsByIndex[0];
+        const rows = await sheet.getRows();
+
+        return rows.map(row => ({
+            barcode: row.get('Barcode') || row.get('Mã vạch') || '',
+            name: row.get('Tên Sản Phẩm') || row.get('Tên') || '',
+            unit: row.get('Đơn vị') || '',
+            category: row.get('Danh mục') || '',
+            price: Number(row.get('Giá Bán') || row.get('Giá') || 0),
+            cost_price: Number(row.get('Giá Vốn') || 0),
+            stock_quantity: Number(row.get('Tồn Kho') || 0),
+        })).filter(p => p.barcode && p.name);
+    } catch (error) {
+        console.error('Pull Products Error:', error);
+        throw error;
+    }
+}
+
+module.exports = { syncSale, syncProduct, syncImport, syncCashFlow, syncVoidSale, pullProductsFromSheet };

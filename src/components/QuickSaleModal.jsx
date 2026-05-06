@@ -1,15 +1,18 @@
-﻿import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { useAuth } from '../contexts/AuthContext'
 import { saveProductLocal } from '../lib/db'
+import { Zap } from './Icons'
 
 export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '', presetName = '' }) {
-    const { shop } = useAuth()
+    const { shop, user } = useAuth()
+    const isSalesStaff = user?.role === 'staff_sales'
+    
     const [step, setStep] = useState(1) // 1: Price, 2: Note, 3: Quantity
     const [price, setPrice] = useState('')
     const [name, setName] = useState(presetName)
     const [quantity, setQuantity] = useState(1)
-    const [saveToCatalog, setSaveToCatalog] = useState(true)
+    const [saveToCatalog, setSaveToCatalog] = useState(false)
 
     const priceInputRef = useRef(null)
     const nameInputRef = useRef(null)
@@ -68,7 +71,7 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
             created_at: new Date().toISOString()
         }
 
-        if (saveToCatalog) {
+        if (saveToCatalog && !isSalesStaff) {
             try {
                 await saveProductLocal({ ...customItem, stock_quantity: 0 })
             } catch (err) {
@@ -87,8 +90,8 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
             <div className="w-full max-w-sm rounded-[24px] bg-white shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b px-5 py-3.5 bg-white">
-                    <h3 className="text-[15px] font-bold flex items-center gap-2 text-gray-700">
-                        <span className="text-lg">⚡</span> Bán nhanh
+                     <h3 className="text-[15px] font-bold flex items-center gap-2 text-gray-700 uppercase tracking-tight">
+                        <Zap className="w-5 h-5 text-primary" /> Bán nhanh
                     </h3>
                     <button
                         type="button"
@@ -185,16 +188,18 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
                     </div>
 
                     {/* Options */}
-                    <div className="flex items-center gap-3 pt-2 select-none">
-                        <input
-                            type="checkbox"
-                            id="saveCatalog"
-                            checked={saveToCatalog}
-                            onChange={e => setSaveToCatalog(e.target.checked)}
-                            className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary/20 transition-all cursor-pointer"
-                        />
-                        <label htmlFor="saveCatalog" className="text-xs font-bold text-gray-500 cursor-pointer">Lưu vào danh mục</label>
-                    </div>
+                    {!isSalesStaff && (
+                        <div className="flex items-center gap-3 pt-2 select-none">
+                            <input
+                                type="checkbox"
+                                id="saveCatalog"
+                                checked={saveToCatalog}
+                                onChange={e => setSaveToCatalog(e.target.checked)}
+                                className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary/20 transition-all cursor-pointer"
+                            />
+                            <label htmlFor="saveCatalog" className="text-xs font-bold text-gray-500 cursor-pointer">Lưu vào danh mục</label>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer Button */}

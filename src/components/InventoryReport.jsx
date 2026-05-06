@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { formatMoney } from '../lib/reports'
 import { exportToExcel } from '../lib/export'
+import { FileSpreadsheet, Printer } from './Icons'
 
 export default function InventoryReport({ data }) {
     const [exporting, setExporting] = useState(false)
@@ -11,10 +12,8 @@ export default function InventoryReport({ data }) {
         try {
             const reportName = `Ton-kho-${data.month.toString().padStart(2, '0')}-${data.year}`
             await exportToExcel(data, reportName, 'inventory')
-            alert('✅ Xuất Excel thành công!')
         } catch (err) {
             console.error('Export error:', err)
-            alert('❌ Lỗi khi xuất Excel')
         } finally {
             setExporting(false)
         }
@@ -24,149 +23,115 @@ export default function InventoryReport({ data }) {
         window.print()
     }
 
-    // Filter to show only items with stock movements
     const itemsWithMovement = data.inventory.filter(
         item => item.imported > 0 || item.sold > 0 || item.adjusted > 0 || item.voided > 0
     )
 
     return (
-        <div className="space-y-6">
-            {/* Summary Card */}
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-3xl p-6 shadow-sm">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <p className="text-gray-600 text-sm font-bold uppercase">Tổng giá trị tồn kho</p>
-                        <p className="text-3xl font-black text-purple-600 mt-2">{formatMoney(data.totalValue)}</p>
-                        <p className="text-xs text-gray-500 mt-1">đ (giá vốn)</p>
+        <div className="space-y-10">
+            {/* Inventory KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[2rem] p-6 lg:p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden group min-w-0">
+                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-700"></div>
+                    <p className="text-white/70 text-[10px] font-black uppercase tracking-widest mb-2">Giá trị kho (vốn)</p>
+                    <div className="flex items-baseline gap-1 lg:gap-2 flex-wrap">
+                        <h4 className="text-2xl sm:text-3xl font-black tracking-tighter break-all">{formatMoney(data.totalValue)}</h4>
+                        <span className="text-[10px] font-bold text-white/60">VNĐ</span>
                     </div>
-                    <div>
-                        <p className="text-gray-600 text-sm font-bold uppercase">Tổng số sản phẩm</p>
-                        <p className="text-3xl font-black text-gray-800 mt-2">{data.totalItems}</p>
-                        <p className="text-xs text-gray-500 mt-1">loại</p>
+                </div>
+
+                <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-6 lg:p-8 shadow-sm hover:shadow-md transition-all min-w-0">
+                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2">Số lượng SKU</p>
+                    <div className="flex items-baseline gap-1 lg:gap-2 flex-wrap">
+                        <h4 className="text-2xl sm:text-3xl font-black text-gray-800 tracking-tighter break-all">{data.totalItems}</h4>
+                        <span className="text-[10px] font-bold text-gray-400">Loại SP</span>
                     </div>
-                    <div>
-                        <p className="text-gray-600 text-sm font-bold uppercase">Sản phẩm có hàng</p>
-                        <p className="text-3xl font-black text-gray-800 mt-2">
+                </div>
+
+                <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-6 lg:p-8 shadow-sm hover:shadow-md transition-all min-w-0">
+                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2">SKU Còn hàng</p>
+                    <div className="flex items-baseline gap-1 lg:gap-2 flex-wrap">
+                        <h4 className="text-2xl sm:text-3xl font-black text-gray-800 tracking-tighter break-all">
                             {data.inventory.filter(i => i.endingStock > 0).length}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">loại</p>
+                        </h4>
+                        <span className="text-[10px] font-bold text-gray-400">Đang kinh doanh</span>
                     </div>
                 </div>
             </div>
 
-            {/* Toggle Details */}
-            <button
-                onClick={() => setShowDetails(!showDetails)}
-                className="w-full bg-white border border-pink-100 rounded-2xl p-4 font-bold text-gray-800 hover:bg-pink-50 transition"
-            >
-                {showDetails ? '🔽 Ẩn chi tiết' : '🔼 Xem chi tiết'}
-            </button>
+            {/* Movement Summary */}
+            <div className="space-y-6">
+                <div className="flex items-center justify-between px-2">
+                    <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight">Biến động kho trong kỳ</h3>
+                    <button
+                        onClick={() => setShowDetails(!showDetails)}
+                        className="text-[10px] font-black text-primary bg-pink-50 px-4 py-2 rounded-xl uppercase tracking-widest hover:bg-primary hover:text-white transition-all shadow-sm"
+                    >
+                        {showDetails ? 'Ẩn bảng chi tiết' : 'Hiện bảng chi tiết'}
+                    </button>
+                </div>
 
-            {/* Inventory Table */}
-            {showDetails && (
-                <div className="bg-white rounded-3xl border border-pink-50 shadow-sm overflow-hidden print:rounded-none print:border-0">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-purple-50 border-b border-purple-100 sticky top-0">
-                                <tr>
-                                    <th className="px-4 py-3 text-left font-black text-gray-800">Sản phẩm</th>
-                                    <th className="px-4 py-3 text-center font-black text-gray-800">Mã vạch</th>
-                                    <th className="px-4 py-3 text-right font-black text-gray-800">Đầu kỳ</th>
-                                    <th className="px-4 py-3 text-right font-black text-gray-800">Nhập</th>
-                                    <th className="px-4 py-3 text-right font-black text-gray-800">Bán</th>
-                                    <th className="px-4 py-3 text-right font-black text-gray-800">Cuối kỳ</th>
-                                    <th className="px-4 py-3 text-right font-black text-gray-800">Giá trị</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-purple-50">
-                                {data.inventory.map(item => (
-                                    <tr key={item.id} className="hover:bg-purple-50/50 transition">
-                                        <td className="px-4 py-3 font-bold text-gray-800">{item.name}</td>
-                                        <td className="px-4 py-3 text-center text-gray-600 text-xs font-bold font-mono">
-                                            {item.barcode}
-                                        </td>
-                                        <td className="px-4 py-3 text-right text-gray-700 font-bold">
-                                            {item.beginningStock}
-                                        </td>
-                                        <td className="px-4 py-3 text-right text-green-600 font-bold">
-                                            +{item.imported}
-                                        </td>
-                                        <td className="px-4 py-3 text-right text-red-600 font-bold">
-                                            -{item.sold}
-                                        </td>
-                                        <td className="px-4 py-3 text-right text-gray-800 font-black">
-                                            {item.endingStock}
-                                        </td>
-                                        <td className="px-4 py-3 text-right text-purple-600 font-black">
-                                            {formatMoney(item.estimatedValue)}
-                                        </td>
+                {showDetails && (
+                    <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="max-h-[500px] overflow-y-auto custom-scrollbar">
+                            <table className="w-full text-xs">
+                                <thead className="bg-gray-50/50 sticky top-0 backdrop-blur-sm z-10">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left font-black text-gray-400 uppercase tracking-widest">Sản phẩm</th>
+                                        <th className="px-4 py-4 text-right font-black text-gray-400 uppercase tracking-widest">Đầu kỳ</th>
+                                        <th className="px-4 py-4 text-right font-black text-gray-400 uppercase tracking-widest">Nhập</th>
+                                        <th className="px-4 py-4 text-right font-black text-gray-400 uppercase tracking-widest">Bán</th>
+                                        <th className="px-4 py-4 text-right font-black text-gray-400 uppercase tracking-widest">Cuối kỳ</th>
+                                        <th className="px-6 py-4 text-right font-black text-gray-400 uppercase tracking-widest">Giá trị</th>
                                     </tr>
-                                ))}
-                                <tr className="bg-purple-50 font-black text-gray-800 border-t-2 border-purple-200">
-                                    <td colSpan="6" className="px-4 py-3 text-right">
-                                        TỔNG GIÁC TRỊ
-                                    </td>
-                                    <td className="px-4 py-3 text-right text-purple-600">
-                                        {formatMoney(data.totalValue)}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {data.inventory.map(item => (
+                                        <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <p className="font-bold text-gray-800">{item.name}</p>
+                                                <p className="text-[10px] text-gray-400 font-mono mt-1">{item.barcode}</p>
+                                            </td>
+                                            <td className="px-4 py-4 text-right font-medium text-gray-500">{item.beginningStock}</td>
+                                            <td className="px-4 py-4 text-right font-bold text-green-600">+{item.imported}</td>
+                                            <td className="px-4 py-4 text-right font-bold text-red-600">-{item.sold}</td>
+                                            <td className="px-4 py-4 text-right font-black text-gray-900">{item.endingStock}</td>
+                                            <td className="px-6 py-4 text-right font-black text-indigo-600">{formatMoney(item.estimatedValue)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Items with Movement Summary */}
-            <div className="bg-white rounded-3xl border border-pink-50 shadow-sm overflow-hidden">
-                <div className="bg-pink-50 px-6 py-4 border-b border-pink-100">
-                    <h3 className="font-black text-gray-800 uppercase tracking-wide">
-                        📦 Sản phẩm có chuyển động ({itemsWithMovement.length})
-                    </h3>
-                </div>
-
-                <div className="divide-y divide-pink-50 max-h-96 overflow-y-auto custom-scrollbar">
+                {/* Visual Grid for Movements */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {itemsWithMovement.length === 0 ? (
-                        <div className="p-6 text-center text-gray-400 italic">Không có sản phẩm nào chuyển động</div>
+                        <div className="lg:col-span-2 py-12 text-center bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
+                            <p className="text-gray-400 font-bold">Không có biến động kho nào được ghi nhận</p>
+                        </div>
                     ) : (
                         itemsWithMovement.map(item => (
-                            <div key={item.id} className="p-4 hover:bg-pink-50/50 transition">
-                                <div className="flex justify-between items-start mb-3">
+                            <div key={item.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-md transition-all group">
+                                <div className="flex justify-between items-start mb-4">
                                     <div>
-                                        <p className="font-black text-gray-800">{item.name}</p>
-                                        <p className="text-xs text-gray-500 mt-1 font-bold">Mã: {item.barcode}</p>
+                                        <h5 className="font-black text-gray-800 uppercase text-sm leading-tight group-hover:text-primary transition-colors">{item.name}</h5>
+                                        <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">Mã: {item.barcode}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-black text-purple-600 text-lg">
-                                            {item.endingStock} <span className="text-sm text-gray-500">cái</span>
-                                        </p>
-                                        <p className="text-xs text-gray-500 font-bold">
-                                            Giá trị: {formatMoney(item.estimatedValue)} đ
-                                        </p>
+                                        <span className="text-2xl font-black text-gray-900 leading-none">{item.endingStock}</span>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase">Tồn kho</p>
                                     </div>
                                 </div>
-
-                                {/* Movement badges */}
                                 <div className="flex gap-2 flex-wrap">
-                                    {item.imported > 0 && (
-                                        <span className="bg-green-100 text-green-700 px-2 py-1 rounded-lg text-xs font-bold">
-                                            ➕ Nhập: {item.imported}
-                                        </span>
-                                    )}
-                                    {item.sold > 0 && (
-                                        <span className="bg-red-100 text-red-700 px-2 py-1 rounded-lg text-xs font-bold">
-                                            ➖ Bán: {item.sold}
-                                        </span>
-                                    )}
-                                    {item.adjusted > 0 && (
-                                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg text-xs font-bold">
-                                            🔧 Điều chỉnh: {item.adjusted}
-                                        </span>
-                                    )}
-                                    {item.voided > 0 && (
-                                        <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg text-xs font-bold">
-                                            🔄 Huỷ: {item.voided}
-                                        </span>
-                                    )}
+                                    {item.imported > 0 && <span className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-green-100">+{item.imported} Nhập</span>}
+                                    {item.sold > 0 && <span className="px-3 py-1 bg-red-50 text-red-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-red-100">-{item.sold} Bán</span>}
+                                    {item.adjusted !== 0 && <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-blue-100">🔧 {item.adjusted > 0 ? '+' : ''}{item.adjusted} Lệch</span>}
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-gray-50 flex justify-between items-center">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Giá trị ước tính</span>
+                                    <span className="text-sm font-black text-indigo-600">{formatMoney(item.estimatedValue)} đ</span>
                                 </div>
                             </div>
                         ))
@@ -174,20 +139,26 @@ export default function InventoryReport({ data }) {
                 </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3">
+            {/* Quick Actions */}
+            <div className="flex gap-4">
                 <button
                     onClick={handleExportExcel}
                     disabled={exporting}
-                    className="flex-1 btn bg-green-500 text-white font-black rounded-2xl py-3 hover:bg-green-600 disabled:opacity-50 transition"
+                    className="flex-1 bg-white border-2 border-gray-100 text-gray-800 font-black py-4 rounded-2xl hover:bg-gray-50 transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2"
                 >
-                    {exporting ? '⏳ Đang xuất...' : '📊 Xuất Excel'}
+                    {exporting ? 'Đang xuất...' : (
+                        <>
+                            <FileSpreadsheet className="w-4 h-4" />
+                            <span>Xuất file Excel</span>
+                        </>
+                    )}
                 </button>
                 <button
                     onClick={handlePrint}
-                    className="flex-1 btn bg-blue-500 text-white font-black rounded-2xl py-3 hover:bg-blue-600 transition"
+                    className="flex-1 bg-gray-900 text-white font-black py-4 rounded-2xl hover:bg-black transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2"
                 >
-                    🖨️ In báo cáo
+                    <Printer className="w-4 h-4" />
+                    <span>In báo cáo kho</span>
                 </button>
             </div>
         </div>

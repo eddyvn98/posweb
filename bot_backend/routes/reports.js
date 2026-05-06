@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const authenticateToken = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const getCashFlows = require('../controllers/reports/getCashFlows');
 const getInventoryLogs = require('../controllers/reports/getInventoryLogs');
 const { sendBackupToTelegram } = require('../services/backupService');

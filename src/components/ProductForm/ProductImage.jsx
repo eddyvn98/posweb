@@ -1,7 +1,10 @@
+import { useRef } from 'react'
 import { compressImage, getProductImageUrl } from '../../lib/imageUtils'
-import api from '../../lib/api'
+import { Camera, Plus } from '../Icons'
 
-export default function ProductImage({ imageUrl, onChange }) {
+export default function ProductImage({ imageUrl, onChange, readOnly }) {
+    const fileInputRef = useRef(null)
+
     const handleImageChange = async (e) => {
         const file = e.target.files[0]
         if (!file) return
@@ -15,24 +18,60 @@ export default function ProductImage({ imageUrl, onChange }) {
         }
     }
 
+    const triggerFileSelect = () => {
+        if (!readOnly) {
+            fileInputRef.current.click()
+        }
+    }
+
     return (
-        <div className="flex bg-gray-50 p-2 rounded items-center gap-3">
-            <div className="w-16 h-16 bg-white border rounded flex items-center justify-center overflow-hidden shrink-0">
+        <div className="flex flex-col items-center justify-center py-2">
+            <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+            />
+            
+            <div 
+                onClick={triggerFileSelect}
+                className={`
+                    relative w-32 h-32 rounded-3xl overflow-hidden border-2 border-dashed transition-all cursor-pointer group
+                    ${imageUrl ? 'border-transparent shadow-lg' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-primary'}
+                    ${readOnly ? 'cursor-default border-none shadow-none' : ''}
+                `}
+            >
                 {imageUrl ? (
-                    <img src={getProductImageUrl(imageUrl)} alt="Preview" className="w-full h-full object-cover" />
+                    <>
+                        <img 
+                            src={getProductImageUrl(imageUrl)} 
+                            alt="Preview" 
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105" 
+                        />
+                        {!readOnly && (
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
+                                <Camera className="w-6 h-6 mb-1" />
+                                <span className="text-[10px] font-black uppercase">Đổi ảnh</span>
+                            </div>
+                        )}
+                    </>
                 ) : (
-                    <span className="text-2xl opacity-20">📷</span>
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 group-hover:text-primary transition-colors">
+                        <div className="bg-white p-3 rounded-2xl shadow-sm mb-2 group-hover:shadow-md transition-all">
+                            <Plus className="w-6 h-6" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Thêm ảnh</span>
+                    </div>
                 )}
             </div>
-            <div className="flex-1">
-                <label className="block text-xs font-bold text-gray-500 mb-1">ẢNH SẢN PHẨM</label>
-                <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="text-xs w-full file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                />
-            </div>
+
+            {!readOnly && (
+                <p className="mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                    {imageUrl ? 'Nhấn vào ảnh để thay đổi' : 'Nhấn để chọn ảnh sản phẩm'}
+                </p>
+            )}
         </div>
     )
 }
+

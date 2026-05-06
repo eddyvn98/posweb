@@ -1,8 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const { Telegraf, Markup } = require('telegraf');
-require('dotenv').config();
+const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
+const cron = require('node-cron');
 const { initSchema } = require('./db/schema');
 const { getDbProvider, isMongoEnabled, isSqliteEnabled } = require('./db/provider');
 const { connectMongo, getMongoHealth } = require('./db/mongo');
@@ -18,6 +23,7 @@ const filesRoutes = require('./routes/files');
 const staffRoutes = require('./routes/staff');
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy for Secure cookies
 const port = process.env.PORT || 3001;
 const dbProvider = getDbProvider();
 
@@ -26,15 +32,55 @@ if (isSqliteEnabled()) {
 }
 
 // Middlewares
-app.use(cors());
-app.use(express.json({ limit: '12mb' }));
+const allowedOrigins = ['http://localhost:5173', 'https://poswebfree.vivutrade.io.vn', 'https://t.me'];
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin) || /^https:\/\/[a-zA-Z0-9-]+\.vivutrade\.io\.vn$/.test(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            "default-src": ["'self'"],
+            "img-src": ["'self'", "data:", "blob:", "https://*.telegram.org", "https://api.telegram.org", "https://*.googleusercontent.com", "https://images.unsplash.com", "https://*.unsplash.com"],
+            "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://telegram.org", "https://accounts.google.com", "https://static.cloudflareinsights.com"],
+            "connect-src": ["'self'", "https://api.telegram.org", "https://poswebfree.vivutrade.io.vn"],
+            "frame-src": ["'self'", "https://*.google.com"],
+            "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://accounts.google.com"],
+            "font-src": ["'self'", "https://fonts.gstatic.com"]
+        },
+    },
+}));
+app.use(cookieParser());
+app.use(express.json({ limit: '2mb' }));
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
     next();
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/static', express.static(path.join(__dirname, 'public')));
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api', limiter);
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    message: { error: 'Too many authentication attempts, please try again later.' }
+});
+
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/reports', reportsRoutes);
@@ -123,6 +169,17 @@ async function startServer() {
 
     app.listen(port, () => {
         console.log(`🌐 API Server listening at http://localhost:${port}`);
+
+        // Schedule backup at 2 AM every day
+        cron.schedule('0 2 * * *', async () => {
+            console.log('⏰ Starting scheduled backup at 2 AM...');
+            try {
+                const { sendBackupToTelegram } = require('./services/backupService');
+                await sendBackupToTelegram();
+            } catch (e) {
+                console.error('Scheduled backup failed:', e.message);
+            }
+        });
 
         // Tự động backup khi khởi động (chạy sau 5s để đảm bảo DB đã sẵn sàng)
         setTimeout(async () => {

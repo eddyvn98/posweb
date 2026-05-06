@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import api from '../../lib/api'
+import { getAllLocalProducts } from '../../lib/db'
 import { useNotification } from '../../contexts/NotificationContext'
+import { useAuth } from '../../contexts/AuthContext'
 import SupplierFormModal from '../SupplierFormModal'
+import { FEATURE_KEYS, hasFeatureEnabled } from '../../lib/featureFlags'
 import {
     buildInitialForm,
     numberValue,
@@ -19,23 +22,45 @@ import {
 } from './Sections'
 
 export default function ImportModalContent({ importRecord, onClose, onSuccess, suppliers, onSupplierSaved }) {
+    const { shop } = useAuth()
     const { showNotification } = useNotification()
     const [loading, setLoading] = useState(false)
     const [products, setProducts] = useState([])
     const [showSupplierForm, setShowSupplierForm] = useState(false)
     const [editingSupplier, setEditingSupplier] = useState(null)
     const [formData, setFormData] = useState(buildInitialForm(importRecord, suppliers))
+    const isSupplierDebtEnabled = hasFeatureEnabled(shop?.feature_flags, FEATURE_KEYS.SUPPLIER_DEBT)
 
     useEffect(() => {
         setFormData(buildInitialForm(importRecord, suppliers))
     }, [importRecord, suppliers])
 
     useEffect(() => {
-        api.get('/products')
-            .then((response) => setProducts(response.data || []))
-            .catch((error) => {
-                console.error('Load products for import error:', error)
-            })
+        const loadProducts = async () => {
+            let localProducts = []
+            try {
+                localProducts = await getAllLocalProducts()
+                if (localProducts.length > 0) {
+                    setProducts(localProducts)
+                }
+            } catch (error) {
+                console.error('Load local products for import error:', error)
+            }
+
+            try {
+                const response = await api.get('/products')
+                const apiProducts = response.data || []
+                if (apiProducts.length > 0) {
+                    setProducts(apiProducts)
+                } else if (localProducts.length === 0) {
+                    setProducts([])
+                }
+            } catch (error) {
+                console.error('Load server products for import error:', error)
+            }
+        }
+
+        loadProducts()
     }, [])
 
     useEffect(() => {
@@ -205,6 +230,7 @@ export default function ImportModalContent({ importRecord, onClose, onSuccess, s
         try {
             const payload = {
                 import_date: formData.import_date,
+                supplier_id: formData.supplier_id || null,
                 supplier_name: formData.supplier_name,
                 supplier_tax_code: formData.supplier_tax_code,
                 invoice_number: formData.invoice_number,
@@ -292,7 +318,7 @@ export default function ImportModalContent({ importRecord, onClose, onSuccess, s
                             onItemChange={handleItemChange}
                         />
 
-                        <SummarySection summary={summary} paidAmount={formData.paid_amount} />
+                        <SummarySection summary={summary} paidAmount={formData.paid_amount} showDebt={isSupplierDebtEnabled} />
 
                         <AttachmentsSection
                             attachments={formData.attachment_files}
@@ -316,6 +342,7 @@ export default function ImportModalContent({ importRecord, onClose, onSuccess, s
             {showSupplierForm && (
                 <SupplierFormModal
                     supplier={editingSupplier}
+                    debtEnabled={isSupplierDebtEnabled}
                     onClose={() => setShowSupplierForm(false)}
                     onSuccess={async () => {
                         await onSupplierSaved?.()

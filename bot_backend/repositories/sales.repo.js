@@ -1,11 +1,12 @@
 const { v4: uuidv4 } = require('uuid');
 const db = require('../db/connection');
 const { getDbProvider } = require('../db/provider');
-const Sale = require('../mongo/models/Sale');
-const SaleItem = require('../mongo/models/SaleItem');
-const Product = require('../mongo/models/Product');
-const InventoryLog = require('../mongo/models/InventoryLog');
-const CashFlow = require('../mongo/models/CashFlow');
+const { getTenantModel } = require('../db/tenantManager');
+const SaleSchema = require('../mongo/models/Sale');
+const SaleItemSchema = require('../mongo/models/SaleItem');
+const ProductSchema = require('../mongo/models/Product');
+const InventoryLogSchema = require('../mongo/models/InventoryLog');
+const CashFlowSchema = require('../mongo/models/CashFlow');
 
 const sqliteRepo = {
   async createSale(shop_id, user_id, sale) {
@@ -78,6 +79,12 @@ const sqliteRepo = {
 
 const mongoRepo = {
   async createSale(shop_id, user_id, sale) {
+    const Sale = getTenantModel(shop_id, 'Sale', SaleSchema);
+    const SaleItem = getTenantModel(shop_id, 'SaleItem', SaleItemSchema);
+    const Product = getTenantModel(shop_id, 'Product', ProductSchema);
+    const InventoryLog = getTenantModel(shop_id, 'InventoryLog', InventoryLogSchema);
+    const CashFlow = getTenantModel(shop_id, 'CashFlow', CashFlowSchema);
+
     const saleId = sale.id || uuidv4();
     await Sale.create({
       id: saleId,
@@ -135,6 +142,7 @@ const mongoRepo = {
   },
 
   async getSales(shop_id, startDate, endDate) {
+    const Sale = getTenantModel(shop_id, 'Sale', SaleSchema);
     const filter = { shop_id };
     if (startDate || endDate) {
       filter.sale_date = {};
@@ -145,6 +153,12 @@ const mongoRepo = {
   },
 
   async voidSale(shop_id, saleId, reason) {
+    const Sale = getTenantModel(shop_id, 'Sale', SaleSchema);
+    const SaleItem = getTenantModel(shop_id, 'SaleItem', SaleItemSchema);
+    const Product = getTenantModel(shop_id, 'Product', ProductSchema);
+    const InventoryLog = getTenantModel(shop_id, 'InventoryLog', InventoryLogSchema);
+    const CashFlow = getTenantModel(shop_id, 'CashFlow', CashFlowSchema);
+
     const sale = await Sale.findOne({ id: saleId, shop_id });
     if (!sale) throw new Error('Sale not found');
     if (sale.is_void) throw new Error('Sale already voided');

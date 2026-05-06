@@ -22,16 +22,9 @@ export const DriveProvider = ({ children, clientId = import.meta.env.VITE_GOOGLE
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        // Load token từ localStorage (nếu có)
-        const savedToken = localStorage.getItem('drive_access_token')
-        const savedUserInfo = localStorage.getItem('drive_user_info')
-        
-        if (savedToken) {
-            setAccessToken(savedToken)
-            setUserInfo(savedUserInfo ? JSON.parse(savedUserInfo) : null)
-            setIsAuthed(true)
-        }
-        
+        // Mặc định không lưu token vào localStorage để tránh XSS.
+        // Chỉ lưu ở RAM (in-memory). Khi người dùng refresh trang, 
+        // họ sẽ cần thao tác kết nối lại nếu có nhu cầu (tính năng hiện đang tạm tắt).
         setLoading(false)
     }, [])
 
@@ -45,20 +38,12 @@ export const DriveProvider = ({ children, clientId = import.meta.env.VITE_GOOGLE
             const parts = token.split('.')
             const payload = JSON.parse(atob(parts[1]))
             
-            // Lưu token
             setAccessToken(token)
             setUserInfo({
                 email: payload.email,
                 name: payload.name,
                 picture: payload.picture
             })
-            
-            localStorage.setItem('drive_access_token', token)
-            localStorage.setItem('drive_user_info', JSON.stringify({
-                email: payload.email,
-                name: payload.name,
-                picture: payload.picture
-            }))
             
             setIsAuthed(true)
         } catch (err) {
@@ -70,8 +55,6 @@ export const DriveProvider = ({ children, clientId = import.meta.env.VITE_GOOGLE
         setAccessToken(null)
         setUserInfo(null)
         setIsAuthed(false)
-        localStorage.removeItem('drive_access_token')
-        localStorage.removeItem('drive_user_info')
         
         // Logout từ Google
         if (window.gapi) {

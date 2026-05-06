@@ -1,11 +1,11 @@
-﻿import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
+import { useCart } from '../contexts/CartContext'
 import { saveProductLocal, findProductByBarcode } from '../lib/db'
 import { useNotification } from '../contexts/NotificationContext'
 import api from '../lib/api'
-import ProductCamera from './ProductCamera'
 import ProductImage from './ProductForm/ProductImage'
 import BarcodeSection from './ProductForm/BarcodeSection'
 import UnitSection from './ProductForm/UnitSection'
@@ -36,9 +36,10 @@ const saveRememberedSelections = ({ unit, category }) => {
     }
 }
 
-export default function ProductFormModal({ product, onClose, onFinish }) {
+export default function ProductFormModal({ product, onClose, onFinish, readOnly = false }) {
     const { shop } = useAuth()
     const { pushProducts } = useSync()
+    const { updateProductInCart } = useCart()
     const { showNotification } = useNotification()
     const [loading, setLoading] = useState(false)
     const [formKey, setFormKey] = useState(0)
@@ -68,6 +69,15 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                 created_at: product?.created_at || new Date().toISOString()
             }
             await saveProductLocal(data)
+            
+            // Sync cart UI immediately if this product is in the cart
+            updateProductInCart(data.id, { 
+                name: data.name, 
+                price: data.price, 
+                image_url: data.image_url,
+                stock_quantity: data.stock_quantity
+            })
+
             console.log('[AutoSave] Local data saved')
         } catch (err) {
             console.error('Autosave error:', err)
@@ -112,6 +122,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     }, [product])
 
     const loadUnits = async () => {
+        if (readOnly || !shop?.id) return
         try {
             const res = await api.get('/units')
             const data = Array.isArray(res.data) ? res.data : []
@@ -124,6 +135,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     }
 
     const loadCategories = async () => {
+        if (readOnly || !shop?.id) return
         try {
             const res = await api.get('/categories')
             const data = Array.isArray(res.data) ? res.data : []
@@ -198,6 +210,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
     const handleSubmit = async (e) => {
         if (e) e.preventDefault()
+        if (readOnly) return
         setLoading(true)
         try {
             let finalImageUrl = formData.image_url
@@ -224,6 +237,15 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                 created_at: product?.created_at || new Date().toISOString()
             }
             await saveProductLocal(data)
+            
+            // Sync cart UI with the final file_id URL
+            updateProductInCart(data.id, { 
+                name: data.name, 
+                price: data.price, 
+                image_url: data.image_url,
+                stock_quantity: data.stock_quantity
+            })
+
             const syncResult = await pushProducts(data)
             if (syncResult?.queued) {
                 showNotification('Đã lưu cục bộ, sẽ tự đồng bộ khi mạng ổn định', 'info')
@@ -252,80 +274,74 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
             <div className="bg-white w-full max-w-md rounded-none sm:rounded-xl shadow-2xl flex flex-col h-[calc(100dvh-5.5rem)] mb-[5.5rem] sm:h-[90vh] max-h-[calc(100dvh-5.5rem)] sm:max-h-[90vh] overflow-hidden">
                 <form key={formKey} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
                     <div className="p-4 border-b flex justify-between items-center bg-white sticky top-0 z-10">
-                        <h2 className="text-lg font-bold">{product ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}</h2>
+                        <h2 className="text-lg font-bold">{readOnly ? 'Chi tiết sản phẩm' : (product ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới')}</h2>
                         <div className="flex items-center gap-2">
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold uppercase tracking-wide disabled:opacity-50"
-                            >
-                                {loading ? 'Đang lưu...' : 'Lưu'}
-                            </button>
+                            {!readOnly && (
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold uppercase tracking-wide disabled:opacity-50"
+                                >
+                                    {loading ? 'Đang lưu...' : 'Lưu'}
+                                </button>
+                            )}
                             <button type="button" onClick={onClose} className="text-gray-400 hover:text-red-500 text-xl p-2">✕</button>
                         </div>
                     </div>
 
                     <div className="p-4 space-y-4 overflow-y-auto overscroll-contain flex-1 min-h-0 pb-24 sm:pb-4">
-                        {!product ? (
-                            <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
-                                <ProductCamera
-                                    onCapture={base64 => {
-                                        const newData = { ...formData, image_url: base64 }
-                                        setFormData(newData)
-                                        handleAutoSave(newData)
-                                    }}
-                                />
-                                <div className="flex-1">
-                                    <ProductImage imageUrl={formData.image_url} onChange={url => {
-                                        const newData = { ...formData, image_url: url }
-                                        setFormData(newData)
-                                        handleAutoSave(newData)
-                                    }} />
-                                </div>
-                            </div>
-                        ) : (
-                            <ProductImage imageUrl={formData.image_url} onChange={url => {
-                                const newData = { ...formData, image_url: url }
-                                setFormData(newData)
-                                handleAutoSave(newData)
-                            }} />
-                        )}
+                        <div className={`bg-gray-50/50 p-6 rounded-3xl border border-gray-100 mb-6 ${readOnly ? 'pointer-events-none' : ''}`}>
+                            <ProductImage 
+                                imageUrl={formData.image_url} 
+                                readOnly={readOnly} 
+                                onChange={url => {
+                                    const newData = { ...formData, image_url: url }
+                                    setFormData(newData)
+                                    handleAutoSave(newData)
+                                }} 
+                            />
+                        </div>
 
-                        <BarcodeSection
-                            barcode={formData.barcode}
-                            onChange={val => setFormData(p => ({ ...p, barcode: val }))}
-                            onGenerate={() => {
-                                const newBarcode = `${Math.floor(Date.now() / 1000)}`
-                                const newData = { ...formData, barcode: newBarcode }
-                                setFormData(newData)
-                                handleAutoSave(newData)
-                            }}
-                            onBlur={() => handleAutoSave()}
-                        />
+                        <div className={readOnly ? 'pointer-events-none opacity-80' : ''}>
+                            <BarcodeSection
+                                barcode={formData.barcode}
+                                onChange={val => setFormData(p => ({ ...p, barcode: val }))}
+                                onGenerate={() => {
+                                    const newBarcode = `${Math.floor(Date.now() / 1000)}`
+                                    const newData = { ...formData, barcode: newBarcode }
+                                    setFormData(newData)
+                                    handleAutoSave(newData)
+                                }}
+                                onBlur={() => handleAutoSave()}
+                            />
+                        </div>
 
-                        <div>
+                        <div className={readOnly ? 'pointer-events-none opacity-80' : ''}>
                             <label className="block text-sm font-medium text-gray-700">Tên sản phẩm</label>
                             <input
                                 className="input w-full"
                                 placeholder="Ví dụ: Bia Heineken..."
                                 value={formData.name}
+                                readOnly={readOnly}
                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                                 onBlur={() => handleAutoSave()}
                             />
                         </div>
 
-                        <PriceStockSection
-                            price={formData.price}
-                            costPrice={formData.cost_price}
-                            stockQuantity={formData.stock_quantity}
-                            onChange={(f, v) => setFormData(p => ({ ...p, [f]: v }))}
-                            onPriceBlur={(f, v) => {
-                                handlePriceBlur(f, v)
-                                handleAutoSave()
-                            }}
-                        />
+                        <div className={readOnly ? 'pointer-events-none opacity-80' : ''}>
+                            <PriceStockSection
+                                price={formData.price}
+                                costPrice={formData.cost_price}
+                                stockQuantity={formData.stock_quantity}
+                                onChange={(f, v) => setFormData(p => ({ ...p, [f]: v }))}
+                                onPriceBlur={(f, v) => {
+                                    handlePriceBlur(f, v)
+                                    handleAutoSave()
+                                }}
+                            />
+                        </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className={`grid grid-cols-2 gap-3 ${readOnly ? 'pointer-events-none opacity-80' : ''}`}>
                             <div>
                                 <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Đơn vị</label>
                                 <UnitSection
@@ -385,8 +401,14 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
                     <div className="p-4 border-t bg-gray-50 sticky bottom-0 z-[130] pb-[max(1rem,env(safe-area-inset-bottom))]">
                         <div className="flex gap-3">
-                            <button type="button" onClick={onClose} disabled={loading} className="flex-1 btn bg-white border-gray-300">Hủy</button>
-                            <button type="submit" disabled={loading} className="flex-1 btn-primary">{loading ? 'Đang lưu...' : 'LƯU SẢN PHẨM'}</button>
+                            <button type="button" onClick={onClose} disabled={loading} className="flex-1 btn bg-white border-gray-300">
+                                {readOnly ? 'Đóng' : 'Hủy'}
+                            </button>
+                            {!readOnly && (
+                                <button type="submit" disabled={loading} className="flex-1 btn-primary">
+                                    {loading ? 'Đang lưu...' : 'LƯU SẢN PHẨM'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </form>

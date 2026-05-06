@@ -26,14 +26,21 @@ const sqliteRepo = {
     ).all(shop_id);
   },
 
-  async createInviteCode(shop_id, created_by) {
+  async createInviteCode(shop_id, created_by, role = 'staff') {
     const code = generateCode();
     const id = uuidv4();
     const expires = expiresAt().toISOString();
     db.prepare(
-      'INSERT INTO invite_codes (id, shop_id, code, created_by, expires_at) VALUES (?, ?, ?, ?, ?)'
-    ).run(id, shop_id, code, created_by, expires);
-    return { id, shop_id, code, expires_at: expires };
+      'INSERT INTO invite_codes (id, shop_id, code, role, created_by, expires_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(id, shop_id, code, role, created_by, expires);
+    return { id, shop_id, code, role, expires_at: expires };
+  },
+
+  async updateStaffRole(shop_id, user_id, new_role) {
+    const result = db.prepare(
+      "UPDATE users SET role = ? WHERE id = ? AND shop_id = ? AND role != 'owner'"
+    ).run(new_role, user_id, shop_id);
+    return result.changes > 0;
   },
 
   async getActiveInviteCodesByShop(shop_id) {
@@ -57,7 +64,7 @@ const sqliteRepo = {
 
   async deleteStaff(shop_id, user_id) {
     const result = db.prepare(
-      "DELETE FROM users WHERE id = ? AND shop_id = ? AND role = 'staff'"
+      "DELETE FROM users WHERE id = ? AND shop_id = ? AND role != 'owner'"
     ).run(user_id, shop_id);
     return result.changes > 0;
   },
@@ -79,12 +86,20 @@ const mongoRepo = {
       .lean();
   },
 
-  async createInviteCode(shop_id, created_by) {
+  async createInviteCode(shop_id, created_by, role = 'staff') {
     const code = generateCode();
     const id = uuidv4();
     const expires = expiresAt();
-    await InviteCode.create({ id, shop_id, code, created_by, expires_at: expires });
-    return { id, shop_id, code, expires_at: expires.toISOString() };
+    await InviteCode.create({ id, shop_id, code, role, created_by, expires_at: expires });
+    return { id, shop_id, code, role, expires_at: expires.toISOString() };
+  },
+
+  async updateStaffRole(shop_id, user_id, new_role) {
+    const result = await User.updateOne(
+      { id: user_id, shop_id, role: { $ne: 'owner' } },
+      { $set: { role: new_role } }
+    );
+    return result.modifiedCount > 0;
   },
 
   async getActiveInviteCodesByShop(shop_id) {
@@ -108,7 +123,7 @@ const mongoRepo = {
   },
 
   async deleteStaff(shop_id, user_id) {
-    const result = await User.deleteOne({ id: user_id, shop_id, role: 'staff' });
+    const result = await User.deleteOne({ id: user_id, shop_id, role: { $ne: 'owner' } });
     return result.deletedCount > 0;
   },
 

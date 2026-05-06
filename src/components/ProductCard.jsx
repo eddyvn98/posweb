@@ -1,4 +1,5 @@
 import { getProductImageUrl } from '../lib/imageUtils'
+import { Package } from './Icons'
 
 export default function ProductCard({ product, onAdd }) {
     const hasStock = product.stock_quantity > 0
@@ -13,7 +14,7 @@ export default function ProductCard({ product, onAdd }) {
                 {product.image_url ? (
                     <img src={getProductImageUrl(product.image_url)} alt={product.name} className="w-full h-full object-cover" />
                 ) : (
-                    <span className="text-3xl opacity-20">📦</span>
+                    <Package className="w-10 h-10 opacity-20" />
                 )}
             </div>
 

@@ -2,6 +2,13 @@ CREATE TABLE IF NOT EXISTS shops (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   address TEXT,
+  bank_name TEXT,
+  bank_account_name TEXT,
+  bank_account_number TEXT,
+  bank_qr_url TEXT,
+  feature_flags TEXT DEFAULT '{}',
+  imports_sheet_id TEXT,
+  imports_sheet_url TEXT,
   updated_at DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -12,7 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
   shop_id TEXT REFERENCES shops(id),
   email TEXT UNIQUE,
   password TEXT,
-  role TEXT CHECK (role IN ('owner', 'staff')) DEFAULT 'staff',
+  role TEXT CHECK (role IN ('owner', 'staff', 'staff_sales', 'staff_warehouse')) DEFAULT 'staff',
   telegram_id TEXT UNIQUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -71,6 +78,7 @@ CREATE TABLE IF NOT EXISTS imports (
   id TEXT PRIMARY KEY,
   shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
   import_date TEXT NOT NULL,
+  supplier_id TEXT REFERENCES suppliers(id) ON DELETE SET NULL,
   supplier_name TEXT NOT NULL,
   supplier_tax_code TEXT,
   invoice_number TEXT,
@@ -110,6 +118,7 @@ CREATE TABLE IF NOT EXISTS suppliers (
   bank_account TEXT,
   bank_name TEXT,
   note TEXT,
+  opening_debt REAL DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -158,6 +167,8 @@ CREATE TABLE IF NOT EXISTS cash_flows (
   amount REAL NOT NULL,
   type TEXT CHECK (type IN ('in', 'out')) NOT NULL,
   category TEXT DEFAULT 'sale',
+  supplier_id TEXT REFERENCES suppliers(id) ON DELETE SET NULL,
+  payment_method TEXT,
   description TEXT,
   ref_id TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -168,6 +179,7 @@ CREATE TABLE IF NOT EXISTS invite_codes (
   id TEXT PRIMARY KEY,
   shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
   code TEXT UNIQUE NOT NULL,
+  role TEXT DEFAULT 'staff',
   created_by TEXT REFERENCES users(id),
   used_by TEXT REFERENCES users(id),
   is_used BOOLEAN DEFAULT 0,

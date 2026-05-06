@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /modules
+Disallow: /app/
+Disallow: /login
+Disallow: /register
+Disallow: /*?*
+
+Sitemap: https://poswebfree.vivutrade.io.vn/sitemap.xml

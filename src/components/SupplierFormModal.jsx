@@ -9,10 +9,11 @@ const EMPTY_FORM = {
     tax_code: '',
     bank_account: '',
     bank_name: '',
-    note: ''
+    note: '',
+    opening_debt: 0
 }
 
-export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
+export default function SupplierFormModal({ supplier, onClose, onSuccess, debtEnabled = true }) {
     const { showNotification } = useNotification()
     const [loading, setLoading] = useState(false)
     const [formData, setFormData] = useState(EMPTY_FORM)
@@ -25,7 +26,8 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
             tax_code: supplier.tax_code || '',
             bank_account: supplier.bank_account || '',
             bank_name: supplier.bank_name || '',
-            note: supplier.note || ''
+            note: supplier.note || '',
+            opening_debt: supplier.opening_debt || 0
         } : EMPTY_FORM)
     }, [supplier])
 
@@ -71,6 +73,19 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
                     <Field label="Mã số thuế" name="tax_code" value={formData.tax_code} onChange={handleChange} />
                     <Field label="Số tài khoản" name="bank_account" value={formData.bank_account} onChange={handleChange} />
                     <Field label="Tên ngân hàng" name="bank_name" value={formData.bank_name} onChange={handleChange} />
+
+                    {debtEnabled && <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100">
+                        <label className="block text-sm font-bold text-amber-900 mb-2 uppercase tracking-wider">Nợ cũ đầu kỳ</label>
+                        <input
+                            type="number"
+                            name="opening_debt"
+                            value={formData.opening_debt}
+                            onChange={handleChange}
+                            placeholder="Nhập số tiền nợ cũ nếu có"
+                            className="input w-full border-amber-200 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                        />
+                        <p className="text-[10px] text-amber-600 mt-2 font-medium italic">* Số tiền bạn đang nợ nhà cung cấp này tính đến thời điểm hiện tại.</p>
+                    </div>}
 
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-2">Ghi chú</label>

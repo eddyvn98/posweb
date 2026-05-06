@@ -57,5 +57,11 @@ export const getProductImageUrl = (url) => {
     if (url.startsWith('http')) return url
 
     // Fallback for relative paths if any
-    return `${api.defaults.baseURL}${url.startsWith('/') ? '' : '/'}${url}`
+    const base = api.defaults.baseURL || '/api'
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`
+    
+    // If url already starts with /api or base, don't prepend base again
+    if (cleanUrl.startsWith(base)) return cleanUrl
+    
+    return `${base}${cleanUrl}`
 }

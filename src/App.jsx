@@ -9,6 +9,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 // Public pages
 import Landing from './pages/Landing'
 import Login from './pages/Login'
+import ResetPassword from './pages/ResetPassword'
 
 // App pages (protected)
 import Home from './pages/Home'
@@ -21,6 +22,8 @@ import SheetImport from './pages/SheetImport'
 import Cashbook from './pages/Cashbook'
 import Settings from './pages/Settings'
 import Modules from './pages/Modules'
+import WebSales from './pages/WebSales'
+import Staff from './pages/Staff'
 import Layout from './components/Layout'
 
 function App() {
@@ -38,6 +41,7 @@ function App() {
                                     <Route path="/" element={<Landing />} />
                                     <Route path="/login" element={<Login />} />
                                     <Route path="/register" element={<Login />} />
+                                    <Route path="/reset-password" element={<ResetPassword />} />
 
                                     {/* ── Protected app routes ───────────────────────── */}
                                     <Route path="/app" element={
@@ -56,12 +60,18 @@ function App() {
                                         <Route path="cashbook" element={<Cashbook />} />
                                         <Route path="settings" element={<Settings />} />
                                         <Route path="modules" element={<Modules />} />
+                                        <Route path="web-sales" element={<WebSales />} />
+                                        <Route path="staff" element={<Staff />} />
                                     </Route>
 
                                     {/* ── Legacy redirect ────────────────────────────── */}
                                     <Route path="/sales" element={<Navigate to="/app/sales" replace />} />
                                     <Route path="/products" element={<Navigate to="/app/products" replace />} />
                                     <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+                                    <Route path="/history" element={<Navigate to="/app/history" replace />} />
+                                    <Route path="/reports" element={<Navigate to="/app/reports" replace />} />
+                                    <Route path="/imports" element={<Navigate to="/app/imports" replace />} />
+                                    <Route path="/cashbook" element={<Navigate to="/app/cashbook" replace />} />
 
                                     {/* ── Catch all ─────────────────────────────────── */}
                                     <Route path="*" element={<Navigate to="/" replace />} />

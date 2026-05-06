@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import api from './api'
+import { getAllLocalProducts, getAllLocalSales, getAllLocalCashFlows } from './db'
 
 export const exportAllData = async (shopId) => {
     const workbook = XLSX.utils.book_new()
@@ -9,15 +10,39 @@ export const exportAllData = async (shopId) => {
         const startDate = '2020-01-01T00:00:00Z'
         const endDate = '2050-12-31T23:59:59Z'
 
-        const [salesRes, productsRes, flowsRes] = await Promise.all([
-            api.get('/sales', { params: { startDate, endDate } }),
-            api.get('/products'),
-            api.get('/reports/cash-flows', { params: { startDate, endDate } })
-        ])
+        let sales, products, cashflows
 
-        const sales = salesRes.data
-        const products = productsRes.data
-        const cashflows = flowsRes.data
+        if (shopId === 'guest_shop') {
+            [sales, products, cashflows] = await Promise.all([
+                getAllLocalSales('guest_shop'),
+                getAllLocalProducts(),
+                getAllLocalCashFlows('guest_shop')
+            ])
+            // Filter by date range just in case
+            sales = sales.filter(s => s.created_at >= startDate && s.created_at <= endDate)
+            cashflows = cashflows.filter(c => c.created_at >= startDate && c.created_at <= endDate)
+        } else {
+            try {
+                const [salesRes, productsRes, flowsRes] = await Promise.all([
+                    api.get('/sales', { params: { startDate, endDate } }),
+                    api.get('/products'),
+                    api.get('/reports/cash-flows', { params: { startDate, endDate } })
+                ])
+                sales = salesRes.data
+                products = productsRes.data
+                cashflows = flowsRes.data
+            } catch (error) {
+                console.warn('[Export] API failed, falling back to local data:', error)
+                // Fallback to local data if offline
+                [sales, products, cashflows] = await Promise.all([
+                    getAllLocalSales(shopId),
+                    getAllLocalProducts(),
+                    getAllLocalCashFlows(shopId)
+                ])
+                sales = sales.filter(s => s.created_at >= startDate && s.created_at <= endDate)
+                cashflows = cashflows.filter(c => c.created_at >= startDate && c.created_at <= endDate)
+            }
+        }
 
         // Sales sheet
         if (sales && sales.length > 0) {

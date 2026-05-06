@@ -1,6 +1,7 @@
 const db = require('../../db/connection');
 const { v4: uuidv4 } = require('uuid');
 const { syncImport } = require('../../services/googleSheetService');
+const { ensureShopInSqlite } = require('../../lib/sqliteSync');
 
 function normalizeImportPayload(body = {}) {
     const items = Array.isArray(body.items) ? body.items : [];
@@ -11,6 +12,7 @@ function normalizeImportPayload(body = {}) {
 
     return {
         import_date: body.import_date,
+        supplier_id: body.supplier_id || null,
         supplier_name: String(body.supplier_name || '').trim(),
         supplier_tax_code: String(body.supplier_tax_code || '').trim(),
         invoice_number: String(body.invoice_number || '').trim(),
@@ -37,23 +39,25 @@ function normalizeImportPayload(body = {}) {
     };
 }
 
-function updateImport(req, res) {
+async function updateImport(req, res) {
     const { shop_id } = req.user;
     const { id } = req.params;
     const payload = normalizeImportPayload(req.body);
+
+    try {
+        await ensureShopInSqlite(shop_id);
 
     if (!payload.import_date || payload.total_cost <= 0) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const supplierLabel = payload.supplier_name || 'khong ro nha cung cap';
-
-    try {
+        const supplierLabel = payload.supplier_name || 'khong ro nha cung cap';
         const transaction = db.transaction(() => {
             const importResult = db.prepare(`
                 UPDATE imports
                 SET
                     import_date = ?,
+                    supplier_id = ?,
                     supplier_name = ?,
                     supplier_tax_code = ?,
                     invoice_number = ?,
@@ -71,6 +75,7 @@ function updateImport(req, res) {
                 WHERE id = ? AND shop_id = ?
             `).run(
                 payload.import_date,
+                payload.supplier_id,
                 payload.supplier_name,
                 payload.supplier_tax_code || null,
                 payload.invoice_number || null,

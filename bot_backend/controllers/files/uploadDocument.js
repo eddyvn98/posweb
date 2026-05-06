@@ -11,10 +11,15 @@ function parseDataUrl(input) {
     };
 }
 
-async function resolveChatId() {
+async function resolveChatId(req) {
     let chatId = process.env.ADMIN_TELEGRAM_ID;
     if (!chatId) {
-        chatId = await getAuthRepo().getOwnerTelegramId();
+        try {
+            const { shop_id } = req.user || {};
+            chatId = await getAuthRepo().getOwnerTelegramId(shop_id);
+        } catch (e) {
+            console.error('Error fetching owner telegram id:', e);
+        }
     }
     return chatId;
 }
@@ -22,10 +27,14 @@ async function resolveChatId() {
 async function uploadDocument(req, res) {
     const { file_name, data_url } = req.body;
     const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = await resolveChatId();
+    const chatId = await resolveChatId(req);
 
     if (!BOT_TOKEN || !chatId) {
-        return res.status(500).json({ error: 'Telegram configuration missing' });
+        return res.json({ 
+            success: false, 
+            error: 'Telegram configuration missing',
+            details: 'Please set TELEGRAM_BOT_TOKEN and ADMIN_TELEGRAM_ID in .env'
+        });
     }
 
     const parsed = parseDataUrl(data_url);
@@ -60,8 +69,11 @@ async function uploadDocument(req, res) {
             file_name: document.file_name || file_name
         });
     } catch (error) {
-        console.error('Telegram Document Upload Error:', error);
-        res.status(500).json({ error: error.message || 'Failed to upload document' });
+        console.error('Telegram Document Upload Error:', error.message);
+        res.json({ 
+            success: false, 
+            error: error.message || 'Failed to upload document' 
+        });
     }
 }
 

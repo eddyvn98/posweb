@@ -1,11 +1,12 @@
 const { v4: uuidv4 } = require('uuid');
 const db = require('../db/connection');
 const { getDbProvider } = require('../db/provider');
+const { getTenantModel } = require('../db/tenantManager');
+const UnitSchema = require('../mongo/models/Unit');
+const ProductSchema = require('../mongo/models/Product');
 const Shop = require('../mongo/models/Shop');
-const Unit = require('../mongo/models/Unit');
-const Product = require('../mongo/models/Product');
 
-const DEFAULT_UNITS = ['C�i', 'H?p', 'Kg', 'Lon', 'Chai'];
+const DEFAULT_UNITS = ['Cái', 'Hộp', 'Kg', 'Lon', 'Chai'];
 
 const sqliteRepo = {
   async getUnits(shop_id) {
@@ -48,29 +49,34 @@ const mongoRepo = {
     if (!shop) await Shop.create({ id: shop_id, name: 'Cua hang' });
   },
   async getUnits(shop_id) {
+    const Unit = getTenantModel(shop_id, 'Unit', UnitSchema);
     await this.ensureShop(shop_id);
-    let units = await Unit.find({ shop_id, is_active: true }, { _id: 0, id: 1, name: 1 }).sort({ name: 1 }).lean();
+    let units = await Unit.find({ shop_id, is_active: { $ne: false } }, { _id: 0, id: 1, name: 1 }).sort({ name: 1 }).lean();
     if (units.length === 0) {
       await Unit.insertMany(DEFAULT_UNITS.map((name) => ({ id: uuidv4(), shop_id, name, is_active: true })));
-      units = await Unit.find({ shop_id, is_active: true }, { _id: 0, id: 1, name: 1 }).sort({ name: 1 }).lean();
+      units = await Unit.find({ shop_id, is_active: { $ne: false } }, { _id: 0, id: 1, name: 1 }).sort({ name: 1 }).lean();
     }
     return units;
   },
   async createUnit(shop_id, name) {
+    const Unit = getTenantModel(shop_id, 'Unit', UnitSchema);
     await this.ensureShop(shop_id);
-    const exists = await Unit.findOne({ shop_id, name: new RegExp(`^${name}$`, 'i'), is_active: true }).lean();
+    const exists = await Unit.findOne({ shop_id, name: new RegExp(`^${name}$`, 'i'), is_active: { $ne: false } }).lean();
     if (exists) throw new Error('Unit already exists');
     const row = { id: uuidv4(), shop_id, name, is_active: true };
     await Unit.create(row);
     return { id: row.id, shop_id, name };
   },
   async updateUnit(shop_id, id, name) {
-    const duplicate = await Unit.findOne({ shop_id, id: { $ne: id }, name: new RegExp(`^${name}$`, 'i'), is_active: true }).lean();
+    const Unit = getTenantModel(shop_id, 'Unit', UnitSchema);
+    const duplicate = await Unit.findOne({ shop_id, id: { $ne: id }, name: new RegExp(`^${name}$`, 'i'), is_active: { $ne: false } }).lean();
     if (duplicate) throw new Error('Unit already exists');
-    const result = await Unit.updateOne({ id, shop_id, is_active: true }, { $set: { name, updated_at: new Date() } });
+    const result = await Unit.updateOne({ id, shop_id, is_active: { $ne: false } }, { $set: { name, updated_at: new Date() } });
     return result.modifiedCount > 0;
   },
   async deleteUnit(shop_id, id) {
+    const Unit = getTenantModel(shop_id, 'Unit', UnitSchema);
+    const Product = getTenantModel(shop_id, 'Product', ProductSchema);
     const unit = await Unit.findOne({ id, shop_id }).lean();
     if (!unit) throw new Error('Unit not found');
     const inUse = await Product.findOne({ shop_id, unit: unit.name }).lean();

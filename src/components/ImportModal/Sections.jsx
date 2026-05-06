@@ -15,20 +15,22 @@ export function GeneralInfoSection({
         <section className="rounded-3xl border border-gray-200 p-5">
             <h3 className="text-xl font-black text-gray-800 mb-4">A. Thông tin chung</h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="md:col-span-2 border border-gray-200 rounded-2xl p-4 flex items-center justify-between gap-3">
-                    <div>
-                        <p className="text-sm text-gray-500 font-semibold">Nhà cung cấp</p>
-                        <p className="text-lg font-black text-gray-800">{formData.supplier_name || 'Chưa chọn nhà cung cấp'}</p>
+                <div className="md:col-span-2 border border-gray-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="min-w-0">
+                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Nhà cung cấp</p>
+                        <p className="text-lg font-black text-gray-800 leading-tight">
+                            {formData.supplier_name || 'Chưa chọn nhà cung cấp'}
+                        </p>
                     </div>
-                    <div className="flex gap-2">
-                        <button type="button" onClick={onAddSupplier} className="px-4 h-10 rounded-xl bg-gray-100 text-gray-700 font-bold">
+                    <div className="flex gap-2 shrink-0">
+                        <button type="button" onClick={onAddSupplier} className="flex-1 sm:flex-none px-4 h-10 rounded-xl bg-gray-100 text-gray-700 font-bold whitespace-nowrap active:scale-95 transition-transform">
                             + Thêm
                         </button>
                         <button
                             type="button"
                             onClick={onEditSupplier}
                             disabled={!selectedSupplier}
-                            className="px-4 h-10 rounded-xl bg-primary text-white font-bold disabled:opacity-40"
+                            className="flex-1 sm:flex-none px-4 h-10 rounded-xl bg-primary text-white font-bold disabled:opacity-40 whitespace-nowrap active:scale-95 transition-transform"
                         >
                             Chọn / sửa
                         </button>
@@ -263,7 +265,7 @@ function ItemRow({ item, index, products, onRemove, onChange, onMatch }) {
     )
 }
 
-export function SummarySection({ summary, paidAmount }) {
+export function SummarySection({ summary, paidAmount, showDebt = true }) {
     return (
         <section className="rounded-3xl border border-gray-200 p-5">
             <h3 className="text-xl font-black text-gray-800 mb-4">C. Bản tóm tắt tiền tệ</h3>
@@ -272,7 +274,7 @@ export function SummarySection({ summary, paidAmount }) {
                 <SummaryRow label="Tổng VAT" value={summary.totalVatAmount} accent="text-sky-600" />
                 <SummaryRow label="Tổng cộng" value={summary.totalCost} tone="bg-green-50" accent="text-green-700" strong />
                 <SummaryRow label="Đã thanh toán" value={numberValue(paidAmount)} />
-                <SummaryRow label="Còn nợ" value={summary.debtAmount} tone="bg-green-50" accent="text-green-700" strong />
+                {showDebt && <SummaryRow label="Còn nợ" value={summary.debtAmount} tone="bg-green-50" accent="text-green-700" strong />}
             </div>
         </section>
     )
@@ -281,9 +283,9 @@ export function SummarySection({ summary, paidAmount }) {
 export function AttachmentsSection({ attachments, onAttachmentChange, onRemoveAttachment, onViewAttachment, onDownloadAttachment }) {
     return (
         <section className="rounded-3xl border border-gray-200 p-5">
-            <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <h3 className="text-xl font-black text-gray-800">D. Chứng từ đính kèm</h3>
-                <label className="px-4 h-10 rounded-xl bg-primary text-white font-bold flex items-center cursor-pointer">
+                <label className="shrink-0 px-4 h-10 rounded-xl bg-primary text-white font-bold flex items-center justify-center cursor-pointer whitespace-nowrap active:scale-95 transition-transform">
                     + Tải lên
                     <input type="file" multiple className="hidden" onChange={onAttachmentChange} />
                 </label>
@@ -332,18 +334,24 @@ export function ActionSection({ status, loading, unmatchedCount = 0, onSaveDraft
                 </div>
             )}
             <div className="flex flex-col md:flex-row gap-3">
-                <button type="button" disabled={loading} onClick={onSaveDraft} className="flex-1 btn-primary h-12 rounded-xl disabled:opacity-50">
+                <button 
+                    type="button" 
+                    disabled={loading} 
+                    onClick={onSaveDraft} 
+                    className="flex-1 btn-primary h-12 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-primary/20 disabled:opacity-50 active:scale-95 transition-all"
+                >
                     Lưu nháp
                 </button>
                 <button
                     type="button"
                     disabled={loading || unmatchedCount > 0}
                     onClick={onConfirm}
-                    className="flex-1 h-12 rounded-xl bg-stone-200 text-stone-700 font-black disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 h-12 rounded-2xl bg-gray-200 text-gray-500 font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
                 >
-                    Xác nhận{unmatchedCount > 0 ? ` (còn ${unmatchedCount} chưa khớp)` : ''}
+                    Xác nhận{unmatchedCount > 0 ? ` (${unmatchedCount} lỗi)` : ''}
                 </button>
             </div>
         </section>
     )
 }
+

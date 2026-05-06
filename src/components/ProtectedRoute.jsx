@@ -26,9 +26,10 @@ export default function ProtectedRoute({ children }) {
         )
     }
 
-    if (!user) {
-        return <Navigate to="/login" state={{ from: location }} replace />
-    }
+    // We no longer redirect to login. Instead, we let the pages handle "Guest Mode"
+    // if (!user) {
+    //     return <Navigate to="/login" state={{ from: location }} replace />
+    // }
 
     // Support both as wrapper (children) and as route element (Outlet)
     return children ?? <Outlet />

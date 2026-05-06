@@ -6,6 +6,7 @@ import { findProductByBarcode, saveProductLocal } from '../lib/db'
 import { useNotification } from '../contexts/NotificationContext'
 import { useScanBarcode } from '../hooks/useScanBarcode'
 import BarcodeScanner from './BarcodeScanner'
+import { Package, Zap, Search } from './Icons'
 
 export default function BulkImportModal({ onClose, onFinish }) {
     const { shop } = useAuth()
@@ -20,7 +21,7 @@ export default function BulkImportModal({ onClose, onFinish }) {
         return () => setIsClosed(true)
     }, [])
 
-    // 🚀 Enable Bluetooth/External Scanner
+    // Enable Bluetooth/External Scanner
     useScanBarcode({
         onScan: (code) => handleScan(code),
         enabled: !isClosed
@@ -122,7 +123,10 @@ export default function BulkImportModal({ onClose, onFinish }) {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 sm:p-4">
             <div className="bg-white w-full max-w-lg h-full sm:h-[80vh] flex flex-col rounded-none sm:rounded-2xl shadow-2xl overflow-hidden">
                 <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-                    <h2 className="text-xl font-bold">📦 Nhập kho nhanh</h2>
+                    <div className="flex items-center gap-2">
+                        <Package className="w-6 h-6 text-primary" />
+                        <h2 className="text-xl font-bold uppercase tracking-tight">Quét lô hàng loạt</h2>
+                    </div>
                     <button onClick={onClose} className="text-gray-400 text-2xl">✕</button>
                 </div>
 
@@ -130,9 +134,19 @@ export default function BulkImportModal({ onClose, onFinish }) {
                     <div className="flex flex-col gap-2">
                         <button
                             onClick={() => setShowCamera(!showCamera)}
-                            className={`btn text-xs font-bold h-9 rounded-xl border transition-all ${showCamera ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}
+                            className={`btn text-xs font-black uppercase tracking-widest h-10 rounded-xl border transition-all flex items-center justify-center gap-2 ${showCamera ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}
                         >
-                            {showCamera ? '🛑 Tắt Camera' : '📷 Mở Camera để quét'}
+                            {showCamera ? (
+                                <>
+                                    <Zap className="w-4 h-4" />
+                                    <span>Tắt Camera</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Zap className="w-4 h-4" />
+                                    <span>Mở Camera để quét</span>
+                                </>
+                            )}
                         </button>
 
                         {showCamera && (
@@ -147,7 +161,44 @@ export default function BulkImportModal({ onClose, onFinish }) {
                             <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Lịch sử quét</h3>
                             <span className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full">Tự động sao lưu</span>
                         </div>
-                        {scannedItems.length === 0 && <p className="text-center text-gray-400 py-10 italic text-sm">Hãy bóp cò máy quét để bắt đầu...</p>}
+                        {scannedItems.length === 0 && (
+                            <div className="py-12 flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in zoom-in duration-500">
+                                <div className="relative">
+                                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100 shadow-inner">
+                                        <Package className="w-10 h-10 text-gray-200" />
+                                    </div>
+                                    <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-50">
+                                        <Zap className="w-4 h-4 text-primary animate-pulse" />
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-4 max-w-[240px] mx-auto opacity-40">
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-black text-gray-600 uppercase tracking-widest">Hướng dẫn nhanh</p>
+                                        <div className="h-0.5 w-8 bg-primary/30 mx-auto rounded-full"></div>
+                                    </div>
+                                    
+                                    <ul className="text-[10px] text-gray-500 space-y-3 font-bold uppercase tracking-tight text-left max-w-[220px] mx-auto">
+                                        <li className="flex items-start gap-2">
+                                            <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] shrink-0 mt-0.5">1</div>
+                                            <span>Bóp cò quét mã sản phẩm liên tục</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <div className="w-4 h-4 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[8px] shrink-0 mt-0.5">2</div>
+                                            <span>Tự động thêm mới nếu chưa có trong kho</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <div className="w-4 h-4 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-[8px] shrink-0 mt-0.5">3</div>
+                                            <span>Cộng thêm số lượng nếu đã có sản phẩm</span>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <p className="text-sm italic text-primary font-black animate-pulse">
+                                    Sẵn sàng quét hàng...
+                                </p>
+                            </div>
+                        )}
                         {scannedItems.map((item, idx) => (
                             <div key={item.barcode} className={`flex gap-3 bg-white p-3 rounded-2xl border transition-all ${item.status === 'saving' ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100 shadow-sm'} items-center animate-in slide-in-from-top-2 duration-300`}>
                                 <div className="flex-1">

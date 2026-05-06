@@ -1,15 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const authenticateToken = require('../middleware/auth');
+const { authenticateToken, ownerOnly } = require('../middleware/auth');
 const { getStaffRepo } = require('../repositories/staff.repo');
 
-// Middleware: chỉ owner mới được quản lý staff
-function ownerOnly(req, res, next) {
-  if (req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Chi owner moi co quyen thuc hien thao tac nay' });
-  }
-  next();
-}
 
 // GET /api/staff — danh sách nhân viên trong shop
 router.get('/', authenticateToken, async (req, res) => {
@@ -36,10 +29,27 @@ router.get('/invite-codes', authenticateToken, ownerOnly, async (req, res) => {
 // POST /api/staff/invite — tạo invite code mới
 router.post('/invite', authenticateToken, ownerOnly, async (req, res) => {
   try {
-    const invite = await getStaffRepo().createInviteCode(req.user.shop_id, req.user.id);
+    const { role } = req.body;
+    const invite = await getStaffRepo().createInviteCode(req.user.shop_id, req.user.id, role);
     res.json({ success: true, invite });
   } catch (err) {
     console.error('[staff] createInvite error:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// PATCH /api/staff/:id/role — cập nhật quyền hạn nhân viên
+router.patch('/:id/role', authenticateToken, ownerOnly, async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['staff', 'staff_sales', 'staff_warehouse'].includes(role)) {
+      return res.status(400).json({ error: 'Quyen han khong hop le' });
+    }
+    const updated = await getStaffRepo().updateStaffRole(req.user.shop_id, req.params.id, role);
+    if (!updated) return res.status(404).json({ error: 'Nhan vien khong ton tai' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[staff] updateRole error:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });

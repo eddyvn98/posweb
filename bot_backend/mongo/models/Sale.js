@@ -1,4 +1,4 @@
-const { Schema, model } = require('mongoose');
+﻿const { Schema } = require('mongoose');
 
 const SaleSchema = new Schema({
   id: { type: String, required: true, unique: true, index: true },
@@ -18,4 +18,4 @@ const SaleSchema = new Schema({
 
 SaleSchema.index({ shop_id: 1, sale_date: -1 });
 
-module.exports = model('Sale', SaleSchema);
+module.exports = SaleSchema;

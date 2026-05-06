@@ -1,6 +1,7 @@
 const db = require('../../db/connection');
 const { v4: uuidv4 } = require('uuid');
 const { syncImport } = require('../../services/googleSheetService');
+const { ensureShopInSqlite } = require('../../lib/sqliteSync');
 
 function normalizeImportPayload(body = {}) {
     const items = Array.isArray(body.items) ? body.items : [];
@@ -11,6 +12,7 @@ function normalizeImportPayload(body = {}) {
 
     return {
         import_date: body.import_date,
+        supplier_id: body.supplier_id || null,
         supplier_name: String(body.supplier_name || '').trim(),
         supplier_tax_code: String(body.supplier_tax_code || '').trim(),
         invoice_number: String(body.invoice_number || '').trim(),
@@ -37,81 +39,84 @@ function normalizeImportPayload(body = {}) {
     };
 }
 
-function createImport(req, res) {
+async function createImport(req, res) {
     const { shop_id } = req.user;
     const payload = normalizeImportPayload(req.body);
 
-    if (!payload.import_date || payload.total_cost <= 0) {
-        return res.status(400).json({ error: 'Missing required fields' });
-    }
+    try {
+        await ensureShopInSqlite(shop_id);
 
-    const supplierLabel = payload.supplier_name || 'khong ro nha cung cap';
+        if (!payload.import_date || payload.total_cost <= 0) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
 
-    const transaction = db.transaction(() => {
-        const importId = uuidv4();
+        const supplierLabel = payload.supplier_name || 'khong ro nha cung cap';
 
-        db.prepare(`
-            INSERT INTO imports (
-                id, shop_id, import_date, supplier_name, supplier_tax_code, invoice_number, invoice_date,
-                invoice_type, payment_method, payment_date, paid_amount, total_goods_amount, total_vat_amount,
-                attachment_files, status, total_cost, note
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
-            importId,
-            shop_id,
-            payload.import_date,
-            payload.supplier_name,
-            payload.supplier_tax_code || null,
-            payload.invoice_number || null,
-            payload.invoice_date || null,
-            payload.invoice_type,
-            payload.payment_method,
-            payload.payment_date || null,
-            payload.paid_amount,
-            payload.total_goods_amount,
-            payload.total_vat_amount,
-            payload.attachment_files,
-            payload.status,
-            payload.total_cost,
-            payload.note || null
-        );
+        const transaction = db.transaction(() => {
+            const importId = uuidv4();
 
-        const insertItem = db.prepare(`
-            INSERT INTO import_items (id, import_id, product_id, product_name, quantity, unit_price, vat_amount, total_amount)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-
-        payload.items.forEach((item) => {
-            insertItem.run(
-                item.id,
+            db.prepare(`
+                INSERT INTO imports (
+                    id, shop_id, import_date, supplier_id, supplier_name, supplier_tax_code, invoice_number, invoice_date,
+                    invoice_type, payment_method, payment_date, paid_amount, total_goods_amount, total_vat_amount,
+                    attachment_files, status, total_cost, note
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
                 importId,
-                item.product_id,
-                item.product_name,
-                item.quantity,
-                item.unit_price,
-                item.vat_amount,
-                item.total_amount
+                shop_id,
+                payload.import_date,
+                payload.supplier_id,
+                payload.supplier_name,
+                payload.supplier_tax_code || null,
+                payload.invoice_number || null,
+                payload.invoice_date || null,
+                payload.invoice_type,
+                payload.payment_method,
+                payload.payment_date || null,
+                payload.paid_amount,
+                payload.total_goods_amount,
+                payload.total_vat_amount,
+                payload.attachment_files,
+                payload.status,
+                payload.total_cost,
+                payload.note || null
             );
+
+            const insertItem = db.prepare(`
+                INSERT INTO import_items (id, import_id, product_id, product_name, quantity, unit_price, vat_amount, total_amount)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `);
+
+            payload.items.forEach((item) => {
+                insertItem.run(
+                    item.id,
+                    importId,
+                    item.product_id,
+                    item.product_name,
+                    item.quantity,
+                    item.unit_price,
+                    item.vat_amount,
+                    item.total_amount
+                );
+            });
+
+            const cashFlowId = uuidv4();
+            db.prepare(`
+                INSERT INTO cash_flows (id, shop_id, amount, type, category, description, ref_id, created_at)
+                VALUES (?, ?, ?, 'out', 'import', ?, ?, ?)
+            `).run(
+                cashFlowId,
+                shop_id,
+                payload.total_cost,
+                `Nhap hang tu ${supplierLabel}`,
+                importId,
+                new Date(payload.import_date).toISOString()
+            );
+
+            return importId;
         });
 
-        const cashFlowId = uuidv4();
-        db.prepare(`
-            INSERT INTO cash_flows (id, shop_id, amount, type, category, description, ref_id, created_at)
-            VALUES (?, ?, ?, 'out', 'import', ?, ?, ?)
-        `).run(
-            cashFlowId,
-            shop_id,
-            payload.total_cost,
-            `Nhap hang tu ${supplierLabel}`,
-            importId,
-            new Date(payload.import_date).toISOString()
-        );
-
-        return importId;
-    });
-
-    try {
         const resultId = transaction();
         syncImport({
             id: resultId,

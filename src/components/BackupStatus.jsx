@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import api from '../lib/api'
+import { Check, X, FileSpreadsheet, AlertTriangle, Save, Info } from './Icons'
 
 /**
  * Hiển thị trạng thái sao lưu gần nhất
@@ -23,21 +24,24 @@ export const BackupStatus = ({ shopId }) => {
 
     if (!lastBackup) {
         return (
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm">
-                <p className="text-gray-600">📭 Chưa có sao lưu nào</p>
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm flex items-center gap-2">
+                <Info className="w-4 h-4 text-gray-400" />
+                <p className="text-gray-600">Chưa có sao lưu nào</p>
             </div>
         )
     }
 
     const createdDate = new Date(lastBackup.created_at).toLocaleString('vi-VN')
     const statusColor = lastBackup.status === 'SUCCESS' ? 'text-green-600' : 'text-red-600'
-    const statusIcon = lastBackup.status === 'SUCCESS' ? '✓' : '✕'
+    const statusIcon = lastBackup.status === 'SUCCESS' ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />
 
     return (
         <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
             <div className="flex items-start justify-between mb-2">
-                <p className="text-sm font-medium">📋 Lần sao lưu gần nhất</p>
-                <span className={`text-sm ${statusColor}`}>
+                <p className="text-sm font-medium flex items-center gap-2">
+                    <FileSpreadsheet className="w-4 h-4 text-primary" /> Lần sao lưu gần nhất
+                </p>
+                <span className={`text-sm ${statusColor} flex items-center gap-1`}>
                     {statusIcon} {lastBackup.status === 'SUCCESS' ? 'Thành công' : 'Thất bại'}
                 </span>
             </div>
@@ -52,7 +56,9 @@ export const BackupStatus = ({ shopId }) => {
                 )}
 
                 {lastBackup.error_message && (
-                    <p className="text-red-600 mt-2">⚠️ Lỗi: {lastBackup.error_message}</p>
+                    <p className="text-red-600 mt-2 flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" /> Lỗi: {lastBackup.error_message}
+                    </p>
                 )}
             </div>
         </div>
@@ -115,9 +121,14 @@ export const BackupButton = ({
             <button
                 onClick={handleBackupNow}
                 disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center justify-center gap-2"
             >
-                {isLoading ? 'Đang sao lưu...' : '💾 Sao lưu ngay'}
+                {isLoading ? 'Đang sao lưu...' : (
+                    <>
+                        <Save className="w-4 h-4" />
+                        <span>Sao lưu ngay</span>
+                    </>
+                )}
             </button>
 
             {status && (

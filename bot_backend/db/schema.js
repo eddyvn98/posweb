@@ -26,6 +26,17 @@ function runMigrations() {
             console.log('Migrated: products.category');
         }
 
+        addColumnIfMissing('shops', 'bank_name', 'TEXT');
+        addColumnIfMissing('shops', 'bank_account_name', 'TEXT');
+        addColumnIfMissing('shops', 'bank_account_number', 'TEXT');
+        addColumnIfMissing('shops', 'bank_qr_url', 'TEXT');
+        addColumnIfMissing('shops', 'feature_flags', "TEXT DEFAULT '{}'");
+        addColumnIfMissing('shops', 'imports_sheet_id', 'TEXT');
+        addColumnIfMissing('shops', 'imports_sheet_url', 'TEXT');
+
+        addColumnIfMissing('suppliers', 'opening_debt', 'REAL DEFAULT 0');
+
+        addColumnIfMissing('imports', 'supplier_id', 'TEXT');
         addColumnIfMissing('imports', 'supplier_tax_code', 'TEXT');
         addColumnIfMissing('imports', 'invoice_number', 'TEXT');
         addColumnIfMissing('imports', 'invoice_date', 'TEXT');
@@ -37,6 +48,15 @@ function runMigrations() {
         addColumnIfMissing('imports', 'total_vat_amount', 'REAL NOT NULL DEFAULT 0');
         addColumnIfMissing('imports', 'attachment_files', 'TEXT');
         addColumnIfMissing('imports', 'status', "TEXT DEFAULT 'draft'");
+
+        addColumnIfMissing('cash_flows', 'supplier_id', 'TEXT');
+        addColumnIfMissing('cash_flows', 'payment_method', 'TEXT');
+        addColumnIfMissing('invite_codes', 'role', "TEXT DEFAULT 'staff'");
+
+        // Migration: Update users role check (complex in SQLite, but we can try to add the column if it were missing, 
+        // however it already exists. For roles, we might just rely on the application logic for now if we can't easily 
+        // drop/recreate the users table without data loss). 
+        // But for fresh installs, init.sql will have it.
 
         // Migration: Make sale_items.product_id nullable for Quick Sales
         const saleItemsInfo = db.prepare("PRAGMA table_info(sale_items)").all();

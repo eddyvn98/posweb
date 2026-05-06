@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const authenticateToken = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const getImports = require('../controllers/imports/getImports');
 const getImportById = require('../controllers/imports/getImportById');
 const createImport = require('../controllers/imports/createImport');

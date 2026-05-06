@@ -24,6 +24,7 @@ export function buildEmptyItem() {
 }
 
 export function matchSupplierId(importRecord, suppliers) {
+    if (importRecord?.supplier_id) return importRecord.supplier_id
     if (!importRecord?.supplier_name) return ''
     const matched = suppliers.find((item) => item.name?.trim() === importRecord.supplier_name?.trim())
     return matched?.id || ''

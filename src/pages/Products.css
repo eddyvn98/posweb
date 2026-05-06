@@ -1,0 +1,122 @@
+/* Google Sheets Style Table */
+.sheet-container {
+    width: 100%;
+    overflow: auto; /* Enable both horizontal and vertical scrolling */
+    background: white;
+    border-top: 1px solid #ccc;
+    height: 100%;
+    position: relative;
+}
+
+.sheet-table {
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: fixed;
+    font-size: 13px;
+    color: #333;
+}
+
+.sheet-table th {
+    background: #f8f9fa;
+    border: 1px solid #ccc;
+    padding: 6px 8px;
+    font-weight: 500;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    text-align: left;
+    white-space: nowrap;
+    color: #5f6368;
+    user-select: none;
+}
+
+.sheet-table td {
+    border: 1px solid #e0e0e0;
+    padding: 0;
+    height: 32px;
+    vertical-align: middle;
+    position: relative;
+}
+
+.sheet-table tr:hover td {
+    background-color: #f1f3f4;
+}
+
+.sheet-table tr.selected td {
+    background-color: #e8f0fe !important;
+}
+
+.row-index {
+    width: 40px;
+    background: #f8f9fa;
+    text-align: center;
+    color: #70757a;
+    font-size: 11px;
+    border-right: 1px solid #ccc !important;
+    position: sticky;
+    left: 0;
+    z-index: 10;
+}
+
+.sheet-input {
+    width: 100%;
+    height: 100%;
+    border: none;
+    padding: 4px 8px;
+    background: transparent;
+    outline: none;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    display: block;
+}
+
+.sheet-input:focus {
+    box-shadow: inset 0 0 0 2px #1a73e8;
+    z-index: 5;
+    position: relative;
+    background: white;
+}
+
+.sheet-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.sheet-cell-text {
+    padding: 4px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+/* Specific Column Widths */
+.col-name { width: 300px; }
+.col-barcode { width: 150px; }
+.col-stock { width: 80px; }
+.col-unit { width: 80px; }
+.col-price { width: 120px; }
+.col-category { width: 150px; }
+.col-actions { width: 80px; }
+
+/* Custom Scrollbar to look more like Google Sheets / Modern POS */
+.sheet-container::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.sheet-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-left: 1px solid #ddd;
+}
+
+.sheet-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border: 2px solid #f1f1f1;
+    border-radius: 5px;
+}
+
+.sheet-container::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}

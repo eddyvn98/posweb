@@ -33,8 +33,15 @@ const sqliteRepo = {
   async getShopByName(name) {
     return db.prepare('SELECT * FROM shops WHERE name = ?').get(name) || null;
   },
-  async getOwnerTelegramId() {
-    const owner = db.prepare("SELECT telegram_id FROM users WHERE role = 'owner' LIMIT 1").get();
+  async getOwnerTelegramId(shop_id) {
+    let query = "SELECT telegram_id FROM users WHERE role = 'owner'";
+    const params = [];
+    if (shop_id) {
+      query += " AND shop_id = ?";
+      params.push(shop_id);
+    }
+    query += " AND telegram_id IS NOT NULL LIMIT 1";
+    const owner = db.prepare(query).get(...params);
     return owner ? owner.telegram_id : null;
   },
   async getOrCreateUserFromTelegram(telegramUser, shopName) {
@@ -66,7 +73,7 @@ const sqliteRepo = {
       ).get(inviteCode.toUpperCase());
       if (!invite) throw new Error('Ma moi khong hop le hoac da het han');
       shopId = invite.shop_id;
-      role = 'staff';
+      role = invite.role || 'staff';
     } else {
       shopId = uuidv4();
       db.prepare('INSERT INTO shops (id, name) VALUES (?, ?)').run(shopId, shopName);
@@ -112,27 +119,47 @@ const sqliteRepo = {
     return db.prepare('SELECT * FROM users WHERE id = ?').get(id) || null;
   },
   async updateUserPassword(userId, newHash) {
-    const result = db.prepare('UPDATE users SET password = ? WHERE id = ?').run(newHash, userId);
+    const result = db.prepare('UPDATE users SET password = ?, reset_password_token = NULL, reset_password_expires = NULL WHERE id = ?').run(newHash, userId);
     return result.changes > 0;
   },
-  async updateShop(shopId, name, address) {
+  async setUserResetToken(email, token, expires) {
+    const result = db.prepare('UPDATE users SET reset_password_token = ?, reset_password_expires = ? WHERE email = ?')
+      .run(token, expires.toISOString(), email);
+    return result.changes > 0;
+  },
+  async getUserByResetToken(token) {
+    const row = db.prepare('SELECT * FROM users WHERE reset_password_token = ? AND reset_password_expires > ?')
+      .get(token, new Date().toISOString());
+    return row || null;
+  },
+  async updateShop(shopId, name, address, bankName, bankAccountName, bankAccountNumber, bankQrUrl, featureFlags) {
     const result = db.prepare(
-      'UPDATE shops SET name = ?, address = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).run(name, address, shopId);
+      'UPDATE shops SET name = ?, address = ?, bank_name = ?, bank_account_name = ?, bank_account_number = ?, bank_qr_url = ?, feature_flags = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).run(name, address, bankName, bankAccountName, bankAccountNumber, bankQrUrl, featureFlags, shopId);
     return result.changes > 0;
   },
   async upsertShop(shop) {
     db.prepare(`
-      INSERT INTO shops (id, name, address, updated_at, created_at)
-      VALUES (?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
+      INSERT INTO shops (id, name, address, bank_name, bank_account_name, bank_account_number, bank_qr_url, feature_flags, updated_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         address = excluded.address,
+        bank_name = excluded.bank_name,
+        bank_account_name = excluded.bank_account_name,
+        bank_account_number = excluded.bank_account_number,
+        bank_qr_url = excluded.bank_qr_url,
+        feature_flags = excluded.feature_flags,
         updated_at = excluded.updated_at
     `).run(
       shop.id,
       shop.name,
       shop.address || null,
+      shop.bank_name || null,
+      shop.bank_account_name || null,
+      shop.bank_account_number || null,
+      shop.bank_qr_url || null,
+      shop.feature_flags || '{}',
       toSqlTimestamp(shop.updated_at),
       toSqlTimestamp(shop.created_at)
     );
@@ -174,8 +201,10 @@ const mongoRepo = {
   async getShopByName(name) {
     return Shop.findOne({ name }).lean();
   },
-  async getOwnerTelegramId() {
-    const owner = await User.findOne({ role: 'owner', telegram_id: { $ne: null } }).lean();
+  async getOwnerTelegramId(shop_id) {
+    const filter = { role: 'owner', telegram_id: { $ne: null } };
+    if (shop_id) filter.shop_id = shop_id;
+    const owner = await User.findOne(filter).lean();
     return owner ? owner.telegram_id : null;
   },
   async getOrCreateUserFromTelegram(telegramUser, shopName) {
@@ -209,7 +238,7 @@ const mongoRepo = {
       }).lean();
       if (!resolvedInvite) throw new Error('Ma moi khong hop le hoac da het han');
       shopId = resolvedInvite.shop_id;
-      role = 'staff';
+      role = resolvedInvite.role || 'staff';
     } else {
       shopId = uuidv4();
       await Shop.create({ id: shopId, name: shopName });
@@ -255,13 +284,33 @@ const mongoRepo = {
     return normalizeUser(await User.findOne({ id }).lean());
   },
   async updateUserPassword(userId, newHash) {
-    const result = await User.updateOne({ id: userId }, { $set: { password: newHash } });
+    const result = await User.updateOne(
+      { id: userId }, 
+      { $set: { password: newHash }, $unset: { reset_password_token: "", reset_password_expires: "" } }
+    );
     return result.modifiedCount > 0;
   },
-  async updateShop(shopId, name, address) {
+  async setUserResetToken(email, token, expires) {
+    const result = await User.updateOne({ email }, { $set: { reset_password_token: token, reset_password_expires: expires } });
+    return result.modifiedCount > 0;
+  },
+  async getUserByResetToken(token) {
+    const user = await User.findOne({ reset_password_token: token, reset_password_expires: { $gt: new Date() } }).lean();
+    return normalizeUser(user);
+  },
+  async updateShop(shopId, name, address, bankName, bankAccountName, bankAccountNumber, bankQrUrl, featureFlags) {
     const result = await Shop.updateOne(
       { id: shopId },
-      { $set: { name, address, updated_at: new Date() } }
+      { $set: { 
+        name, 
+        address, 
+        bank_name: bankName,
+        bank_account_name: bankAccountName,
+        bank_account_number: bankAccountNumber,
+        bank_qr_url: bankQrUrl,
+        feature_flags: featureFlags,
+        updated_at: new Date() 
+      } }
     );
     return result.modifiedCount > 0;
   },
@@ -273,7 +322,7 @@ const dualRepo = {
   ...mongoRepo,
   async getShopById(id) { return mongoRepo.getShopById(id); },
   async getShopByName(name) { return mongoRepo.getShopByName(name); },
-  async getOwnerTelegramId() { return mongoRepo.getOwnerTelegramId(); },
+  async getOwnerTelegramId(shop_id) { return mongoRepo.getOwnerTelegramId(shop_id); },
   async getUserById(id) { return mongoRepo.getUserById(id); },
   async getOrCreateUserFromTelegram(telegramUser, shopName) {
     const user = await mongoRepo.getOrCreateUserFromTelegram(telegramUser, shopName);
@@ -317,9 +366,17 @@ const dualRepo = {
     }
     return ok;
   },
-  async updateShop(shopId, name, address) {
-    const ok = await mongoRepo.updateShop(shopId, name, address);
-    try { await sqliteRepo.updateShop(shopId, name, address); } catch (e) {
+  async setUserResetToken(email, token, expires) {
+    const ok = await mongoRepo.setUserResetToken(email, token, expires);
+    try { await sqliteRepo.setUserResetToken(email, token, expires); } catch (e) {
+      console.error('[dual][auth] sqlite write failed:', e.message);
+    }
+    return ok;
+  },
+  async getUserByResetToken(token) { return mongoRepo.getUserByResetToken(token); },
+  async updateShop(shopId, name, address, bankName, bankAccountName, bankAccountNumber, bankQrUrl, featureFlags) {
+    const ok = await mongoRepo.updateShop(shopId, name, address, bankName, bankAccountName, bankAccountNumber, bankQrUrl, featureFlags);
+    try { await sqliteRepo.updateShop(shopId, name, address, bankName, bankAccountName, bankAccountNumber, bankQrUrl, featureFlags); } catch (e) {
       console.error('[dual][auth] sqlite write failed:', e.message);
     }
     return ok;

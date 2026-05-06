@@ -1,9 +1,10 @@
 const { v4: uuidv4 } = require('uuid');
 const db = require('../db/connection');
 const { getDbProvider } = require('../db/provider');
+const { getTenantModel } = require('../db/tenantManager');
+const CategorySchema = require('../mongo/models/Category');
+const ProductSchema = require('../mongo/models/Product');
 const Shop = require('../mongo/models/Shop');
-const Category = require('../mongo/models/Category');
-const Product = require('../mongo/models/Product');
 
 const sqliteRepo = {
   async getCategories(shop_id) {
@@ -36,23 +37,28 @@ const mongoRepo = {
     if (!shop) await Shop.create({ id: shop_id, name: 'Cua hang' });
   },
   async getCategories(shop_id) {
-    return Category.find({ shop_id }, null, { sort: { name: 1 } }).lean();
+    const Category = getTenantModel(shop_id, 'Category', CategorySchema);
+    return Category.find({ shop_id, is_active: { $ne: false } }, null, { sort: { name: 1 } }).lean();
   },
   async createCategory(shop_id, name) {
+    const Category = getTenantModel(shop_id, 'Category', CategorySchema);
     await this.ensureShop(shop_id);
-    const exists = await Category.findOne({ shop_id, name: new RegExp(`^${name}$`, 'i') }).lean();
+    const exists = await Category.findOne({ shop_id, name: new RegExp(`^${name}$`, 'i'), is_active: { $ne: false } }).lean();
     if (exists) throw new Error('CATEGORY_EXISTS');
     const row = { id: uuidv4(), shop_id, name, is_active: true, created_at: new Date() };
     await Category.create(row);
     return row;
   },
   async updateCategory(shop_id, id, name) {
-    const duplicate = await Category.findOne({ shop_id, id: { $ne: id }, name: new RegExp(`^${name}$`, 'i') }).lean();
+    const Category = getTenantModel(shop_id, 'Category', CategorySchema);
+    const duplicate = await Category.findOne({ shop_id, id: { $ne: id }, name: new RegExp(`^${name}$`, 'i'), is_active: { $ne: false } }).lean();
     if (duplicate) throw new Error('CATEGORY_EXISTS');
-    const result = await Category.updateOne({ id, shop_id }, { $set: { name, updated_at: new Date() } });
+    const result = await Category.updateOne({ id, shop_id, is_active: { $ne: false } }, { $set: { name, updated_at: new Date() } });
     return result.modifiedCount > 0;
   },
   async deleteCategory(shop_id, id) {
+    const Category = getTenantModel(shop_id, 'Category', CategorySchema);
+    const Product = getTenantModel(shop_id, 'Product', ProductSchema);
     const category = await Category.findOne({ id, shop_id }).lean();
     if (!category) throw new Error('Category not found');
     const inUse = await Product.findOne({ shop_id, category: category.name }).lean();
