@@ -32,3 +32,22 @@ npm-debug.log*
 *.cache
 bot_backend/backup_err.json
 .playwright-cli/
+.gitnexus
+# Local/generated heavy artifacts
+scratch/
+backups/
+playwright-report/
+test-results/
+*.log
+build_log.txt
+build_error.txt
+print-proof.png
+red-dot.png
+
+# Local DB files
+bot_backend/pos.db
+bot_backend/db/posweb.db
+
+# Mongo local data
+**/mongo-local/
+**/mongo-legacy-data/
