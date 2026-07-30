@@ -38,10 +38,15 @@ Ly do: domain `posweb.vivutrade.io.vn` dang chay theo Docker + Cloudflare Tunnel
 
 - [css.md](css.md)
 
+## Development & Git Workflow
+
+- [DEVELOPMENT_BRANCH.md](DEVELOPMENT_BRANCH.md): Quy trình làm việc trên nhánh `dev-workspace`.
+
 ## Suggested Reading Order
 
 1. [START_HERE.md](START_HERE.md)
 2. [DEPLOY_DOCKER_CLOUDFLARE.md](DEPLOY_DOCKER_CLOUDFLARE.md)
 3. [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
 4. [SETUP_CHECKLIST.md](SETUP_CHECKLIST.md)
+
 
