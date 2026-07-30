@@ -17,9 +17,12 @@
      git add .
      git commit -m "Mô tả thay đổi..."
      ```
-4. **Hợp nhất (Merge)**:
-   - Khi hoàn thành và kiểm thử tính năng ổn định, nếu cần merge lại vào `main`:
+4. **Sử dụng Code Indexing (GitNexus & CodeGraph)**:
+   - Dự án đã được index bởi cả **GitNexus** và **CodeGraph**.
+   - Khi chỉnh sửa hoặc phát triển tính năng mới, bắt buộc sử dụng `gitnexus` (truy vấn context, impact analysis, execution flows) và `codegraph` (callers, callees, symbol graph, explore) để phân tích ảnh hưởng trước và trong quá trình viết code.
+   - Cập nhật lại index sau các đợt chỉnh sửa lớn:
      ```bash
-     git checkout main
-     git merge dev-workspace
+     gitnexus analyze
+     codegraph sync
      ```
+
