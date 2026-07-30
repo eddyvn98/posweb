@@ -32,3 +32,9 @@ npm-debug.log*
 *.cache
 bot_backend/backup_err.json
 .playwright-cli/
+
+# Indexing Tools
+.codegraph/
+.gitnexus/
+.claude/
+
