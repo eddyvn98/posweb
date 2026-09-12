@@ -26,6 +26,20 @@ function runMigrations() {
             console.log('Migrated: products.category');
         }
 
+        addColumnIfMissing('products', 'online_price', 'REAL');
+        addColumnIfMissing('products', 'promo_price', 'REAL');
+
+        addColumnIfMissing('shops', 'phone', 'TEXT');
+        addColumnIfMissing('shops', 'zalo_url', 'TEXT');
+        addColumnIfMissing('shops', 'opening_hours', 'TEXT');
+        addColumnIfMissing('shops', 'pickup_available', 'BOOLEAN NOT NULL DEFAULT 1');
+        addColumnIfMissing('shops', 'delivery_note', 'TEXT');
+        addColumnIfMissing('shops', 'shipping_fee', 'REAL');
+        addColumnIfMissing('shops', 'free_shipping_threshold', 'REAL');
+        addColumnIfMissing('shops', 'bank_name', 'TEXT');
+        addColumnIfMissing('shops', 'bank_account', 'TEXT');
+        addColumnIfMissing('shops', 'bank_owner', 'TEXT');
+
         addColumnIfMissing('imports', 'supplier_tax_code', 'TEXT');
         addColumnIfMissing('imports', 'invoice_number', 'TEXT');
         addColumnIfMissing('imports', 'invoice_date', 'TEXT');
@@ -107,7 +121,49 @@ function runMigrations() {
               total_amount REAL NOT NULL DEFAULT 0,
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS online_orders (
+              id TEXT PRIMARY KEY,
+              shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+              sale_id TEXT REFERENCES sales(id) ON DELETE SET NULL,
+              customer_token TEXT NOT NULL,
+              code TEXT NOT NULL,
+              customer_name TEXT NOT NULL,
+              customer_phone TEXT NOT NULL,
+              customer_email TEXT,
+              address TEXT NOT NULL,
+              ward TEXT,
+              city TEXT NOT NULL,
+              payment_method TEXT NOT NULL CHECK (payment_method IN ('cod', 'bank_transfer')),
+              status TEXT NOT NULL DEFAULT 'awaiting_shipment' CHECK (status IN ('awaiting_shipment', 'completed', 'cancelled')),
+              note TEXT,
+              subtotal_amount REAL NOT NULL DEFAULT 0,
+              voucher_code TEXT,
+              voucher_discount REAL NOT NULL DEFAULT 0,
+              shipping_amount REAL NOT NULL DEFAULT 0,
+              total_amount REAL NOT NULL DEFAULT 0,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_online_orders_customer
+              ON online_orders (shop_id, customer_token, created_at DESC);
+
+            CREATE TABLE IF NOT EXISTS online_order_items (
+              id TEXT PRIMARY KEY,
+              order_id TEXT NOT NULL REFERENCES online_orders(id) ON DELETE CASCADE,
+              product_id TEXT NOT NULL,
+              product_name TEXT NOT NULL,
+              quantity INTEGER NOT NULL,
+              price REAL NOT NULL,
+              image_url TEXT
+            );
         `);
+
+        addColumnIfMissing('online_orders', 'subtotal_amount', 'REAL NOT NULL DEFAULT 0');
+        addColumnIfMissing('online_orders', 'voucher_code', 'TEXT');
+        addColumnIfMissing('online_orders', 'voucher_discount', 'REAL NOT NULL DEFAULT 0');
+        addColumnIfMissing('online_orders', 'shipping_amount', 'REAL NOT NULL DEFAULT 0');
     } catch (err) {
         console.error('Error running migrations:', err.message);
     }

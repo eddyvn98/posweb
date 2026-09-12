@@ -8,13 +8,15 @@ const sqliteRepo = {
   },
   async upsertProduct(shop_id, product) {
     const stmt = db.prepare(`
-      INSERT INTO products (id, shop_id, barcode, name, unit, category, price, cost_price, stock_quantity, image_url, is_active)
-      VALUES (@id, @shop_id, @barcode, @name, @unit, @category, @price, @cost_price, @stock_quantity, @image_url, @is_active)
+      INSERT INTO products (id, shop_id, barcode, name, unit, category, price, online_price, promo_price, cost_price, stock_quantity, image_url, is_active)
+      VALUES (@id, @shop_id, @barcode, @name, @unit, @category, @price, @online_price, @promo_price, @cost_price, @stock_quantity, @image_url, @is_active)
       ON CONFLICT(shop_id, barcode) DO UPDATE SET
         name = excluded.name,
         unit = excluded.unit,
         category = excluded.category,
         price = excluded.price,
+        online_price = excluded.online_price,
+        promo_price = excluded.promo_price,
         cost_price = excluded.cost_price,
         stock_quantity = excluded.stock_quantity,
         image_url = excluded.image_url,
@@ -27,6 +29,12 @@ const sqliteRepo = {
       category: product.category || null,
       shop_id,
       price: Number(product.price || 0),
+      online_price: product.online_price === null || product.online_price === '' || product.online_price === undefined
+        ? null
+        : Number(product.online_price || 0),
+      promo_price: product.promo_price === null || product.promo_price === '' || product.promo_price === undefined
+        ? null
+        : Number(product.promo_price || 0),
       cost_price: Number(product.cost_price || 0),
       stock_quantity: Number(product.stock_quantity || 0),
       image_url: product.image_url || null,
@@ -57,6 +65,12 @@ const mongoRepo = {
       unit: product.unit || 'Cai',
       category: product.category || '',
       price: Number(product.price || 0),
+      online_price: product.online_price === null || product.online_price === '' || product.online_price === undefined
+        ? null
+        : Number(product.online_price || 0),
+      promo_price: product.promo_price === null || product.promo_price === '' || product.promo_price === undefined
+        ? null
+        : Number(product.promo_price || 0),
       cost_price: Number(product.cost_price || 0),
       stock_quantity: Number(product.stock_quantity || 0),
       image_url: product.image_url || null,

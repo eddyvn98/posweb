@@ -73,22 +73,59 @@ const sqliteRepo = {
     const result = db.prepare('UPDATE users SET password = ? WHERE id = ?').run(newHash, userId);
     return result.changes > 0;
   },
-  async updateShop(shopId, name, address) {
-    const result = db.prepare('UPDATE shops SET name = ?, address = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(name, address, shopId);
+  async updateShop(shopId, shop = {}) {
+    const result = db.prepare(`UPDATE shops SET
+      name = ?, address = ?, phone = ?, zalo_url = ?, opening_hours = ?, pickup_available = ?,
+      delivery_note = ?, shipping_fee = ?, free_shipping_threshold = ?, bank_name = ?, bank_account = ?, bank_owner = ?,
+      updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(
+      shop.name,
+      shop.address || null,
+      shop.phone || null,
+      shop.zalo_url || null,
+      shop.opening_hours || null,
+      shop.pickup_available === false ? 0 : 1,
+      shop.delivery_note || null,
+      Number.isFinite(Number(shop.shipping_fee)) && Number(shop.shipping_fee) > 0 ? Number(shop.shipping_fee) : null,
+      Number.isFinite(Number(shop.free_shipping_threshold)) && Number(shop.free_shipping_threshold) > 0 ? Number(shop.free_shipping_threshold) : null,
+      shop.bank_name || null,
+      shop.bank_account || null,
+      shop.bank_owner || null,
+      shopId,
+    );
     return result.changes > 0;
   },
   async upsertShop(shop) {
     db.prepare(`
-      INSERT INTO shops (id, name, address, updated_at, created_at)
-      VALUES (?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
+      INSERT INTO shops (id, name, address, phone, zalo_url, opening_hours, pickup_available, delivery_note, shipping_fee, free_shipping_threshold, bank_name, bank_account, bank_owner, updated_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         address = excluded.address,
+        phone = excluded.phone,
+        zalo_url = excluded.zalo_url,
+        opening_hours = excluded.opening_hours,
+        pickup_available = excluded.pickup_available,
+        delivery_note = excluded.delivery_note,
+        shipping_fee = excluded.shipping_fee,
+        free_shipping_threshold = excluded.free_shipping_threshold,
+        bank_name = excluded.bank_name,
+        bank_account = excluded.bank_account,
+        bank_owner = excluded.bank_owner,
         updated_at = excluded.updated_at
     `).run(
       shop.id,
       shop.name,
       shop.address || null,
+      shop.phone || null,
+      shop.zalo_url || null,
+      shop.opening_hours || null,
+      shop.pickup_available === false ? 0 : 1,
+      shop.delivery_note || null,
+      shop.shipping_fee || null,
+      shop.free_shipping_threshold || null,
+      shop.bank_name || null,
+      shop.bank_account || null,
+      shop.bank_owner || null,
       toSqlTimestamp(shop.updated_at),
       toSqlTimestamp(shop.created_at)
     );
@@ -173,8 +210,8 @@ const mongoRepo = {
     const result = await User.updateOne({ id: userId }, { $set: { password: newHash } });
     return result.modifiedCount > 0;
   },
-  async updateShop(shopId, name, address) {
-    const result = await Shop.updateOne({ id: shopId }, { $set: { name, address, updated_at: new Date() } });
+  async updateShop(shopId, shop = {}) {
+    const result = await Shop.updateOne({ id: shopId }, { $set: { ...shop, updated_at: new Date() } });
     return result.modifiedCount > 0;
   },
 };
@@ -215,9 +252,9 @@ const dualRepo = {
     try { await sqliteRepo.updateUserPassword(userId, newHash); } catch (e) { console.error('[dual][auth] sqlite write failed:', e.message); }
     return ok;
   },
-  async updateShop(shopId, name, address) {
-    const ok = await mongoRepo.updateShop(shopId, name, address);
-    try { await sqliteRepo.updateShop(shopId, name, address); } catch (e) { console.error('[dual][auth] sqlite write failed:', e.message); }
+  async updateShop(shopId, shop) {
+    const ok = await mongoRepo.updateShop(shopId, shop);
+    try { await sqliteRepo.updateShop(shopId, shop); } catch (e) { console.error('[dual][auth] sqlite write failed:', e.message); }
     return ok;
   },
 };

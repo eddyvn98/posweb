@@ -20,6 +20,7 @@ import Cashbook from './pages/Cashbook'
 import Settings from './pages/Settings'
 import CartBar from './components/CartBar'
 import Layout from './components/Layout'
+import Shop from './pages/Shop'
 
 function App() {
     const showTestConsole = import.meta.env.DEV && import.meta.env.VITE_ENABLE_TEST_CONSOLE === 'true'
@@ -35,6 +36,8 @@ function App() {
                                 {showTestConsole && <TestConsole />}
                                 <Routes>
                                     <Route path="/login" element={<Login />} />
+
+                                    <Route path="/shop/*" element={<Shop />} />
 
                                     <Route path="/" element={<Navigate to="/sales" replace />} />
 

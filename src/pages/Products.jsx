@@ -79,12 +79,14 @@ export default function Products() {
 
             const merged = new Map()
 
-            ;(apiRes.data || []).forEach((product) => {
+            ;(localProducts || []).forEach((product) => {
                 const key = product.barcode || product.id
                 if (key && (product.name?.trim() || product.barcode?.trim())) merged.set(key, product)
             })
 
-            ;(localProducts || []).forEach((product) => {
+            // The authenticated inventory response is authoritative for
+            // offline price, online price, promotion price, and stock.
+            ;(apiRes.data || []).forEach((product) => {
                 const key = product.barcode || product.id
                 if (key && (product.name?.trim() || product.barcode?.trim())) merged.set(key, product)
             })
