@@ -44,7 +44,17 @@ function calculateShippingFee(shop, subtotal) {
 }
 
 function requireShopId(req, res) {
-  const shopId = String(req.query.shop_id || req.body?.shop_id || '').trim();
+  let shopId = String(req.query.shop_id || req.body?.shop_id || '').trim();
+  if (!shopId) {
+    if (getDbProvider() === 'sqlite') {
+      try {
+        const bestShop = db.prepare('SELECT s.id FROM shops s LEFT JOIN products p ON s.id = p.shop_id GROUP BY s.id ORDER BY count(p.id) DESC LIMIT 1').get();
+        if (bestShop?.id) shopId = bestShop.id;
+      } catch (err) {
+        console.warn('Could not query default shop:', err.message);
+      }
+    }
+  }
   if (!shopId) {
     res.status(400).json({ error: 'Missing shop_id' });
     return null;
@@ -133,6 +143,7 @@ function orderFromRow(row, items) {
 function publicShop(shop) {
   if (!shop) return null;
   return {
+    id: shop.id,
     name: shop.name,
     address: shop.address || '302 Vườn Lài, An Phú Đông, Quận 12, TP.HCM',
     phone: shop.phone || '',

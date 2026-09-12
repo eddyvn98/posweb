@@ -137,11 +137,16 @@ export function ShopProvider({ children }) {
         if (import.meta.env.VITE_PUBLIC_SHOP_ID) return String(import.meta.env.VITE_PUBLIC_SHOP_ID)
         if (typeof window === 'undefined') return ''
         return new URLSearchParams(window.location.search).get('shop_id') || ''
-    }, [])
-    const publicApiConfig = useMemo(() => publicShopId ? ({
-        params: { shop_id: publicShopId },
-        headers: { 'X-Customer-Token': customerToken },
-    }) : null, [customerToken, publicShopId])
+    const publicApiConfig = useMemo(() => {
+        const config = {
+            headers: { 'X-Customer-Token': customerToken },
+        }
+        const effectiveShopId = publicShopId || shop?.id
+        if (effectiveShopId) {
+            config.params = { shop_id: effectiveShopId }
+        }
+        return config
+    }, [customerToken, publicShopId, shop?.id])
 
     const loadCatalog = useCallback(async () => {
         setCatalogLoading(true)
@@ -305,7 +310,7 @@ export function ShopProvider({ children }) {
         if (publicApiConfig) {
             try {
                 const response = await api.post('/storefront/orders', {
-                    shop_id: publicShopId,
+                    shop_id: publicShopId || shop?.id,
                     customer,
                     address,
                     payment_method: paymentMethod,
@@ -352,7 +357,7 @@ export function ShopProvider({ children }) {
         if (publicApiConfig && ['cancelled', 'completed'].includes(status)) {
             try {
                 const endpoint = status === 'cancelled' ? `/storefront/orders/${id}/cancel` : `/storefront/orders/${id}/complete`
-                const response = await api.post(endpoint, { shop_id: publicShopId }, publicApiConfig)
+                const response = await api.post(endpoint, { shop_id: publicShopId || shop?.id }, publicApiConfig)
                 const updated = response.data
                 setOrders((current) => current.map((order) => order.id === id ? updated : order))
                 return updated
