@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
 import CartItem from './CartItem'
+import { ShoppingCart, ChevronDown, X } from 'lucide-react'
 
 export default function CartBar() {
     const navigate = useNavigate()
@@ -30,11 +31,13 @@ export default function CartBar() {
             {/* Expanded Content Overlay */}
             {expanded && (
                 <div
-                    className="absolute bottom-full left-0 w-full mb-3 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-fade-in-up origin-bottom"
+                    className="absolute bottom-full left-0 w-full mb-3 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-fade-in-up origin-bottom"
                 >
-                    <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
-                        <span className="font-bold text-gray-700">Chi tiết giỏ hàng</span>
-                        <button onClick={() => setExpanded(false)} className="text-gray-400 font-bold text-xl">&times;</button>
+                    <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                        <span className="font-bold text-slate-800 text-sm">Chi tiết giỏ hàng ({totalItems})</span>
+                        <button onClick={() => setExpanded(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
                     </div>
                     <div className="max-h-[350px] overflow-y-auto px-4 py-2 space-y-1 custom-scrollbar">
                         {cart.map((item) => (
@@ -53,26 +56,26 @@ export default function CartBar() {
             {/* Main Bar */}
             <div
                 className={`
-                    flex items-center gap-3 p-3 bg-primary/95 backdrop-blur-md text-white rounded-2xl shadow-2xl transition-all border border-pink-400
-                    ${animate ? 'scale-105 shadow-pink-200' : 'scale-100'}
+                    flex items-center gap-3 p-3 bg-slate-900 text-white rounded-2xl shadow-xl transition-all border border-slate-800
+                    ${animate ? 'scale-[1.02]' : 'scale-100'}
                 `}
             >
                 {/* Summary Info (Click to toggle expanded) */}
                 <div
-                    className="flex-1 flex items-center gap-3 cursor-pointer select-none active:opacity-70 transition-opacity pl-2"
+                    className="flex-1 flex items-center gap-3 cursor-pointer select-none active:opacity-80 transition-opacity pl-1"
                     onClick={() => setExpanded(!expanded)}
                 >
-                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl shadow-inner">
-                        🛒
+                    <div className="w-10 h-10 rounded-xl bg-sky-600 flex items-center justify-center text-white shadow-sm">
+                        <ShoppingCart className="w-5 h-5" />
                     </div>
                     <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest opacity-60 leading-none mb-1">
-                            {totalItems} MÓN TRONG GIỎ
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-1">
+                            {totalItems} món trong giỏ
                         </div>
-                        <div className="text-xl font-black leading-none flex items-center gap-1">
+                        <div className="text-lg font-bold font-mono tabular-nums leading-none flex items-center gap-1.5 text-white">
                             {new Intl.NumberFormat('vi-VN').format(totalAmount)}
-                            <span className="text-xs font-bold opacity-60 pt-1">đ</span>
-                            <span className={`text-[10px] transition-transform ml-1 ${expanded ? 'rotate-180' : ''}`}>▼</span>
+                            <span className="text-xs font-normal text-slate-400">đ</span>
+                            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
                         </div>
                     </div>
                 </div>
@@ -80,7 +83,7 @@ export default function CartBar() {
                 {/* Checkout Button */}
                 <button
                     onClick={() => navigate('/sales')}
-                    className="bg-white text-primary font-black px-6 py-3 rounded-xl shadow-lg active:scale-90 transition-all text-sm uppercase tracking-tighter border-b-2 border-gray-200"
+                    className="btn bg-sky-600 hover:bg-sky-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm text-sm uppercase tracking-tight"
                 >
                     Thanh toán
                 </button>
@@ -88,3 +91,4 @@ export default function CartBar() {
         </div>
     )
 }
+

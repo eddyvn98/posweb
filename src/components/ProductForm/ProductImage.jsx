@@ -1,5 +1,6 @@
-﻿import { compressImage } from '../../lib/imageUtils'
+import { compressImage } from '../../lib/imageUtils'
 import api from '../../lib/api'
+import { Camera } from 'lucide-react'
 
 export default function ProductImage({ imageUrl, onChange }) {
     const handleImageChange = async (e) => {
@@ -30,7 +31,7 @@ export default function ProductImage({ imageUrl, onChange }) {
                 {imageUrl ? (
                     <img src={getDisplayUrl(imageUrl)} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
-                    <span className="text-2xl opacity-20">📷</span>
+                    <Camera className="w-6 h-6 text-gray-300" />
                 )}
             </div>
             <div className="flex-1">

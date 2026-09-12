@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 
 export default function SelectionModal({
     isOpen,
@@ -168,8 +168,8 @@ export default function SelectionModal({
                                 onKeyDown={e => e.key === 'Enter' && handleCreate()}
                             />
                             <div className="flex gap-1 pr-1">
-                                <button type="button" onClick={handleCreate} className="p-2 bg-primary text-white rounded-lg shadow-sm hover:bg-primary-dark font-bold px-4">Lưu</button>
-                                <button type="button" onClick={() => setIsAdding(false)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg">✕</button>
+                                <button type="button" onClick={handleCreate} className="btn-primary h-11 px-5 font-bold">Lưu</button>
+                                <button type="button" onClick={() => setIsAdding(false)} className="btn-ghost btn-icon h-11 w-11 text-gray-400">✕</button>
                             </div>
                         </div>
                     ) : (
@@ -180,7 +180,7 @@ export default function SelectionModal({
                                 setEditingId(null)
                                 setDeletingId(null)
                             }}
-                            className="flex-1 btn-primary h-11 text-sm rounded-xl font-bold tracking-wide shadow-md"
+                            className="flex-1 btn-primary h-11 text-sm font-bold tracking-wide"
                         >
                             + Thêm mới
                         </button>

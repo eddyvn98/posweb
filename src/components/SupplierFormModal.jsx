@@ -62,7 +62,7 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
             <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-                <h2 className="text-2xl font-black text-gray-800 mb-6">{title}</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-6">{title}</h2>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <Field label="Tên" name="name" value={formData.name} onChange={handleChange} />
@@ -88,14 +88,14 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
                             type="button"
                             onClick={onClose}
                             disabled={loading}
-                            className="flex-1 btn bg-gray-100 text-gray-700 font-black rounded-xl hover:bg-gray-200 transition"
+                            className="flex-1 btn-secondary h-11 font-bold"
                         >
                             Hủy
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 btn bg-primary text-white font-black rounded-xl hover:bg-pink-600 transition disabled:opacity-50"
+                            className="flex-1 btn-primary h-11 font-bold"
                         >
                             {loading ? 'Đang lưu...' : 'Lưu'}
                         </button>

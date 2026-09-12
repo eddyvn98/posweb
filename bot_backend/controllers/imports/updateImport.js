@@ -109,6 +109,14 @@ function updateImport(req, res) {
                     item.vat_amount,
                     item.total_amount
                 );
+
+                if (payload.status === 'confirmed' && item.product_id) {
+                    const prod = db.prepare('SELECT stock_quantity FROM products WHERE id = ? AND shop_id = ?').get(item.product_id, shop_id);
+                    if (prod) {
+                        const newStock = Number(prod.stock_quantity || 0) + Number(item.quantity || 0);
+                        db.prepare('UPDATE products SET stock_quantity = ? WHERE id = ? AND shop_id = ?').run(newStock, item.product_id, shop_id);
+                    }
+                }
             });
 
             db.prepare(`

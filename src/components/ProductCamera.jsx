@@ -1,4 +1,5 @@
-﻿import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
+import { Camera } from 'lucide-react'
 
 export default function ProductCamera({ onCapture }) {
     const videoRef = useRef(null)
@@ -69,7 +70,7 @@ export default function ProductCamera({ onCapture }) {
                     className="w-24 h-24 bg-gray-100 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-gray-300 hover:border-primary transition-colors cursor-pointer group shadow-sm"
                     onClick={startCamera}
                 >
-                    <span className="text-3xl mb-1 group-hover:scale-110 transition-transform">📸</span>
+                    <Camera className="w-6 h-6 text-gray-500 group-hover:scale-110 transition-transform mb-1" />
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter text-center px-1">Chụp ảnh</span>
                     {error && <p className="absolute -bottom-6 text-[10px] text-red-500 w-full text-center">{error}</p>}
                 </div>
@@ -104,7 +105,7 @@ export default function ProductCamera({ onCapture }) {
                         className="w-12 h-12 rounded-full bg-white flex items-center justify-center active:scale-95 transition-all shadow-2xl"
                     >
                         <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-lg">
-                            📸
+                            <Camera className="w-5 h-5" />
                         </div>
                     </button>
                     <div className="w-8"></div>

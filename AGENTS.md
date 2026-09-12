@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **posweb2** (1734 symbols, 3085 relationships, 105 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **posweb** (1905 symbols, 3570 relationships, 137 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
@@ -25,10 +25,10 @@ This project is indexed by GitNexus as **posweb2** (1734 symbols, 3085 relations
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/posweb2/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/posweb2/clusters` | All functional areas |
-| `gitnexus://repo/posweb2/processes` | All execution flows |
-| `gitnexus://repo/posweb2/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/posweb/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/posweb/clusters` | All functional areas |
+| `gitnexus://repo/posweb/processes` | All execution flows |
+| `gitnexus://repo/posweb/process/{name}` | Step-by-step execution trace |
 
 ## CLI
 
@@ -42,3 +42,28 @@ This project is indexed by GitNexus as **posweb2** (1734 symbols, 3085 relations
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+---
+
+# ⚡ MANDATORY TOKEN & QUOTA OPTIMIZATION RULES FOR ALL AI AGENTS
+
+> **MỤC TIÊU BẮT BUỘC:** Tối ưu tuyệt đối lượng Token tiêu thụ (Input/Output), bảo vệ Quota sử dụng, loại bỏ hoàn toàn các câu trả lời lan man, lặp lại thông tin và vòng lặp thử-sai (Vibe Coding).
+
+## 🛑 NGUYÊN TẮC CẤM (NEVER DO)
+1. **CẤM DÙNG `write_to_file` CHO FILE CÓ SẴN:** Tuyệt đối không dùng `write_to_file` để ghi đè các file hiện có (trừ tạo file mới hoàn toàn hoặc file < 30 dòng). Phải dùng `replace_file_content` hoặc `multi_replace_file_content` để chỉ thay đổi đúng các dòng cần sửa.
+2. **CẤM COPY/PASTE NỘI DUNG ARTIFACT VÀO CHAT:** Khi tạo/cập nhật file Markdown (`.md`), trong chat CHỈ gửi link clickable `[Tên file](file:///đường_dẫn)` và tóm tắt ngắn 2-3 dòng. Không bao giờ xả lại toàn bộ nội dung file ra chat.
+3. **CẤM DUYỆT FILE/THƯ MỤC LAN MAN:** Không dùng `list_dir` duyệt từng thư mục hoặc `view_file` đọc toàn bộ file dài mà không chỉ định `StartLine`/`EndLine`. Phải dùng `grep_search` hoặc GitNexus tools để định vị chính xác trước.
+4. **CẤM CHÀO HỎI & GIẢI THÍCH LAN MAN:** Không viết văn chào hỏi, không giải thích lại đề bài, không lặp lại các quy tắc nếu người dùng không yêu cầu. Đi thẳng vào kết quả/giải pháp.
+5. **CẤM "VIBE CODING" THỬ-SAI MULTI-TURN:** Phải phân tích chính xác nguyên nhân và lập plan trước khi sửa code, đảm bảo SỬA ĐÚNG NGAY LẦN ĐẦU để tránh tốn 4-6 turns sửa lỗi.
+6. **CẤM GREP TỪ KHÓA CHUNG CHUNG TOÀN REPO:** Không grep các từ khóa phổ biến (như `click`, `set`, `data`, `barcode`) trên toàn thư mục làm bùng nổ output rác. Bắt buộc thu hẹp `SearchPath` (VD: `src/pages`, `src/components`).
+7. **CẤM ĐỌC CODE THỪA KHI CHỈ THẢO LUẬN:** Không tự ý chạy tool đọc/tìm code khi người dùng chỉ đang làm rõ ý tưởng/yêu cầu.
+8. **CẤM ĐỌC CUỐN CHIẾU & ĐỌC VỤN VẶT NHIỀU LẦN TRÊN 1 FILE:** Không gọi liên tiếp 5-8 lần `view_file` từng mẩu 20-30 dòng trên cùng 1 file. Định vị chính xác và chỉ đọc 1 lần bao trọn khối code cần sửa (50-80 dòng).
+9. **CẤM TỰ Ý CHẠY `npm run build`:** Không tự ý chạy full build gây log dài và tốn turn trừ khi user yêu cầu hoặc chuẩn bị release.
+10. **CẤM THỬ-SAI LỆNH SHELL PHỨC TẠP INLINE:** Cấm gõ lệnh PowerShell/Node inline phức tạp dẫn đến lỗi crash chuỗi/quote lặp đi lặp lại. Viết script ra file tạm nếu lệnh dài > 1 dòng.
+11. **CẤM SEARCH WEB DÀN TRẢI CHO CÂU HỎI THÔNG THƯỜNG:** Trả lời trực tiếp từ tri thức mô hình, không spam công cụ tìm kiếm web khi không được yêu cầu.
+
+## ✅ NGUYÊN TẮC BẮT BUỘC (ALWAYS DO)
+1. **CHỈNH SỬA TOÁN CỤC SÚC TÍCH:** Dùng `replace_file_content` với chunk tối thiểu.
+2. **KẾT QUẢ NGẮN GỌN (OUTPUT < 500 TOKENS/TURN):** Phản hồi chat bằng tiếng Việt súc tích, dạng bullet-points.
+3. **THAM CHIẾU TOKEN OPTIMIZATION SPEC:** Xem thông tin chi tiết tại [TOKEN_OPTIMIZATION_RULES.md](file:///d:/posweb2/TOKEN_OPTIMIZATION_RULES.md).
+

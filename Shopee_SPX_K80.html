@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In Tem Shopee SPX K80 - SPXVN064478027568</title>
+    <!-- JsBarcode CDN for Crisp Barcodes -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <!-- QRCode.js CDN for Crisp QR Codes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        @page {
+            size: 80mm auto;
+            margin: 0;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            color: #000;
+        }
+        body {
+            background-color: #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 5px;
+        }
+        .btn-container {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            background-color: #ee4d2d;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn:hover {
+            background-color: #d73211;
+        }
+
+        /* Khung in chuẩn khổ K80 nhiệt */
+        .paper-k80 {
+            width: 76mm;
+            background: #fff;
+            padding: 3mm 2mm;
+            border: 1px solid #000;
+            font-size: 11px;
+            line-height: 1.25;
+        }
+
+        .border-bottom { border-bottom: 1px solid #000; }
+        .border-top { border-top: 1px solid #000; }
+        .border-right { border-right: 1px solid #000; }
+        .border-dashed-b { border-bottom: 1px dashed #000; }
+        .border-dashed-r { border-right: 1px dashed #000; }
+
+        .header-grid {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #000;
+            padding-bottom: 3px;
+        }
+        .logo-box {
+            width: 38%;
+            padding-right: 4px;
+            text-align: center;
+        }
+        .logo-spx {
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            line-height: 1;
+        }
+        .logo-sub {
+            font-size: 8px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .tracking-box {
+            width: 62%;
+            text-align: center;
+            padding-left: 2px;
+        }
+        .barcode-svg {
+            width: 100%;
+            height: 42px;
+            shape-rendering: crispEdges;
+        }
+        .order-info {
+            font-size: 9.5px;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .address-section {
+            display: flex;
+            border-bottom: 1px solid #000;
+            font-size: 10px;
+        }
+        .addr-sender {
+            width: 48%;
+            padding: 4px 3px;
+            border-right: 1px dashed #000;
+        }
+        .addr-receiver {
+            width: 52%;
+            padding: 4px 3px;
+        }
+        .addr-title {
+            font-weight: bold;
+            font-size: 10.5px;
+            text-transform: uppercase;
+        }
+        .receiver-name {
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .routing-section {
+            display: flex;
+            border-bottom: 1px solid #000;
+            align-items: stretch;
+        }
+        .sort-code-box {
+            width: 62%;
+            padding: 4px 2px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 1px dashed #000;
+        }
+        .sort-code {
+            font-size: 15px;
+            font-weight: 900;
+            text-align: center;
+            letter-spacing: -0.5px;
+            line-height: 1.1;
+        }
+        .station-code {
+            font-size: 13px;
+            font-weight: 900;
+            text-align: center;
+            margin-top: 4px;
+        }
+        .qr-box {
+            width: 38%;
+            padding: 3px 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        #qrcode img, #qrcode canvas {
+            display: block;
+            margin: 0 auto;
+        }
+        .qr-subcode {
+            font-size: 8.5px;
+            font-weight: bold;
+            line-height: 1.1;
+            margin-top: 2px;
+        }
+        .order-time {
+            font-size: 8px;
+            margin-top: 2px;
+        }
+        .order-time-val {
+            font-size: 10px;
+            font-weight: 900;
+        }
+
+        .goods-section {
+            padding: 4px 3px;
+            border-bottom: 1px solid #000;
+            font-size: 10px;
+        }
+        .goods-title {
+            font-weight: bold;
+        }
+        .goods-list {
+            margin-top: 2px;
+            font-size: 10.5px;
+            font-weight: 600;
+        }
+        .goods-disclaimer {
+            margin-top: 3px;
+            font-size: 7.5px;
+            line-height: 1.15;
+            color: #333;
+        }
+
+        .cod-section {
+            display: flex;
+            border-bottom: 1px solid #000;
+        }
+        .cod-left {
+            width: 55%;
+            padding: 4px 3px;
+            border-right: 1px solid #000;
+        }
+        .cod-title {
+            font-size: 9px;
+            font-weight: bold;
+        }
+        .cod-amount {
+            font-size: 16px;
+            font-weight: 900;
+            margin-top: 2px;
+        }
+        .cod-right {
+            width: 45%;
+            padding: 4px 3px;
+            font-size: 9px;
+        }
+        .weight-text {
+            font-weight: bold;
+            font-size: 9.5px;
+        }
+        .sign-note {
+            font-size: 8px;
+            line-height: 1.15;
+            margin-top: 2px;
+        }
+
+        .instruction-section {
+            display: flex;
+            border-bottom: 1px solid #000;
+            font-size: 9.5px;
+            padding: 3px 2px;
+        }
+        .inst-left {
+            width: 55%;
+            font-weight: bold;
+        }
+        .inst-right {
+            width: 45%;
+            font-size: 8px;
+            line-height: 1.15;
+            padding-left: 2px;
+        }
+
+        .footer-section {
+            padding-top: 3px;
+            font-size: 8px;
+            line-height: 1.25;
+            display: flex;
+            align-items: center;
+        }
+        .hotline-box {
+            width: 35%;
+            font-size: 9px;
+            font-weight: 900;
+        }
+        .footer-promo {
+            width: 65%;
+            font-size: 7.5px;
+        }
+
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+            }
+            .btn-container {
+                display: none !important;
+            }
+            .paper-k80 {
+                width: 76mm;
+                border: 1px solid #000;
+                box-shadow: none;
+                padding: 1mm 1mm;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="btn-container">
+        <button class="btn" onclick="window.print()">🖨️ IN TEM SPX K80</button>
+    </div>
+
+    <!-- Phiếu Shopee Express chuẩn máy in nhiệt K80 -->
+    <div class="paper-k80">
+        <!-- Header: Logo SPX + Barcode Vận Đơn -->
+        <div class="header-grid">
+            <div class="logo-box">
+                <div style="font-size: 10px; font-weight: bold;">Shopee</div>
+                <div class="logo-spx">SPX</div>
+                <div class="logo-sub">EXPRESS</div>
+            </div>
+            <div class="tracking-box">
+                <svg id="barcode-spx" class="barcode-svg"></svg>
+                <div class="order-info">
+                    Mã đơn hàng: <strong>260828HNFC5KUY</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thông tin Người gửi / Người nhận -->
+        <div class="address-section">
+            <div class="addr-sender">
+                <div class="addr-title">Từ:</div>
+                <div style="font-weight: bold;">văn phòng phẩm 302</div>
+                <div>302 vườn lài, Phường An Phú Đông, Thành phố Hồ Chí Minh</div>
+            </div>
+            <div class="addr-receiver">
+                <div class="addr-title">Đến:</div>
+                <div class="receiver-name">Lý Kim Yến</div>
+                <div>310 Phạm Văn Chiêu, Phường Thông Tây Hội, Thành phố Hồ Chí Minh</div>
+            </div>
+        </div>
+
+        <!-- Phân luồng & Mã QR -->
+        <div class="routing-section">
+            <div class="sort-code-box">
+                <div class="sort-code">HCB-51-93-GV09-N</div>
+                <div class="station-code">QGV-P09-03</div>
+            </div>
+            <div class="qr-box">
+                <div id="qrcode"></div>
+                <div class="qr-subcode">HCB-51-180-12APD1-N</div>
+                <div class="order-time">Ngày đặt hàng:</div>
+                <div class="order-time-val">28-08-2026 16:06</div>
+            </div>
+        </div>
+
+        <!-- Danh sách sản phẩm -->
+        <div class="goods-section">
+            <div class="goods-title">Nội dung hàng (Tổng SL sản phẩm: 1)</div>
+            <div class="goods-list">1. GẤU BÔNG HOA HỒNG CỪU NHỒI BÔNG, , SL: 1</div>
+            <div class="goods-disclaimer">
+                Người gửi phải cam kết hàng hóa có đầy đủ các hóa đơn, chứng từ, giấy phép cần thiết theo quy định của pháp luật và đính kèm theo bên trong đơn hàng này (Lưu ý: Một số sản phẩm có thể bị ẩn do danh sách quá dài).
+            </div>
+        </div>
+
+        <!-- Tiền thu COD & Chữ ký -->
+        <div class="cod-section">
+            <div class="cod-left">
+                <div class="cod-title">Tiền thu Người nhận:</div>
+                <div class="cod-amount">299,000 VND</div>
+            </div>
+            <div class="cod-right">
+                <div class="weight-text">Khối lượng tối đa: 500 g</div>
+                <div style="font-weight: bold; margin-top: 3px; font-size: 8.5px;">Chữ ký người nhận</div>
+                <div class="sign-note">Xác nhận hàng nguyên vẹn, không móp/méo, bể/vỡ</div>
+            </div>
+        </div>
+
+        <!-- Chỉ dẫn giao hàng -->
+        <div class="instruction-section">
+            <div class="inst-left">
+                Chỉ dẫn giao hàng: <span style="font-size: 10.5px; font-weight: 900;">Được đồng kiểm</span>
+            </div>
+            <div class="inst-right">
+                Chuyển hoàn sau 3 lần phát; Lưu kho tối đa 5 ngày
+            </div>
+        </div>
+
+        <!-- Footer Hotline & CSKH -->
+        <div class="footer-section">
+            <div class="hotline-box">
+                Gọi 1900 6885
+            </div>
+            <div class="footer-promo">
+                <div>✔ Giao hàng toàn quốc/ Chuyển phát nhanh từ 11.000 VNĐ (*)</div>
+                <div>✔ Tuyển NV Giao hàng/ NV Bưu cục thu nhập đến 20.000.000 VNĐ</div>
+                <div style="font-size: 6.5px; color: #555;">(*) Theo điều kiện điều khoản áp dụng</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script render Barcode & QR Code -->
+    <script>
+        function initCodes() {
+            try {
+                // Render Mã vận đơn Code128
+                if (typeof JsBarcode === 'function') {
+                    JsBarcode("#barcode-spx", "SPXVN064478027568", {
+                        format: "CODE128",
+                        width: 1.4,
+                        height: 38,
+                        displayValue: true,
+                        font: "monospace",
+                        fontSize: 10.5,
+                        fontOptions: "bold",
+                        margin: 4,
+                        background: "#ffffff",
+                        lineColor: "#000000"
+                    });
+                }
+
+                // Render QR Code 
+                if (typeof QRCode === 'function') {
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: "SPXVN064478027568",
+                        width: 72,
+                        height: 72,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                }
+            } catch (e) {
+                console.error("Lỗi render mã:", e);
+            }
+        }
+
+        window.onload = initCodes;
+    </script>
+</body>
+</html>

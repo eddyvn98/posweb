@@ -6,6 +6,7 @@ import { findProductByBarcode, saveProductLocal } from '../lib/db'
 import { useNotification } from '../contexts/NotificationContext'
 import { useScanBarcode } from '../hooks/useScanBarcode'
 import BarcodeScanner from './BarcodeScanner'
+import { Package, Camera, CameraOff, Check } from 'lucide-react'
 
 export default function BulkImportModal({ onClose, onFinish }) {
     const { shop } = useAuth()
@@ -20,7 +21,7 @@ export default function BulkImportModal({ onClose, onFinish }) {
         return () => setIsClosed(true)
     }, [])
 
-    // 🚀 Enable Bluetooth/External Scanner
+    // Enable Bluetooth/External Scanner
     useScanBarcode({
         onScan: (code) => handleScan(code),
         enabled: !isClosed
@@ -122,17 +123,23 @@ export default function BulkImportModal({ onClose, onFinish }) {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 sm:p-4">
             <div className="bg-white w-full max-w-lg h-full sm:h-[80vh] flex flex-col rounded-none sm:rounded-2xl shadow-2xl overflow-hidden">
                 <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-                    <h2 className="text-xl font-bold">📦 Nhập kho nhanh</h2>
-                    <button onClick={onClose} className="text-gray-400 text-2xl">✕</button>
+                    <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900">
+                        <Package className="w-5 h-5 text-primary" /> Nhập kho nhanh
+                    </h2>
+                    <button onClick={onClose} className="text-gray-400 text-2xl font-bold">✕</button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     <div className="flex flex-col gap-2">
                         <button
                             onClick={() => setShowCamera(!showCamera)}
-                            className={`btn text-xs font-bold h-9 rounded-xl border transition-all ${showCamera ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}
+                            className={`btn text-xs font-bold h-9 rounded-xl border transition-all flex items-center justify-center gap-1.5 ${showCamera ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}
                         >
-                            {showCamera ? '🛑 Tắt Camera' : '📷 Mở Camera để quét'}
+                            {showCamera ? (
+                                <><CameraOff className="w-4 h-4" /> Tắt Camera</>
+                            ) : (
+                                <><Camera className="w-4 h-4" /> Mở Camera để quét</>
+                            )}
                         </button>
 
                         {showCamera && (
@@ -144,7 +151,7 @@ export default function BulkImportModal({ onClose, onFinish }) {
 
                     <div className="space-y-2">
                         <div className="flex justify-between items-center px-1">
-                            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Lịch sử quét</h3>
+                            <h3 className="text-xs font-bold text-gray-400">Lịch sử quét</h3>
                             <span className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full">Tự động sao lưu</span>
                         </div>
                         {scannedItems.length === 0 && <p className="text-center text-gray-400 py-10 italic text-sm">Hãy bóp cò máy quét để bắt đầu...</p>}
@@ -156,11 +163,13 @@ export default function BulkImportModal({ onClose, onFinish }) {
                                             className="font-bold text-sm bg-transparent border-none p-0 focus:ring-0 w-full uppercase tracking-tight"
                                             value={item.name}
                                             onChange={(e) => handleUpdateItem(idx, 'name', e.target.value)}
+                                            onFocus={(e) => e.target.select()}
+                                            onClick={(e) => e.target.select()}
                                         />
                                         {item.status === 'saving' ? (
                                             <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
                                         ) : (
-                                            <span className="text-[10px] text-green-500">✓</span>
+                                            <Check className="w-3.5 h-3.5 text-green-500 shrink-0" />
                                         )}
                                     </div>
                                     <p className="text-[10px] text-gray-400 font-mono mt-0.5">{item.barcode} • Số lượng: <span className="font-bold text-gray-700">{item.quantity}</span></p>
@@ -174,9 +183,9 @@ export default function BulkImportModal({ onClose, onFinish }) {
                     </div>
                 </div>
 
-                <div className="p-4 border-t bg-gray-50 flex gap-3 sticky bottom-0">
-                    <button onClick={handleFinish} className="flex-1 btn-primary h-12 shadow-lg font-black uppercase tracking-widest text-sm">
-                        HOÀN TẤT & ĐÓNG
+                <div className="p-4 border-t bg-slate-50 flex gap-3 sticky bottom-0">
+                    <button onClick={handleFinish} className="flex-1 btn-primary btn-lg">
+                        Hoàn tất & Đóng
                     </button>
                 </div>
             </div>

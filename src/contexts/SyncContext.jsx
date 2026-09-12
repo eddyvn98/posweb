@@ -82,6 +82,10 @@ export const SyncProvider = ({ children }) => {
         setIsSyncing(true)
         try {
             for (const sale of pending) {
+                if (sale.is_void) {
+                    await markSaleSynced(sale.local_id)
+                    continue
+                }
                 await api.post('/sales', sale)
                 await markSaleSynced(sale.local_id)
             }

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback } from 'react'
+import { CheckCircle2, XCircle, Info } from 'lucide-react'
 
 const NotificationContext = createContext()
 
@@ -29,9 +30,13 @@ export function NotificationProvider({ children }) {
                             notification.type === 'error' ? 'bg-red-500/90 text-white border-red-400' :
                                 'bg-gray-800/90 text-white border-gray-700'}
                     `}>
-                        <span className="text-lg">
-                            {notification.type === 'success' ? '✅' : notification.type === 'error' ? '❌' : 'ℹ️'}
-                        </span>
+                        {notification.type === 'success' ? (
+                            <CheckCircle2 className="w-5 h-5 text-white shrink-0" />
+                        ) : notification.type === 'error' ? (
+                            <XCircle className="w-5 h-5 text-white shrink-0" />
+                        ) : (
+                            <Info className="w-5 h-5 text-white shrink-0" />
+                        )}
                         <span className="text-sm font-bold flex-1">{notification.message}</span>
                     </div>
                 </div>

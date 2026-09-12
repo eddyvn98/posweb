@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 
 const DriveContext = createContext()
 
@@ -107,8 +108,9 @@ export const DriveLoginButton = () => {
     if (!clientId) {
         return (
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-700">
-                    ⚠️ Google Drive Client ID chưa cấu hình. 
+                <p className="text-sm text-yellow-700 flex items-center gap-1">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    Google Drive Client ID chưa cấu hình. 
                     <br/>
                     Hướng dẫn: Xem file GOOGLE_SETUP.md
                 </p>
@@ -128,7 +130,7 @@ export const DriveLoginButton = () => {
                         />
                     )}
                     <div className="text-sm">
-                        <p className="font-medium">✓ Đã đăng nhập</p>
+                        <p className="font-medium flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-green-600" /> Đã đăng nhập</p>
                         <p className="text-xs text-gray-600">{userInfo?.email}</p>
                     </div>
                 </div>

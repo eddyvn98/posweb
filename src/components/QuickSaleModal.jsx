@@ -1,7 +1,9 @@
-﻿import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { useAuth } from '../contexts/AuthContext'
 import { saveProductLocal } from '../lib/db'
+import SmartPriceInput from './Common/SmartPriceInput'
+import { Zap } from 'lucide-react'
 
 export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '', presetName = '' }) {
     const { shop } = useAuth()
@@ -20,6 +22,17 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
         if (step === 2) nameInputRef.current?.focus()
         if (step === 3) qtyInputRef.current?.focus()
     }, [step])
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault()
+                onClose()
+            }
+        }
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [onClose])
 
     const formatNumber = (val) => {
         if (!val) return ''
@@ -44,7 +57,13 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
 
     const nextStep = (e) => {
         if (e) e.preventDefault()
-        if (step === 1 && price) setStep(2)
+        if (step === 1 && price) {
+            const num = Number(price)
+            if (num > 0 && num < 1000) {
+                setPrice((num * 1000).toString())
+            }
+            setStep(2)
+        }
         else if (step === 2) setStep(3)
         else if (step === 3) handleSubmit()
     }
@@ -54,7 +73,8 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
         if (!price) return
 
         const itemId = uuidv4()
-        const actualPrice = Number(price)
+        const rawPrice = Number(price)
+        const actualPrice = rawPrice > 0 && rawPrice < 1000 ? rawPrice * 1000 : rawPrice
         const customItem = {
             id: itemId,
             shop_id: shop.id,
@@ -87,8 +107,8 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
             <div className="w-full max-w-sm rounded-[24px] bg-white shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b px-5 py-3.5 bg-white">
-                    <h3 className="text-[15px] font-bold flex items-center gap-2 text-gray-700">
-                        <span className="text-lg">⚡</span> Bán nhanh
+                    <h3 className="text-xl font-bold flex items-center gap-2 text-gray-900">
+                        <Zap className="w-5 h-5 text-amber-500" /> Bán nhanh
                     </h3>
                     <button
                         type="button"
@@ -103,20 +123,25 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
                     {/* Step 1: Price */}
                     <div className={`${step >= 1 ? 'block' : 'hidden'} space-y-2`}>
                         <label className="block text-[9px] font-black uppercase text-primary/60 tracking-[0.2em]">GIÁ BÁN</label>
-                        <div className="relative">
-                            <input
-                                ref={priceInputRef}
-                                type="text"
-                                inputMode="numeric"
-                                className="block w-full border-b-2 border-primary/10 bg-transparent py-2 text-3xl font-black text-primary focus:border-primary focus:ring-0 transition-all text-center placeholder:opacity-20"
+                        <div className="relative border-b-2 border-primary/10 focus-within:border-primary transition-all py-2 flex items-center justify-center">
+                            <SmartPriceInput
+                                inputRef={priceInputRef}
+                                className="text-3xl font-black text-primary justify-center"
+                                inputClassName="text-3xl font-black text-primary font-mono text-center"
+                                suffixClassName="text-3xl font-black text-primary/45 font-mono"
                                 placeholder="0"
-                                value={formatNumber(price)}
+                                value={price}
                                 onChange={handlePriceChange}
                                 onKeyDown={e => e.key === 'Enter' && nextStep()}
                                 required
                             />
-                            <span className="absolute bottom-2 right-2 text-lg font-black text-primary/30">đ</span>
+                            <span className="ml-1 text-lg font-black text-primary/30">đ</span>
                         </div>
+                        {Number(price) > 0 && (
+                            <div className="text-center text-xs font-bold text-primary">
+                                = {formatNumber(Number(price) < 1000 ? Number(price) * 1000 : Number(price))} đ
+                            </div>
+                        )}
 
                         {step === 1 && (
                             <div className="flex gap-2 animate-in slide-in-from-top-2 duration-300">
@@ -144,6 +169,8 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
                             placeholder="Mặc định: Khách lẻ..."
                             value={name}
                             onChange={e => setName(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
                             onKeyDown={e => e.key === 'Enter' && nextStep()}
                         />
                         {presetBarcode && (
@@ -172,6 +199,8 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
                                     const val = e.target.value.replace(/\D/g, '')
                                     setQuantity(Math.max(1, parseInt(val) || 1))
                                 }}
+                                onFocus={(e) => e.target.select()}
+                                onClick={(e) => e.target.select()}
                                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                             />
                             <button

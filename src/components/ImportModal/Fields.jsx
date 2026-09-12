@@ -1,10 +1,48 @@
+import SmartPriceInput from '../Common/SmartPriceInput'
 import { numberValue } from './utils'
 
-export function Field({ label, name, value, onChange, type = 'text', readOnly = false }) {
+export function Field({ label, name, value, onChange, onBlur, type = 'text', readOnly = false }) {
+    const handleBlur = (e) => {
+        if (onBlur) onBlur(e)
+        if (type === 'number' && onChange) {
+            const num = numberValue(e.target.value)
+            if (num > 0 && num < 1000) {
+                onChange({ target: { name, value: num * 1000 } })
+            }
+        }
+    }
+
     return (
         <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">{label}</label>
-            <input type={type} name={name} value={value} onChange={onChange} readOnly={readOnly} className="input w-full" />
+            {type === 'number' && !readOnly ? (
+                <SmartPriceInput
+                    name={name}
+                    value={value}
+                    onChange={onChange}
+                    onBlur={handleBlur}
+                    className="input w-full px-3 h-11"
+                    inputClassName="font-mono text-sm font-bold text-gray-800"
+                    suffixClassName="font-mono text-sm font-bold text-gray-400 opacity-60"
+                />
+            ) : (
+                <input
+                    type={type}
+                    name={name}
+                    value={value}
+                    onChange={onChange}
+                    onBlur={handleBlur}
+                    onFocus={(e) => e.target.select()}
+                    onClick={(e) => e.target.select()}
+                    readOnly={readOnly}
+                    className="input w-full"
+                />
+            )}
+            {type === 'number' && numberValue(value) > 0 && (
+                <div className="text-[10px] font-bold text-primary mt-1">
+                    = {new Intl.NumberFormat('vi-VN').format(numberValue(value) < 1000 ? numberValue(value) * 1000 : numberValue(value))} đ
+                </div>
+            )}
         </div>
     )
 }

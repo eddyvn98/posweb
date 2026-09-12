@@ -203,6 +203,39 @@ export default function ImportModalContent({ importRecord, onClose, onSuccess, s
 
         setLoading(true)
         try {
+            let processedItems = [...formData.items]
+
+            // Khi xác nhận: tự động tạo mới cho các sản phẩm chưa khớp SP
+            if (nextStatus === 'confirmed') {
+                processedItems = await Promise.all(
+                    processedItems.map(async (item) => {
+                        if (!item.product_id && item.product_name) {
+                            const newProductId = uuidv4()
+                            const newProduct = {
+                                id: newProductId,
+                                name: String(item.product_name || '').trim(),
+                                unit: 'Cái',
+                                cost_price: numberValue(item.unit_price),
+                                price: numberValue(item.unit_price),
+                                stock_quantity: 0,
+                                is_active: 1
+                            }
+                            try {
+                                await api.post('/products/upsert', newProduct)
+                                return {
+                                    ...item,
+                                    product_id: newProductId
+                                }
+                            } catch (e) {
+                                console.error('Tự động tạo sản phẩm thất bại:', e)
+                                return item
+                            }
+                        }
+                        return item
+                    })
+                )
+            }
+
             const payload = {
                 import_date: formData.import_date,
                 supplier_name: formData.supplier_name,
@@ -219,10 +252,8 @@ export default function ImportModalContent({ importRecord, onClose, onSuccess, s
                 attachment_files: formData.attachment_files,
                 status: nextStatus,
                 note: formData.note,
-                items: formData.items
-                    // Khi lưu draft: giữ cả items chưa match product (chỉ có product_name từ AI)
-                    // Khi confirmed: chỉ lưu items đã được match với product_id
-                    .filter((item) => nextStatus === 'draft' ? item.product_name : item.product_id)
+                items: processedItems
+                    .filter((item) => nextStatus === 'draft' ? item.product_name : (item.product_id || item.product_name))
                     .map((item) => ({
                         id: item.id,
                         product_id: item.product_id || '',
@@ -236,7 +267,7 @@ export default function ImportModalContent({ importRecord, onClose, onSuccess, s
 
             if (importRecord?.id) {
                 await api.put(`/imports/${importRecord.id}`, payload)
-                showNotification(nextStatus === 'confirmed' ? 'Đã xác nhận phiếu nhập' : 'Đã cập nhật phiếu nhập', 'success')
+                showNotification(nextStatus === 'confirmed' ? 'Đã xác nhận và tạo SP mới' : 'Đã cập nhật phiếu nhập', 'success')
             } else {
                 await api.post('/imports', payload)
                 showNotification(nextStatus === 'confirmed' ? 'Đã tạo và xác nhận phiếu nhập' : 'Đã lưu nháp phiếu nhập', 'success')

@@ -1,6 +1,18 @@
 import { useState } from 'react'
 import { formatMoney } from '../lib/reports'
 import { exportToExcel } from '../lib/export'
+import { 
+    ChevronDown, 
+    ChevronUp, 
+    Package, 
+    Plus, 
+    Minus, 
+    Wrench, 
+    RotateCcw, 
+    FileSpreadsheet, 
+    Printer, 
+    Loader2 
+} from 'lucide-react'
 
 export default function InventoryReport({ data }) {
     const [exporting, setExporting] = useState(false)
@@ -11,10 +23,10 @@ export default function InventoryReport({ data }) {
         try {
             const reportName = `Ton-kho-${data.month.toString().padStart(2, '0')}-${data.year}`
             await exportToExcel(data, reportName, 'inventory')
-            alert('✅ Xuất Excel thành công!')
+            alert('Xuất Excel thành công!')
         } catch (err) {
             console.error('Export error:', err)
-            alert('❌ Lỗi khi xuất Excel')
+            alert('Lỗi khi xuất Excel')
         } finally {
             setExporting(false)
         }
@@ -57,17 +69,21 @@ export default function InventoryReport({ data }) {
             {/* Toggle Details */}
             <button
                 onClick={() => setShowDetails(!showDetails)}
-                className="w-full bg-white border border-pink-100 rounded-2xl p-4 font-bold text-gray-800 hover:bg-pink-50 transition"
+                className="w-full bg-white border border-sky-100 rounded-2xl p-4 font-bold text-gray-800 hover:bg-sky-50 transition flex items-center justify-center gap-1.5"
             >
-                {showDetails ? '🔽 Ẩn chi tiết' : '🔼 Xem chi tiết'}
+                {showDetails ? (
+                    <><ChevronDown className="w-4 h-4" /> Ẩn chi tiết</>
+                ) : (
+                    <><ChevronUp className="w-4 h-4" /> Xem chi tiết</>
+                )}
             </button>
 
             {/* Inventory Table */}
             {showDetails && (
-                <div className="bg-white rounded-3xl border border-pink-50 shadow-sm overflow-hidden print:rounded-none print:border-0">
+                <div className="bg-white rounded-3xl border border-sky-50 shadow-sm overflow-hidden print:rounded-none print:border-0">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                            <thead className="bg-purple-50 border-b border-purple-100 sticky top-0">
+                            <thead className="bg-sky-50 border-b border-sky-100 sticky top-0">
                                 <tr>
                                     <th className="px-4 py-3 text-left font-black text-gray-800">Sản phẩm</th>
                                     <th className="px-4 py-3 text-center font-black text-gray-800">Mã vạch</th>
@@ -78,9 +94,9 @@ export default function InventoryReport({ data }) {
                                     <th className="px-4 py-3 text-right font-black text-gray-800">Giá trị</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-purple-50">
+                            <tbody className="divide-y divide-sky-50">
                                 {data.inventory.map(item => (
-                                    <tr key={item.id} className="hover:bg-purple-50/50 transition">
+                                    <tr key={item.id} className="hover:bg-sky-50/50 transition">
                                         <td className="px-4 py-3 font-bold text-gray-800">{item.name}</td>
                                         <td className="px-4 py-3 text-center text-gray-600 text-xs font-bold font-mono">
                                             {item.barcode}
@@ -97,16 +113,16 @@ export default function InventoryReport({ data }) {
                                         <td className="px-4 py-3 text-right text-gray-800 font-black">
                                             {item.endingStock}
                                         </td>
-                                        <td className="px-4 py-3 text-right text-purple-600 font-black">
+                                        <td className="px-4 py-3 text-right text-sky-600 font-black">
                                             {formatMoney(item.estimatedValue)}
                                         </td>
                                     </tr>
                                 ))}
-                                <tr className="bg-purple-50 font-black text-gray-800 border-t-2 border-purple-200">
+                                <tr className="bg-sky-50 font-black text-gray-800 border-t-2 border-sky-200">
                                     <td colSpan="6" className="px-4 py-3 text-right">
-                                        TỔNG GIÁC TRỊ
+                                        TỔNG GIÁ TRỊ
                                     </td>
-                                    <td className="px-4 py-3 text-right text-purple-600">
+                                    <td className="px-4 py-3 text-right text-sky-600">
                                         {formatMoney(data.totalValue)}
                                     </td>
                                 </tr>
@@ -117,19 +133,20 @@ export default function InventoryReport({ data }) {
             )}
 
             {/* Items with Movement Summary */}
-            <div className="bg-white rounded-3xl border border-pink-50 shadow-sm overflow-hidden">
-                <div className="bg-pink-50 px-6 py-4 border-b border-pink-100">
+            <div className="bg-white rounded-3xl border border-sky-50 shadow-sm overflow-hidden">
+                <div className="bg-sky-50 px-6 py-4 border-b border-sky-100 flex items-center gap-2">
+                    <Package className="w-5 h-5 text-sky-600" />
                     <h3 className="font-black text-gray-800 uppercase tracking-wide">
-                        📦 Sản phẩm có chuyển động ({itemsWithMovement.length})
+                        Sản phẩm có chuyển động ({itemsWithMovement.length})
                     </h3>
                 </div>
 
-                <div className="divide-y divide-pink-50 max-h-96 overflow-y-auto custom-scrollbar">
+                <div className="divide-y divide-sky-50 max-h-96 overflow-y-auto custom-scrollbar">
                     {itemsWithMovement.length === 0 ? (
                         <div className="p-6 text-center text-gray-400 italic">Không có sản phẩm nào chuyển động</div>
                     ) : (
                         itemsWithMovement.map(item => (
-                            <div key={item.id} className="p-4 hover:bg-pink-50/50 transition">
+                            <div key={item.id} className="p-4 hover:bg-sky-50/50 transition">
                                 <div className="flex justify-between items-start mb-3">
                                     <div>
                                         <p className="font-black text-gray-800">{item.name}</p>
@@ -148,23 +165,23 @@ export default function InventoryReport({ data }) {
                                 {/* Movement badges */}
                                 <div className="flex gap-2 flex-wrap">
                                     {item.imported > 0 && (
-                                        <span className="bg-green-100 text-green-700 px-2 py-1 rounded-lg text-xs font-bold">
-                                            ➕ Nhập: {item.imported}
+                                        <span className="bg-green-100 text-green-700 px-2 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1">
+                                            <Plus className="w-3 h-3" /> Nhập: {item.imported}
                                         </span>
                                     )}
                                     {item.sold > 0 && (
-                                        <span className="bg-red-100 text-red-700 px-2 py-1 rounded-lg text-xs font-bold">
-                                            ➖ Bán: {item.sold}
+                                        <span className="bg-red-100 text-red-700 px-2 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1">
+                                            <Minus className="w-3 h-3" /> Bán: {item.sold}
                                         </span>
                                     )}
                                     {item.adjusted > 0 && (
-                                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg text-xs font-bold">
-                                            🔧 Điều chỉnh: {item.adjusted}
+                                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1">
+                                            <Wrench className="w-3 h-3" /> Điều chỉnh: {item.adjusted}
                                         </span>
                                     )}
                                     {item.voided > 0 && (
-                                        <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg text-xs font-bold">
-                                            🔄 Huỷ: {item.voided}
+                                        <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1">
+                                            <RotateCcw className="w-3 h-3" /> Huỷ: {item.voided}
                                         </span>
                                     )}
                                 </div>
@@ -179,15 +196,15 @@ export default function InventoryReport({ data }) {
                 <button
                     onClick={handleExportExcel}
                     disabled={exporting}
-                    className="flex-1 btn bg-green-500 text-white font-black rounded-2xl py-3 hover:bg-green-600 disabled:opacity-50 transition"
+                    className="flex-1 btn-primary btn-lg font-bold"
                 >
-                    {exporting ? '⏳ Đang xuất...' : '📊 Xuất Excel'}
+                    {exporting ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang xuất...</> : <><FileSpreadsheet className="w-4 h-4" /> Xuất Excel</>}
                 </button>
                 <button
                     onClick={handlePrint}
-                    className="flex-1 btn bg-blue-500 text-white font-black rounded-2xl py-3 hover:bg-blue-600 transition"
+                    className="flex-1 btn-secondary btn-lg font-bold"
                 >
-                    🖨️ In báo cáo
+                    <Printer className="w-4 h-4" /> In báo cáo
                 </button>
             </div>
         </div>

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
@@ -212,13 +212,18 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                 }
             }
 
+            const rawPrice = Number(formData.price)
+            const rawCost = Number(formData.cost_price)
+            const finalPrice = rawPrice > 0 && rawPrice < 1000 ? rawPrice * 1000 : rawPrice
+            const finalCostPrice = rawCost > 0 && rawCost < 1000 ? rawCost * 1000 : rawCost
+
             const data = {
                 ...formData,
                 image_url: finalImageUrl,
                 id: product?.id || draftId.current,
                 shop_id: shop.id,
-                price: Number(formData.price),
-                cost_price: Number(formData.cost_price),
+                price: finalPrice,
+                cost_price: finalCostPrice,
                 stock_quantity: Number(formData.stock_quantity),
                 is_active: true,
                 created_at: product?.created_at || new Date().toISOString()
@@ -243,7 +248,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     }
 
     const handlePriceBlur = (field, value) => {
-        const num = Number(value)
+        const num = Number(String(value || 0).replace(',', '.'))
         if (num > 0 && num < 1000) setFormData(p => ({ ...p, [field]: num * 1000 }))
     }
 
@@ -252,7 +257,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
             <div className="bg-white w-full max-w-md rounded-none sm:rounded-xl shadow-2xl flex flex-col h-[calc(100dvh-5.5rem)] mb-[5.5rem] sm:h-[90vh] max-h-[calc(100dvh-5.5rem)] sm:max-h-[90vh] overflow-hidden">
                 <form key={formKey} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
                     <div className="p-4 border-b flex justify-between items-center bg-white sticky top-0 z-10">
-                        <h2 className="text-lg font-bold">{product ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}</h2>
+                        <h2 className="text-xl font-bold text-gray-900">{product ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}</h2>
                         <div className="flex items-center gap-2">
                             <button
                                 type="submit"
@@ -383,10 +388,10 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                         </div>
                     </div>
 
-                    <div className="p-4 border-t bg-gray-50 sticky bottom-0 z-[130] pb-[max(1rem,env(safe-area-inset-bottom))]">
+                    <div className="p-4 border-t bg-slate-50 sticky bottom-0 z-[130] pb-[max(1rem,env(safe-area-inset-bottom))]">
                         <div className="flex gap-3">
-                            <button type="button" onClick={onClose} disabled={loading} className="flex-1 btn bg-white border-gray-300">Hủy</button>
-                            <button type="submit" disabled={loading} className="flex-1 btn-primary">{loading ? 'Đang lưu...' : 'LƯU SẢN PHẨM'}</button>
+                            <button type="button" onClick={onClose} disabled={loading} className="flex-1 btn-secondary h-11 text-sm font-bold">Hủy</button>
+                            <button type="submit" disabled={loading} className="flex-1 btn-primary h-11 text-sm font-bold">{loading ? 'Đang lưu...' : 'Lưu sản phẩm'}</button>
                         </div>
                     </div>
                 </form>

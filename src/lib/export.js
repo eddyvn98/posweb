@@ -103,7 +103,7 @@ export const exportMonthlyReportCompliant = async (
         const monthName = new Date(year, month - 1).toLocaleString('vi-VN', { month: 'long', year: 'numeric' })
         const summaryData = [
             ['TỔNG QUAN BÁO CÁO', ''],
-            ['Cửa hàng', shopName || 'POS Shop'],
+            ['Cửa hàng', shopName || 'PosWebFree'],
             ['Tháng báo cáo', monthName],
             ['Ngày xuất file', new Date().toLocaleString('vi-VN')],
             ['', ''],

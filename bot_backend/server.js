@@ -50,7 +50,7 @@ if (BOT_TOKEN) {
         ctx.reply(
             'Chào mừng bạn đến với POS Web! Nhấn vào nút bên dưới để mở ứng dụng quản lý bán hàng.',
             Markup.inlineKeyboard([
-                Markup.button.webApp("Mở POS Shop", WEB_APP_URL)
+                Markup.button.webApp("Mở PosWebFree", WEB_APP_URL)
             ])
         );
     });
@@ -118,15 +118,9 @@ async function startServer() {
     app.listen(port, () => {
         console.log(`🌐 API Server listening at http://localhost:${port}`);
 
-        // Tự động backup khi khởi động (chạy sau 5s để đảm bảo DB đã sẵn sàng)
-        setTimeout(async () => {
-            try {
-                const { sendBackupToTelegram } = require('./services/backupService');
-                await sendBackupToTelegram();
-            } catch (e) {
-                console.error('Auto backup failed:', e.message);
-            }
-        }, 5000);
+        // Khởi động lịch trình sao lưu tự động định kỳ mỗi ngày (giữ tối đa 30 bản)
+        const { startDailyBackupScheduler } = require('./services/backupService');
+        startDailyBackupScheduler({ maxBackups: 30 });
     });
 }
 

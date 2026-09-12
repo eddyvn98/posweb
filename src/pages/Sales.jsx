@@ -5,6 +5,18 @@ import { useCart } from '../contexts/CartContext'
 import { useSync } from '../contexts/SyncContext'
 import { useScanBarcode } from '../hooks/useScanBarcode'
 
+import { 
+    Store, 
+    ShoppingCart, 
+    ArrowRight, 
+    Search, 
+    Package, 
+    CheckCircle2, 
+    XCircle, 
+    Zap, 
+    History 
+} from 'lucide-react'
+
 import ProductCard from '../components/ProductCard'
 import CartItem from '../components/CartItem'
 import CheckoutModal from '../components/CheckoutModal'
@@ -57,6 +69,24 @@ export default function Sales() {
     useEffect(() => {
         searchInputRef.current?.focus()
     }, [])
+
+    // Escape shortcut to exit search state
+    useEffect(() => {
+        const handleGlobalKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                if (showCheckout || showQuickSale || lastSale) return
+                if (query || isSearchInputFocused) {
+                    e.preventDefault()
+                    setQuery('')
+                    setProducts([])
+                    setIsSearchInputFocused(false)
+                    searchInputRef.current?.blur()
+                }
+            }
+        }
+        window.addEventListener('keydown', handleGlobalKeyDown)
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+    }, [query, isSearchInputFocused, showCheckout, showQuickSale, lastSale])
 
     const isSearching = query.trim().length > 0
 
@@ -118,30 +148,29 @@ export default function Sales() {
     }
 
     return (
-        <div className="h-[100dvh] flex flex-col overflow-hidden bg-white md:flex-col-reverse">
+        <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 md:flex-col-reverse">
             {/* Main Content: Products + Cart */}
-            <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 bg-gray-50">
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 bg-slate-50">
                 {/* --- LEFT: MAIN LOGIC AREA --- */}
                 <div className={`${cart.length > 0 ? 'hidden md:flex' : 'flex'} flex-1 flex flex-col h-full relative z-0`}>
                     {/* Main Content Area - Just Show "Sẵn sàng" state when idle */}
-                    <div className="flex-1 overflow-y-auto p-3 content-start custom-scrollbar">
-                        <div className="text-center mt-12 opacity-30 select-none animate-fade-in-up">
-                            <div className="text-7xl mb-4">🏪</div>
-                            <h3 className="text-lg font-black text-gray-800 uppercase tracking-tighter">Sẵn sàng bán hàng</h3>
-                            <p className="text-xs text-gray-500 font-medium tracking-tight">Quét mã vạch hoặc nhập tên để tìm</p>
+                    <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-center custom-scrollbar select-none">
+                        <div className="text-center my-auto w-full max-w-lg">
+                            <h3 className="text-base font-bold text-slate-700 tracking-tight">Sẵn sàng bán hàng</h3>
+                            <p className="text-xs text-slate-400 font-medium mt-1">Quét mã vạch hoặc nhập tên/mã sản phẩm bên dưới</p>
                         </div>
                     </div>
                 </div>
 
                 {/* --- RIGHT: CART & CHECKOUT --- */}
-                <div className={`flex flex-col z-20 overflow-hidden md:flex-none md:w-[380px] bg-white border-l border-pink-100 shadow-xl ${cart.length === 0 ? 'h-auto' : 'flex-1 md:flex-1'}`}>
-                    <div className="p-3 bg-gray-50 border-b flex justify-between items-center">
-                        <h2 className="font-black text-xs uppercase tracking-widest text-gray-500 flex items-center gap-2">
-                            🛒 GIỎ HÀNG <span className="bg-primary text-white px-2 py-0.5 rounded-full text-[10px]">{totalItems}</span>
+                <div className={`flex flex-col z-20 overflow-hidden md:flex-none md:w-[380px] bg-white border-l border-slate-200 shadow-sm ${cart.length === 0 ? 'h-auto' : 'flex-1 md:flex-1'}`}>
+                    <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                        <h2 className="font-bold text-xs uppercase tracking-wider text-slate-600 flex items-center gap-2">
+                            <ShoppingCart className="w-4 h-4 text-sky-600" /> GIỎ HÀNG <span className="bg-sky-600 text-white px-2 py-0.5 rounded-full text-[10px] font-mono tabular-nums">{totalItems}</span>
                         </h2>
                         <button
                             onClick={clearCart}
-                            className="text-[10px] text-red-400 hover:text-red-600 font-black uppercase tracking-tighter transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
+                            className="text-[11px] text-slate-400 hover:text-rose-600 font-medium transition-colors px-2 py-1 rounded-md hover:bg-rose-50"
                             disabled={totalItems === 0}
                         >
                             Xoá hết
@@ -150,11 +179,11 @@ export default function Sales() {
 
                     <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar min-h-0">
                         {cart.length === 0 ? (
-                            <div className="hidden md:flex flex-col items-center justify-center h-full text-gray-300 text-xs italic font-medium">
-                                Giỏ hàng đang trống...
+                            <div className="hidden md:flex flex-col items-center justify-center h-full text-slate-400 text-xs italic font-medium">
+                                Chưa có sản phẩm trong giỏ...
                             </div>
                         ) : (
-                            <div className="divide-y divide-gray-50">
+                            <div className="divide-y divide-slate-100">
                                 {cart.map(item => (
                                     <CartItem
                                         key={item.product_id || item.id}
@@ -169,20 +198,20 @@ export default function Sales() {
                     </div>
 
                     {/* Sticky Checkout Area - Combined Total into Button */}
-                    <div className="p-3 border-t bg-white shadow-[0_-10px_30px_rgba(233,30,99,0.05)]">
+                    <div className="p-3 border-t border-slate-200 bg-white shadow-sm">
                         <button
                             onClick={() => setShowCheckout(true)}
-                            className="w-full h-14 bg-primary text-white rounded-xl shadow-lg shadow-pink-100 active:scale-95 transition-all disabled:opacity-30 disabled:shadow-none flex items-center justify-between px-5"
+                            className="btn-success w-full h-13 rounded-xl shadow-sm active:scale-[0.98] transition-all disabled:opacity-30 disabled:shadow-none flex items-center justify-between px-4 py-3"
                             disabled={totalItems === 0}
                         >
                             <div className="flex flex-col items-start">
-                                <span className="text-[10px] opacity-70 font-black uppercase tracking-widest leading-none mb-1">Xác nhận</span>
-                                <span className="text-sm font-black uppercase tracking-tight">THANH TOÁN ➝</span>
+                                <span className="text-[10px] opacity-80 font-bold uppercase tracking-wider leading-none mb-0.5">Xác nhận</span>
+                                <span className="text-sm font-bold uppercase tracking-tight flex items-center gap-1">THANH TOÁN <ArrowRight className="w-4 h-4" /></span>
                             </div>
                             <div className="text-right">
-                                <span className="text-xl font-black leading-none">
+                                <span className="text-lg font-bold font-mono tabular-nums leading-none">
                                     {new Intl.NumberFormat('vi-VN').format(totalAmount)}
-                                    <span className="text-xs ml-0.5 opacity-80 font-bold underline">đ</span>
+                                    <span className="text-xs ml-0.5 opacity-90 font-normal">đ</span>
                                 </span>
                             </div>
                         </button>
@@ -201,13 +230,13 @@ export default function Sales() {
                                 <span className="text-[9px] font-black uppercase text-gray-400 tracking-[0.2em] px-2">Kết quả</span>
                                 <button
                                     onClick={() => { setQuery(''); setIsSearchInputFocused(false); }}
-                                    className="h-6 w-6 rounded-md bg-gray-50 flex items-center justify-center text-[10px] text-gray-400"
+                                    className="h-6 w-6 rounded-md bg-gray-50 flex items-center justify-center text-[10px] text-gray-400 hover:text-red-500 font-bold"
                                 >✕</button>
                             </div>
                             <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar min-h-[100px]">
                                 {products.length === 0 ? (
                                     <div className="text-center py-10 opacity-30">
-                                        <p className="text-4xl mb-2">🔍</p>
+                                        <Search className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                                         <p className="text-sm font-bold">Không tìm thấy</p>
                                     </div>
                                 ) : (
@@ -228,7 +257,9 @@ export default function Sales() {
                                                     {p.image_url ? (
                                                         <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-lg">📦</div>
+                                                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                            <Package className="w-5 h-5" />
+                                                        </div>
                                                     )}
                                                 </div>
 
@@ -249,15 +280,15 @@ export default function Sales() {
                     </div>
                 )}
 
-                {/* 🏷️ Floating Scan Feedback - Moved higher to avoid overlap */}
+                {/* Floating Scan Feedback */}
                 {lastScanned && (
-                    <div className={`${isSearching ? 'bottom-[120%]' : '-top-12'} absolute left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-full shadow-lg font-bold text-xs animate-in slide-in-from-bottom-2 flex items-center gap-2 z-50 whitespace-nowrap transition-all`}>
-                        <span>✅ {lastScanned}</span>
+                    <div className={`${isSearching ? 'bottom-[120%]' : '-top-12'} absolute left-1/2 -translate-x-1/2 bg-sky-600 text-white px-4 py-2 rounded-full shadow-lg font-bold text-xs animate-in slide-in-from-bottom-2 flex items-center gap-2 z-50 whitespace-nowrap transition-all`}>
+                        <CheckCircle2 className="w-4 h-4" /> <span>{lastScanned}</span>
                     </div>
                 )}
                 {scanError && (
                     <div className={`${isSearching ? 'bottom-[120%]' : '-top-12'} absolute left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-full shadow-lg font-bold text-xs animate-in slide-in-from-bottom-2 flex items-center gap-2 z-50 whitespace-nowrap transition-all`}>
-                        <span>❌ {scanError}</span>
+                        <XCircle className="w-4 h-4" /> <span>{scanError}</span>
                     </div>
                 )}
 
@@ -268,15 +299,25 @@ export default function Sales() {
                             ref={searchInputRef}
                             autoFocus
                             type="text"
-                            className="w-full h-10 pl-9 pr-3 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:ring-primary focus:border-primary focus:bg-white transition-all outline-none"
-                            placeholder="Mã/Tên SP..."
+                            className="w-full h-10 pl-9 pr-8 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:ring-primary focus:border-primary focus:bg-white transition-all outline-none"
+                            placeholder="Mã/Tên SP... (Esc để thoát)"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             onKeyDown={(e) => {
-                                const scanCode = e.currentTarget.value.trim()
-                                if (e.key === 'Enter' && scanCode) {
-                                    handleScanResult(scanCode)
+                                if (e.key === 'Escape') {
                                     e.preventDefault()
+                                    setQuery('')
+                                    setProducts([])
+                                    setIsSearchInputFocused(false)
+                                    searchInputRef.current?.blur()
+                                    return
+                                }
+                                const scanCode = e.currentTarget.value.trim()
+                                if (e.key === 'Enter') {
+                                    if (scanCode) {
+                                        handleScanResult(scanCode)
+                                        e.preventDefault()
+                                    }
                                 }
                             }}
                             onFocus={() => setIsSearchInputFocused(true)}
@@ -286,7 +327,24 @@ export default function Sales() {
                                 }
                             }}
                         />
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <Search className="w-4 h-4" />
+                        </span>
+                        {query && (
+                            <button
+                                type="button"
+                                tabIndex={-1}
+                                onClick={() => {
+                                    setQuery('')
+                                    setProducts([])
+                                    setIsSearchInputFocused(false)
+                                    searchInputRef.current?.blur()
+                                }}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-rose-500 transition-colors p-1"
+                            >
+                                <XCircle className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
 
                     {/* Quick Sale Button - Compact */}
@@ -295,17 +353,17 @@ export default function Sales() {
                             setQuickSalePreset({ barcode: '', name: '' })
                             setShowQuickSale(true)
                         }}
-                        className="h-10 px-3 bg-primary text-white font-bold rounded-xl shadow-sm active:scale-95 transition-all text-[10px] flex items-center gap-1 shrink-0 uppercase"
+                        className="btn-primary btn-md"
                     >
-                        <span>⚡</span> <span className="hidden xs:inline">BÁN NHANH</span><span className="xs:hidden">NHANH</span>
+                        <Zap className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Bán Nhanh</span><span className="xs:hidden">Nhanh</span>
                     </button>
 
                     {/* History Button - Compact */}
                     <button
                         onClick={() => navigate('/history')}
-                        className="h-10 px-3 bg-blue-500 text-white font-bold rounded-xl shadow-sm active:scale-95 transition-all text-[10px] flex items-center gap-1 shrink-0 uppercase"
+                        className="btn-secondary btn-md"
                     >
-                        <span>📜</span> <span className="hidden xs:inline">LỊCH SỬ</span><span className="xs:hidden">T.SỬ</span>
+                        <History className="w-3.5 h-3.5 text-slate-500" /> <span className="hidden xs:inline">Lịch Sử</span><span className="xs:hidden">T.Sử</span>
                     </button>
                 </div>
             </div>

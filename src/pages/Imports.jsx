@@ -4,6 +4,21 @@ import api from '../lib/api'
 import ImportModal from '../components/ImportModal'
 import SupplierManagerModal from '../components/SupplierManagerModal'
 import { useNotification } from '../contexts/NotificationContext'
+import { 
+    Download, 
+    Sparkles, 
+    Search, 
+    ChevronDown, 
+    ChevronUp, 
+    Plus, 
+    Users, 
+    AlertCircle, 
+    Package, 
+    CheckCircle2, 
+    Copy,
+    Trash2,
+    FileText
+} from 'lucide-react'
 
 function getSupplierLabel(name) {
     return name?.trim() || 'Không có nhà cung cấp'
@@ -22,12 +37,15 @@ function getImportIssues(record) {
     return issues
 }
 
-function SummaryCard({ label, value, hint, tone = 'bg-white' }) {
+function SummaryCard({ label, value, hint, tone = 'bg-white', icon: Icon, iconColor = 'text-primary' }) {
     return (
-        <div className={`rounded-3xl border border-gray-200 p-4 ${tone}`}>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-gray-400">{label}</p>
-            <p className="mt-2 text-3xl font-black text-gray-900">{value}</p>
-            {hint && <p className="mt-2 text-sm font-medium text-gray-500">{hint}</p>}
+        <div className={`rounded-3xl border border-gray-100 p-4 shadow-sm transition hover:shadow-md ${tone}`}>
+            <div className="flex items-center justify-between">
+                <p className="text-xs font-black uppercase tracking-wider text-gray-400">{label}</p>
+                {Icon && <Icon className={`w-5 h-5 ${iconColor}`} />}
+            </div>
+            <p className="mt-2 text-2xl sm:text-3xl font-black text-gray-900">{value}</p>
+            {hint && <p className="mt-1 text-xs font-medium text-gray-500">{hint}</p>}
         </div>
     )
 }
@@ -47,7 +65,8 @@ function extractJsonBlock(raw) {
 }
 
 function numberValue(value) {
-    const parsed = Number(value || 0)
+    const str = typeof value === 'string' ? value.replace(',', '.') : value
+    const parsed = Number(str || 0)
     return Number.isFinite(parsed) ? parsed : 0
 }
 
@@ -111,6 +130,11 @@ export default function Imports() {
     const [editingImport, setEditingImport] = useState(null)
     const [showSupplierModal, setShowSupplierModal] = useState(false)
     const [aiDraftText, setAiDraftText] = useState('')
+    const [showAiTool, setShowAiTool] = useState(false)
+
+    // Search and Filter states
+    const [searchQuery, setSearchQuery] = useState('')
+    const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'problem' | 'confirmed' | 'draft'
 
     const loadImports = async () => {
         if (!shop?.id) return
@@ -205,219 +229,291 @@ export default function Imports() {
         }
     }, [imports])
 
+    // Filtered records based on query and status filter
+    const filteredRecords = useMemo(() => {
+        return importInsights.records.filter((rec) => {
+            const q = searchQuery.trim().toLowerCase()
+            const matchesQuery = !q || 
+                (rec.supplier_name || '').toLowerCase().includes(q) || 
+                (rec.invoice_number || '').toLowerCase().includes(q) ||
+                (rec.note || '').toLowerCase().includes(q)
+
+            if (!matchesQuery) return false
+
+            if (statusFilter === 'problem') return rec.issues.length > 0
+            if (statusFilter === 'confirmed') return (rec.status || 'draft') === 'confirmed'
+            if (statusFilter === 'draft') return (rec.status || 'draft') !== 'confirmed'
+
+            return true
+        })
+    }, [importInsights.records, searchQuery, statusFilter])
+
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
+            {/* Header */}
             <div className="bg-white shadow-sm p-4 sticky top-0 z-10 border-b">
-                <div className="flex gap-3 items-center justify-between">
+                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                     <div>
-                        <h1 className="text-xl font-black text-gray-800 uppercase tracking-tighter">Nhập hàng</h1>
-                        <p className="text-sm text-gray-500 font-medium">Theo dõi nhanh phiếu nhập và dữ liệu còn thiếu ngay trong web</p>
+                        <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+                            <Package className="w-6 h-6 text-primary" /> Nhập hàng
+                        </h1>
+                        <p className="text-xs text-gray-500 font-medium">Quản lý phiếu nhập kho & theo dõi dữ liệu hóa đơn</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full sm:w-auto">
                         <button
                             onClick={() => setShowSupplierModal(true)}
-                            className="px-4 shadow-sm text-sm font-bold h-10 rounded-xl bg-gray-100 text-gray-700"
+                            className="flex-1 sm:flex-initial px-3 sm:px-4 shadow-sm text-xs sm:text-sm font-bold h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition flex items-center justify-center gap-1.5"
                         >
-                            Nhà cung cấp
+                            <Users className="w-4 h-4" /> Nhà cung cấp
                         </button>
                         <button
                             onClick={() => {
                                 setEditingImport(null)
                                 setShowModal(true)
                             }}
-                            className="btn-primary px-4 shadow-lg text-sm font-bold h-10 rounded-xl"
+                            className="btn-primary flex-1 sm:flex-initial px-4 shadow-lg text-xs sm:text-sm font-bold h-10 rounded-xl flex items-center justify-center gap-1"
                         >
-                            + Ghi nhận
+                            <Plus className="w-4 h-4" /> Ghi nhận
                         </button>
                     </div>
                 </div>
             </div>
 
             <div className="p-4 space-y-4">
-                <section className="rounded-3xl border border-primary/15 bg-white p-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="max-w-2xl">
-                            <h2 className="text-lg font-black text-gray-900">Dán dữ liệu từ GPT / Gemini</h2>
-                            <p className="mt-1 text-sm text-gray-500">
-                                Khi đi mua hàng về, bạn chỉ cần đưa ảnh/PDF hóa đơn cho AI web, yêu cầu nó trả về JSON đúng mẫu rồi dán vào đây.
-                                Hệ thống sẽ mở sẵn phiếu nhập để bạn chỉnh nhẹ và lưu, không cần nhập từng món bằng tay.
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => navigator.clipboard.writeText(AI_IMPORT_TEMPLATE)}
-                            className="h-10 px-4 rounded-xl bg-gray-100 text-gray-700 font-bold"
-                        >
-                            Copy mẫu prompt
-                        </button>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-4">
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Kết quả JSON từ AI</label>
-                            <textarea
-                                value={aiDraftText}
-                                onChange={(e) => setAiDraftText(e.target.value)}
-                                rows="12"
-                                className="input w-full resize-y font-mono text-sm"
-                                placeholder={`Ví dụ:\n${AI_IMPORT_TEMPLATE}`}
-                            />
-                            <div className="flex gap-3 mt-3">
-                                <button type="button" onClick={handleCreateDraftFromAi} className="btn-primary h-11 px-5 rounded-xl font-bold">
-                                    Tạo nháp từ AI
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setAiDraftText('')}
-                                    className="h-11 px-5 rounded-xl bg-gray-100 text-gray-700 font-bold"
-                                >
-                                    Xóa nội dung
-                                </button>
+                {/* AI Import Collapsible Section */}
+                <section className="rounded-3xl border border-primary/20 bg-white shadow-sm overflow-hidden transition-all">
+                    <button
+                        type="button"
+                        onClick={() => setShowAiTool(!showAiTool)}
+                        className="w-full p-4 sm:p-5 flex items-center justify-between bg-gradient-to-r from-sky-50/50 to-white hover:bg-sky-50 transition text-left"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                                <Sparkles className="w-5 h-5 animate-pulse" />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-black text-gray-900 flex items-center gap-2">
+                                    Nhập hàng nhanh bằng AI (GPT / Gemini)
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-primary/10 text-primary font-bold">Mới</span>
+                                </h2>
+                                <p className="text-xs text-gray-500">Dán dữ liệu hóa đơn JSON từ AI để tạo phiếu tự động</p>
                             </div>
                         </div>
-
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                            <p className="text-sm font-black text-gray-800 mb-2">Prompt nên dùng với GPT/Gemini</p>
-                            <pre className="text-xs leading-6 text-gray-600 whitespace-pre-wrap break-words">
-                                {AI_IMPORT_TEMPLATE}
-                            </pre>
+                        <div className="flex items-center gap-2 text-gray-400 font-bold text-xs">
+                            <span>{showAiTool ? 'Thu gọn' : 'Mở công cụ'}</span>
+                            {showAiTool ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                         </div>
-                    </div>
+                    </button>
+
+                    {showAiTool && (
+                        <div className="p-4 sm:p-5 border-t border-gray-100 bg-gray-50/50 space-y-4">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between bg-white p-4 rounded-2xl border border-gray-200">
+                                <div className="max-w-2xl">
+                                    <p className="text-xs sm:text-sm text-gray-600">
+                                        Chụp ảnh hoặc upload hóa đơn lên AI (ChatGPT/Gemini), copy mẫu prompt dưới đây rồi dán JSON kết quả vào ô bên dưới.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(AI_IMPORT_TEMPLATE)
+                                        showNotification('Đã copy mẫu prompt AI!', 'success')
+                                    }}
+                                    className="h-9 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs flex items-center justify-center gap-1.5 shrink-0"
+                                >
+                                    <Copy className="w-3.5 h-3.5" /> Copy mẫu Prompt
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 mb-2">Kết quả JSON từ AI</label>
+                                    <textarea
+                                        value={aiDraftText}
+                                        onChange={(e) => setAiDraftText(e.target.value)}
+                                        rows="8"
+                                        className="input w-full resize-y font-mono text-xs sm:text-sm bg-white p-3 rounded-xl border border-gray-200 focus:ring-primary focus:border-primary"
+                                        placeholder={`Ví dụ:\n${AI_IMPORT_TEMPLATE}`}
+                                    />
+                                    <div className="flex gap-3 mt-3">
+                                        <button type="button" onClick={handleCreateDraftFromAi} className="btn-primary h-10 px-4 rounded-xl font-bold text-xs flex items-center gap-1.5">
+                                            <Sparkles className="w-4 h-4" /> Tạo nháp từ AI
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAiDraftText('')}
+                                            className="h-10 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs flex items-center gap-1"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" /> Xóa nội dung
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-gray-200 bg-white p-4">
+                                    <p className="text-xs font-black text-gray-800 mb-2 flex items-center gap-1">
+                                        <FileText className="w-4 h-4 text-primary" /> Mẫu prompt tiêu chuẩn
+                                    </p>
+                                    <pre className="text-[11px] leading-5 text-gray-600 whitespace-pre-wrap break-words bg-gray-50 p-3 rounded-xl border border-gray-100 font-mono">
+                                        {AI_IMPORT_TEMPLATE}
+                                    </pre>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </section>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <SummaryCard
                         label="Tổng phiếu"
                         value={importInsights.totalImports}
-                        hint="Tổng số phiếu nhập đang có"
+                        hint="Phiếu nhập kho"
+                        icon={Package}
+                        iconColor="text-sky-500"
                     />
                     <SummaryCard
                         label="Tổng giá trị"
                         value={`${formatMoney(importInsights.totalCost)} đ`}
-                        hint="Tổng giá trị nhập hàng"
-                        tone="bg-emerald-50"
+                        hint="Chi phí nhập"
+                        tone="bg-emerald-50/50"
+                        icon={Download}
+                        iconColor="text-emerald-500"
                     />
                     <SummaryCard
-                        label="Cần xử lý"
+                        label="Cần bổ sung"
                         value={importInsights.problematicRecords.length}
-                        hint="Phiếu còn thiếu dữ liệu hoặc chưa hoàn tất"
-                        tone="bg-amber-50"
+                        hint="Thiếu thông tin"
+                        tone="bg-amber-50/50"
+                        icon={AlertCircle}
+                        iconColor="text-amber-500"
                     />
                     <SummaryCard
                         label="Chưa xác nhận"
                         value={importInsights.draftCount}
-                        hint={`${importInsights.missingDocsCount} phiếu thiếu chứng từ, ${importInsights.unpaidCount} phiếu chưa thanh toán đủ`}
-                        tone="bg-rose-50"
+                        hint={`${importInsights.unpaidCount} chưa thanh toán đủ`}
+                        tone="bg-purple-50/50"
+                        icon={CheckCircle2}
+                        iconColor="text-purple-500"
                     />
                 </div>
 
-                {importInsights.problematicRecords.length > 0 && (
-                    <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
-                        <div className="flex items-center justify-between gap-3 mb-4">
-                            <div>
-                                <h2 className="text-lg font-black text-amber-900">Phiếu cần bổ sung dữ liệu</h2>
-                                <p className="text-sm text-amber-800">Đây là phần thay cho việc phải soi Google Sheet để tìm phiếu còn thiếu.</p>
-                            </div>
-                            <span className="px-3 py-1 rounded-full bg-white text-amber-700 font-black text-sm">
-                                {importInsights.problematicRecords.length} phiếu
-                            </span>
-                        </div>
+                {/* Search and Filters Section */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 flex flex-col sm:flex-row gap-3 justify-between items-center shadow-sm">
+                    <div className="relative w-full sm:w-80">
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Tìm tên NCC, số hóa đơn, ghi chú..."
+                            className="w-full h-10 pl-9 pr-8 text-xs sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-primary focus:border-primary focus:bg-white transition outline-none"
+                        />
+                        <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 font-bold text-xs"
+                                title="Xóa từ khóa"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
 
-                        <div className="space-y-3">
-                            {importInsights.problematicRecords.map((imp) => (
-                                <button
-                                    key={imp.id}
-                                    type="button"
-                                    onClick={() => openImportDetail(imp.id)}
-                                    className="w-full rounded-2xl border border-amber-200 bg-white p-4 text-left hover:border-amber-300"
-                                >
-                                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                                        <div className="min-w-0">
-                                            <p className="font-black text-gray-900">{getSupplierLabel(imp.supplier_name)}</p>
-                                            <p className="text-xs font-semibold text-gray-500 mt-1">{formatDate(imp.import_date)}</p>
-                                            <div className="flex flex-wrap gap-2 mt-3">
-                                                {imp.issues.map((issue) => (
-                                                    <span key={issue} className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">
-                                                        {issue}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="shrink-0 text-left lg:text-right">
-                                            <p className="text-lg font-black text-primary">{formatMoney(imp.total_cost)} đ</p>
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                {loadingDetail ? 'Đang mở...' : 'Bấm để bổ sung'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </section>
-                )}
+                    {/* Filter Pills */}
+                    <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+                        {[
+                            { id: 'all', label: 'Tất cả' },
+                            { id: 'problem', label: `Cần xử lý (${importInsights.problematicRecords.length})` },
+                            { id: 'confirmed', label: 'Đã xác nhận' },
+                            { id: 'draft', label: 'Chưa xác nhận' }
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setStatusFilter(tab.id)}
+                                className={`px-3 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition ${
+                                    statusFilter === tab.id
+                                        ? 'bg-primary text-white shadow-sm'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-                <section className="rounded-3xl border border-gray-200 bg-white p-5">
+                {/* Import Records List */}
+                <section className="rounded-3xl border border-gray-200 bg-white p-4 sm:p-5 shadow-sm">
                     <div className="flex items-center justify-between gap-3 mb-4">
                         <div>
-                            <h2 className="text-lg font-black text-gray-900">Danh sách phiếu nhập</h2>
-                            <p className="text-sm text-gray-500">Xem toàn bộ phiếu và kiểm tra nhanh các trường còn thiếu.</p>
+                            <h2 className="text-base sm:text-lg font-black text-gray-900">Danh sách phiếu nhập</h2>
+                            <p className="text-xs text-gray-500">Hiển thị {filteredRecords.length} trên tổng số {importInsights.totalImports} phiếu</p>
                         </div>
-                        <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 font-black text-sm">
-                            {importInsights.totalImports} phiếu
-                        </span>
                     </div>
 
                     {loading ? (
                         <div className="text-center py-16">
-                            <p className="text-gray-500 font-bold">Đang tải...</p>
+                            <p className="text-gray-500 font-bold text-sm">Đang tải phiếu nhập...</p>
                         </div>
-                    ) : imports.length === 0 ? (
-                        <div className="text-center py-16">
-                            <p className="text-5xl mb-4">📥</p>
-                            <p className="text-gray-600 font-bold text-lg">Chưa có nhập hàng nào</p>
-                            <p className="text-gray-400 text-sm mt-2">Nhấn "+ Ghi nhận" để thêm phiếu nhập hàng</p>
+                    ) : filteredRecords.length === 0 ? (
+                        <div className="text-center py-12">
+                            <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-gray-600 font-bold text-sm">
+                                {searchQuery || statusFilter !== 'all' ? 'Không tìm thấy phiếu phù hợp' : 'Chưa có phiếu nhập hàng nào'}
+                            </p>
+                            <p className="text-gray-400 text-xs mt-1">
+                                {searchQuery || statusFilter !== 'all' ? 'Thử đổi từ khóa hoặc bộ lọc' : 'Nhấn nút "+ Ghi nhận" để tạo phiếu mới'}
+                            </p>
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {importInsights.records.map((imp) => (
+                            {filteredRecords.map((imp) => (
                                 <button
                                     key={imp.id}
                                     type="button"
                                     onClick={() => openImportDetail(imp.id)}
-                                    className="w-full text-left bg-white rounded-2xl p-4 border border-gray-100 hover:border-primary/20 hover:shadow-sm transition"
+                                    className="w-full text-left bg-white rounded-2xl p-4 border border-gray-100 hover:border-primary/30 hover:shadow-md transition group"
                                 >
                                     <div className="flex justify-between items-start gap-4">
-                                        <div className="flex-1">
+                                        <div className="flex-1 min-w-0">
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <p className="font-black text-gray-800">{getSupplierLabel(imp.supplier_name)}</p>
+                                                <p className="font-black text-gray-800 text-sm sm:text-base group-hover:text-primary transition">
+                                                    {getSupplierLabel(imp.supplier_name)}
+                                                </p>
                                                 {imp.issues.length > 0 && (
-                                                    <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black">
-                                                        {imp.issues.length} mục cần bổ sung
+                                                    <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black">
+                                                        {imp.issues.length} mục thiếu
                                                     </span>
                                                 )}
                                             </div>
                                             <p className="text-xs text-gray-500 mt-1">{formatDate(imp.import_date)}</p>
                                             {imp.invoice_number && (
-                                                <p className="text-xs text-gray-500 mt-1">Số hóa đơn: {imp.invoice_number}</p>
+                                                <p className="text-xs text-gray-500 mt-0.5">Số HĐ: {imp.invoice_number}</p>
                                             )}
                                             {imp.note && (
-                                                <p className="text-xs text-gray-600 mt-2 italic">{imp.note}</p>
+                                                <p className="text-xs text-gray-600 mt-1.5 italic line-clamp-1">{imp.note}</p>
                                             )}
-                                            <div className="flex flex-wrap gap-2 mt-3">
-                                                <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-[11px] font-bold">
-                                                    Trạng thái: {(imp.status || 'draft').toUpperCase()}
+                                            
+                                            {/* Badges */}
+                                            <div className="flex flex-wrap gap-1.5 mt-3">
+                                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                                    (imp.status || 'draft') === 'confirmed' 
+                                                        ? 'bg-emerald-100 text-emerald-800' 
+                                                        : 'bg-amber-100 text-amber-800'
+                                                }`}>
+                                                    {(imp.status || 'draft').toUpperCase()}
                                                 </span>
-                                                <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-[11px] font-bold">
+                                                <span className="px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold">
                                                     Chứng từ: {imp.attachment_files?.length || 0}
                                                 </span>
-                                                <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-[11px] font-bold">
-                                                    Đã thanh toán: {formatMoney(imp.paid_amount || 0)} đ
+                                                <span className="px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold">
+                                                    Đã trả: {formatMoney(imp.paid_amount || 0)} đ
                                                 </span>
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <p className="font-black text-primary text-lg">{formatMoney(imp.total_cost)} đ</p>
-                                            <p className="text-xs text-gray-400 mt-2">{loadingDetail ? 'Đang mở...' : 'Bấm để sửa'}</p>
+                                            <p className="font-black text-primary text-base sm:text-lg">{formatMoney(imp.total_cost)} đ</p>
+                                            <p className="text-[11px] text-gray-400 mt-1 font-medium">{loadingDetail ? 'Đang mở...' : 'Bấm để sửa'}</p>
                                         </div>
                                     </div>
                                 </button>

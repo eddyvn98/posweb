@@ -6,7 +6,8 @@ export function getSupplierLabel(supplier) {
 }
 
 export function numberValue(value) {
-    const parsed = Number(value || 0)
+    const str = typeof value === 'string' ? value.replace(',', '.') : value
+    const parsed = Number(str || 0)
     return Number.isFinite(parsed) ? parsed : 0
 }
 

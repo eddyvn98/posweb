@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { formatMoney, formatDateVN } from '../lib/reports'
 import { exportToExcel } from '../lib/export'
+import { 
+    ArrowDownLeft, 
+    ArrowUpRight, 
+    FileSpreadsheet, 
+    Printer, 
+    Loader2 
+} from 'lucide-react'
 
 export default function CashbookReport({ data }) {
     const [exporting, setExporting] = useState(false)
@@ -10,10 +17,10 @@ export default function CashbookReport({ data }) {
         try {
             const reportName = `So-quy-${data.month.toString().padStart(2, '0')}-${data.year}`
             await exportToExcel(data, reportName, 'cashbook')
-            alert('✅ Xuất Excel thành công!')
+            alert('Xuất Excel thành công!')
         } catch (err) {
             console.error('Export error:', err)
-            alert('❌ Lỗi khi xuất Excel')
+            alert('Lỗi khi xuất Excel')
         } finally {
             setExporting(false)
         }
@@ -75,8 +82,12 @@ export default function CashbookReport({ data }) {
                                                 day: '2-digit'
                                             })}
                                         </td>
-                                        <td className={`px-6 py-3 font-bold ${tx.type === 'in' ? 'text-green-600' : 'text-red-600'}`}>
-                                            {tx.type === 'in' ? '💰 Thu' : '💸 Chi'}
+                                        <td className={`px-6 py-3 font-bold flex items-center gap-1 ${tx.type === 'in' ? 'text-green-600' : 'text-red-600'}`}>
+                                            {tx.type === 'in' ? (
+                                                <><ArrowDownLeft className="w-4 h-4" /> Thu</>
+                                            ) : (
+                                                <><ArrowUpRight className="w-4 h-4" /> Chi</>
+                                            )}
                                         </td>
                                         <td className="px-6 py-3 text-gray-700">{tx.description}</td>
                                         <td className={`px-6 py-3 text-right font-black ${tx.type === 'in' ? 'text-green-600' : 'text-red-600'}`}>
@@ -92,8 +103,9 @@ export default function CashbookReport({ data }) {
 
             {/* Cash In Section */}
             <div className="bg-white rounded-3xl border border-green-100 shadow-sm overflow-hidden">
-                <div className="bg-green-50 px-6 py-4 border-b border-green-100">
-                    <h3 className="font-black text-gray-800 uppercase tracking-wide">💰 Thu tiền ({data.inFlows.length})</h3>
+                <div className="bg-green-50 px-6 py-4 border-b border-green-100 flex items-center gap-2">
+                    <ArrowDownLeft className="w-5 h-5 text-green-600" />
+                    <h3 className="font-black text-gray-800 uppercase tracking-wide">Thu tiền ({data.inFlows.length})</h3>
                 </div>
 
                 <div className="divide-y divide-green-50 max-h-80 overflow-y-auto custom-scrollbar">
@@ -120,8 +132,9 @@ export default function CashbookReport({ data }) {
 
             {/* Cash Out Section */}
             <div className="bg-white rounded-3xl border border-red-100 shadow-sm overflow-hidden">
-                <div className="bg-red-50 px-6 py-4 border-b border-red-100">
-                    <h3 className="font-black text-gray-800 uppercase tracking-wide">💸 Chi tiền ({data.outFlows.length})</h3>
+                <div className="bg-red-50 px-6 py-4 border-b border-red-100 flex items-center gap-2">
+                    <ArrowUpRight className="w-5 h-5 text-red-600" />
+                    <h3 className="font-black text-gray-800 uppercase tracking-wide">Chi tiền ({data.outFlows.length})</h3>
                 </div>
 
                 <div className="divide-y divide-red-50 max-h-80 overflow-y-auto custom-scrollbar">
@@ -151,15 +164,15 @@ export default function CashbookReport({ data }) {
                 <button
                     onClick={handleExportExcel}
                     disabled={exporting}
-                    className="flex-1 btn bg-green-500 text-white font-black rounded-2xl py-3 hover:bg-green-600 disabled:opacity-50 transition"
+                    className="flex-1 btn-primary btn-lg font-bold"
                 >
-                    {exporting ? '⏳ Đang xuất...' : '📊 Xuất Excel'}
+                    {exporting ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang xuất...</> : <><FileSpreadsheet className="w-4 h-4" /> Xuất Excel</>}
                 </button>
                 <button
                     onClick={handlePrint}
-                    className="flex-1 btn bg-blue-500 text-white font-black rounded-2xl py-3 hover:bg-blue-600 transition"
+                    className="flex-1 btn-secondary btn-lg font-bold"
                 >
-                    🖨️ In báo cáo
+                    <Printer className="w-4 h-4" /> In báo cáo
                 </button>
             </div>
         </div>

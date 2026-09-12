@@ -12,11 +12,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['vite.svg'],
       manifest: {
-        name: 'POS Shop',
-        short_name: 'POS',
-        description: 'Hệ thống bán hàng đơn giản',
-        theme_color: '#e91e63',
-        background_color: '#fff5f8',
+        name: 'PosWebFree',
+        short_name: 'PosWebFree',
+        description: 'Hệ thống bán hàng miễn phí đơn giản',
+        theme_color: '#0284c7',
+        background_color: '#f0f9ff',
         display: 'standalone',
         start_url: '/',
         icons: [

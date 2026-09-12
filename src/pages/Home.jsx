@@ -1,6 +1,19 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
+import { 
+    Sparkles, 
+    DollarSign, 
+    ShoppingBag, 
+    Wifi, 
+    WifiOff, 
+    Zap, 
+    Package, 
+    History, 
+    ArrowRight,
+    RefreshCw,
+    TrendingUp
+} from 'lucide-react'
 
 export default function Home() {
     const navigate = useNavigate()
@@ -27,133 +40,163 @@ export default function Home() {
     }
 
     return (
-        <div className="min-h-screen bg-transparent p-4 pb-20">
+        <div className="min-h-screen bg-slate-50 p-4 md:p-6 pb-24 max-w-7xl mx-auto space-y-6">
             {/* Store Header */}
-            <div className="mb-8 mt-2">
-                <h1 className="text-3xl font-black text-gray-800 tracking-tight">
-                    Chào, <span className="text-primary">{shop?.name || 'Chủ Shop'}</span> 👋
-                </h1>
-                <p className="text-gray-400 font-medium">Hôm nay của bạn thế nào?</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div>
+                    <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                        <span>Xin chào, <span className="text-sky-600">{shop?.name || 'Chủ Shop'}</span></span>
+                        <Sparkles className="w-5 h-5 text-amber-500" />
+                    </h1>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">Tổng quan hoạt động bán hàng hôm nay</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => navigate('/sales')}
+                        className="btn btn-primary btn-sm"
+                    >
+                        <Zap className="w-3.5 h-3.5" /> Bán hàng ngay
+                    </button>
+                </div>
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="card bg-white border border-pink-50 p-5 shadow-sm rounded-3xl">
-                    <div className="text-2xl mb-1">💰</div>
-                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Doanh thu</div>
-                    <div className="text-xl font-black text-gray-800">
-                        {new Intl.NumberFormat('vi-VN').format(todayStats.revenue)}đ
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Doanh Thu Hôm Nay</span>
+                        <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                            <DollarSign className="w-5 h-5" />
+                        </div>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900 font-mono tabular-nums tracking-tight">
+                        {new Intl.NumberFormat('vi-VN').format(todayStats.revenue)} <span className="text-xs font-normal text-slate-500">đ</span>
                     </div>
                 </div>
-                <div className="card bg-white border border-pink-50 p-5 shadow-sm rounded-3xl">
-                    <div className="text-2xl mb-1">🛍️</div>
-                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Đơn hàng</div>
-                    <div className="text-xl font-black text-gray-800">{todayStats.orders} Đơn</div>
+
+                <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Đơn Hàng</span>
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <ShoppingBag className="w-5 h-5" />
+                        </div>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900 font-mono tabular-nums tracking-tight">
+                        {todayStats.orders} <span className="text-xs font-normal text-slate-500">đơn</span>
+                    </div>
+                </div>
+
+                <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chờ Đồng Bộ</span>
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${pendingCount > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>
+                            <RefreshCw className="w-5 h-5" />
+                        </div>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900 font-mono tabular-nums tracking-tight flex items-center justify-between">
+                        <span>{pendingCount}</span>
+                        {pendingCount > 0 && isOnline && (
+                            <button
+                                onClick={pushSales}
+                                className="text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-100 transition-colors"
+                            >
+                                Gửi ngay
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Trạng Thái Kết Nối</span>
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isOnline ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                            {isOnline ? <Wifi className="w-5 h-5" /> : <WifiOff className="w-5 h-5" />}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]' : 'bg-rose-500 animate-pulse'}`}></span>
+                        <span className="text-sm font-semibold text-slate-900">
+                            {isOnline ? 'Trực tuyến' : 'Ngoại tuyến (Offline)'}
+                        </span>
+                    </div>
                 </div>
             </div>
 
-            {/* System Status Section */}
-            <div className="space-y-4">
-                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Hệ thống & Dữ liệu</h3>
-
-                <div className="card bg-white border border-pink-50 p-4 rounded-3xl shadow-sm space-y-4">
-                    {/* Network & Sync */}
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl shadow-inner ${isOnline ? 'bg-green-50' : 'bg-red-50'}`}>
-                                {isOnline ? '🌐' : '📵'}
+            {/* Quick Actions Bento Section */}
+            <div className="space-y-3">
+                <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Thao Tác Tức Thì</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div
+                        onClick={() => navigate('/sales')}
+                        className="bg-sky-600 text-white p-5 rounded-2xl shadow-sm flex items-center justify-between active:scale-[0.98] hover:bg-sky-700 transition-all cursor-pointer border border-sky-700"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-white">
+                                <Zap className="w-6 h-6" />
                             </div>
                             <div>
-                                <div className="font-bold text-gray-800 text-sm">
-                                    {isOnline ? 'Đang Trực tuyến' : 'Đang Ngoại tuyến'}
-                                </div>
-                                <div className="text-[10px] text-gray-400 font-medium">
-                                    {isOnline ? 'Sẵn sàng đồng bộ ngay' : 'Dữ liệu sẽ được lưu cục bộ'}
-                                </div>
+                                <div className="font-bold text-base">Bán Hàng Ngay</div>
+                                <div className="text-white/80 text-xs font-normal">Quét mã & thanh toán nhanh</div>
                             </div>
                         </div>
-                        <div className={`w-3 h-3 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-red-500 animate-pulse'}`}></div>
+                        <ArrowRight className="w-5 h-5 text-white/80" />
                     </div>
 
-                    <hr className="border-pink-50" />
-
-                    {/* Pending Sync */}
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <div className="font-bold text-gray-800 text-sm">Đơn chờ đồng bộ</div>
-                            <div className="text-[10px] text-gray-400 font-medium">Số đơn hàng chưa đưa lên Server</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <span className={`text-lg font-black ${pendingCount > 0 ? 'text-orange-500' : 'text-gray-300'}`}>
-                                {pendingCount}
-                            </span>
-                            {pendingCount > 0 && isOnline && (
-                                <button
-                                    onClick={pushSales}
-                                    className="bg-orange-50 text-orange-600 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-tighter active:scale-95 transition-transform"
-                                >
-                                    Gửi ngay ↻
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    <hr className="border-pink-50" />
-
-                    {/* Product Sync */}
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <div className="font-bold text-gray-800 text-sm">Danh mục sản phẩm</div>
-                            <div className="text-[10px] text-gray-400 font-medium">
-                                Cập nhật lần cuối: {lastSync ? new Date(lastSync).toLocaleTimeString() : '---'}
+                    <div
+                        onClick={() => navigate('/products')}
+                        className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between active:scale-[0.98] hover:border-slate-300 transition-all cursor-pointer"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+                                <Package className="w-6 h-6 text-sky-600" />
+                            </div>
+                            <div>
+                                <div className="font-bold text-slate-900 text-base">Quản Lý Sản Phẩm</div>
+                                <div className="text-slate-500 text-xs font-normal">Xem & thêm mới mặt hàng</div>
                             </div>
                         </div>
-                        <button
-                            onClick={handlePullProducts}
-                            disabled={!isOnline || isSyncing}
-                            className="bg-primary text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter disabled:opacity-30 active:scale-95 transition-transform shadow-md shadow-pink-100"
-                        >
-                            {isSyncing ? 'Đang tải...' : 'Làm mới ⬇'}
-                        </button>
+                        <ArrowRight className="w-5 h-5 text-slate-400" />
+                    </div>
+
+                    <div
+                        onClick={() => navigate('/history')}
+                        className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between active:scale-[0.98] hover:border-slate-300 transition-all cursor-pointer"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+                                <History className="w-6 h-6 text-sky-600" />
+                            </div>
+                            <div>
+                                <div className="font-bold text-slate-900 text-base">Lịch Sử Giao Dịch</div>
+                                <div className="text-slate-500 text-xs font-normal">Tra cứu hóa đơn đã bán</div>
+                            </div>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-slate-400" />
                     </div>
                 </div>
             </div>
 
-            {/* Quick Access List */}
-            <div className="mt-8 space-y-4">
-                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Thao tác nhanh</h3>
-
-                <div
-                    onClick={() => navigate('/sales')}
-                    className="card bg-primary p-4 rounded-3xl shadow-lg shadow-pink-200 flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer border border-pink-400"
-                >
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2x bg-white/20 flex items-center justify-center text-2xl shadow-inner">⚡</div>
-                        <div>
-                            <div className="text-white font-black text-lg leading-tight uppercase tracking-tighter">Bán hàng ngay</div>
-                            <div className="text-white/70 text-[10px] font-bold">Mở màn hình scan & thanh toán</div>
-                        </div>
-                    </div>
-                    <div className="text-white/50 text-2xl">→</div>
+            {/* System Info Box */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Thông Tin Dữ Liệu</span>
+                    <button
+                        onClick={handlePullProducts}
+                        disabled={!isOnline || isSyncing}
+                        className="btn border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs py-1.5 px-3 min-h-0 h-auto disabled:opacity-40"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                        <span>{isSyncing ? 'Đang tải...' : 'Làm mới danh mục'}</span>
+                    </button>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div
-                        onClick={() => navigate('/products')}
-                        className="card bg-white p-4 rounded-3xl shadow-sm border border-pink-50 flex flex-col gap-2 active:scale-[0.98] transition-all cursor-pointer"
-                    >
-                        <div className="text-2xl">📦</div>
-                        <div className="font-black text-gray-700 text-sm uppercase tracking-tighter">Sản phẩm</div>
-                    </div>
-                    <div
-                        onClick={() => navigate('/history')}
-                        className="card bg-white p-4 rounded-3xl shadow-sm border border-pink-50 flex flex-col gap-2 active:scale-[0.98] transition-all cursor-pointer"
-                    >
-                        <div className="text-2xl">📜</div>
-                        <div className="font-black text-gray-700 text-sm uppercase tracking-tighter">Lịch sử</div>
-                    </div>
+                <div className="text-xs text-slate-500 flex justify-between items-center">
+                    <span>Thời gian đồng bộ danh mục sản phẩm gần nhất:</span>
+                    <span className="font-mono font-semibold text-slate-700">
+                        {lastSync ? new Date(lastSync).toLocaleString('vi-VN') : 'Chưa đồng bộ'}
+                    </span>
                 </div>
             </div>
         </div>
     )
 }
+

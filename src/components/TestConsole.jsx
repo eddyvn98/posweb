@@ -2,6 +2,14 @@ import { useState, useRef } from 'react'
 import { testStress, testMobileUX } from '../lib/testUtils'
 import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
+import { 
+    FlaskConical, 
+    BarChart3, 
+    Smartphone, 
+    Keyboard, 
+    Trash2, 
+    Loader2 
+} from 'lucide-react'
 
 export default function TestConsole() {
     const { shop, user } = useAuth()
@@ -18,7 +26,7 @@ export default function TestConsole() {
 
     const runStressTest = async () => {
         if (!shop?.id || !user?.id) {
-            addLog('❌ Shop or User not found', 'error')
+            addLog('Shop or User not found', 'error')
             return
         }
 
@@ -36,15 +44,15 @@ export default function TestConsole() {
             console.log = originalLog
 
             if (results.overall.success) {
-                addLog('✅ STRESS TEST PASSED', 'success')
+                addLog('STRESS TEST PASSED', 'success')
                 addLog(`Total duration: ${results.overall.totalDuration}ms`, 'success')
             } else {
-                addLog('❌ STRESS TEST FAILED', 'error')
+                addLog('STRESS TEST FAILED', 'error')
             }
 
             addLog(JSON.stringify(results, null, 2), 'debug')
         } catch (err) {
-            addLog(`❌ Error: ${err.message}`, 'error')
+            addLog(`Error: ${err.message}`, 'error')
         } finally {
             setIsRunning(false)
         }
@@ -62,17 +70,17 @@ export default function TestConsole() {
 
             const results = await testMobileUX.simulateRapidScans(mockHandler, 20, 100)
 
-            addLog('✅ SCAN TEST COMPLETED', 'success')
+            addLog('SCAN TEST COMPLETED', 'success')
             addLog(`Success: ${results.successCount}/20`, 'success')
             addLog(`Average time: ${results.averagePerScan}ms`, 'success')
 
             if (results.averagePerScan < 100) {
-                addLog('✅ Performance acceptable (<100ms)', 'success')
+                addLog('Performance acceptable (<100ms)', 'success')
             } else {
-                addLog('⚠️ Performance could be optimized', 'warning')
+                addLog('Performance could be optimized', 'warning')
             }
         } catch (err) {
-            addLog(`❌ Error: ${err.message}`, 'error')
+            addLog(`Error: ${err.message}`, 'error')
         } finally {
             setIsRunning(false)
         }
@@ -107,13 +115,13 @@ export default function TestConsole() {
                 title="Epic 9 Test Console"
                 aria-label={isOpen ? 'Đóng test console' : 'Mở test console'}
             >
-                🧪
+                <FlaskConical className="w-5 h-5" />
             </button>
 
             {isOpen && (
                 <div className="fixed bottom-24 right-6 w-96 max-h-[600px] bg-white rounded-2xl shadow-2xl border-2 border-purple-200 z-40 flex flex-col">
                     <div className="bg-purple-600 text-white px-4 py-3 rounded-t-xl font-bold flex justify-between items-center">
-                        🧪 Test Console
+                        <span className="flex items-center gap-2"><FlaskConical className="w-5 h-5" /> Test Console</span>
                         <button
                             onClick={() => setIsOpen(false)}
                             className="text-white hover:bg-purple-700 rounded px-2 py-1"
@@ -127,28 +135,28 @@ export default function TestConsole() {
                         <button
                             onClick={runStressTest}
                             disabled={isRunning}
-                            className="btn btn-sm bg-blue-500 text-white rounded-lg text-xs font-bold hover:bg-blue-600 disabled:opacity-50"
+                            className="btn btn-sm bg-blue-500 text-white rounded-lg text-xs font-bold hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center gap-1"
                         >
-                            {isRunning ? '⏳' : '📊'} Stress Test
+                            {isRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BarChart3 className="w-3.5 h-3.5" />} Stress Test
                         </button>
                         <button
                             onClick={runScanTest}
                             disabled={isRunning}
-                            className="btn btn-sm bg-green-500 text-white rounded-lg text-xs font-bold hover:bg-green-600 disabled:opacity-50"
+                            className="btn btn-sm bg-sky-600 text-white rounded-lg text-xs font-bold hover:bg-sky-700 disabled:opacity-50 flex items-center justify-center gap-1"
                         >
-                            {isRunning ? '⏳' : '📱'} Scan Test
+                            {isRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Smartphone className="w-3.5 h-3.5" />} Scan Test
                         </button>
                         <button
                             onClick={checkKeyboardOverlap}
-                            className="btn btn-sm bg-orange-500 text-white rounded-lg text-xs font-bold hover:bg-orange-600"
+                            className="btn btn-sm bg-orange-500 text-white rounded-lg text-xs font-bold hover:bg-orange-600 flex items-center justify-center gap-1"
                         >
-                            ⌨️ Keyboard Check
+                            <Keyboard className="w-3.5 h-3.5" /> Keyboard Check
                         </button>
                         <button
                             onClick={clearLogs}
-                            className="btn btn-sm bg-gray-500 text-white rounded-lg text-xs font-bold hover:bg-gray-600"
+                            className="btn btn-sm bg-gray-500 text-white rounded-lg text-xs font-bold hover:bg-gray-600 flex items-center justify-center gap-1"
                         >
-                            🗑️ Clear
+                            <Trash2 className="w-3.5 h-3.5" /> Clear
                         </button>
                     </div>
 

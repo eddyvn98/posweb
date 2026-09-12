@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In Phiếu TikTok K80 - TikTokSeller.pdf</title>
+    <!-- JsBarcode Official Barcode Renderer CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <style>
+        @page {
+            size: 80mm auto;
+            margin: 0;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #000;
+        }
+        body {
+            background-color: #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 10px;
+        }
+        .btn-container {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            background-color: #0284c7;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn:hover {
+            background-color: #0369a1;
+        }
+        /* Thermal K80 Paper Box */
+        .paper-k80 {
+            width: 80mm;
+            background: #fff;
+            padding: 5mm 3mm;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            font-size: 12px;
+            line-height: 1.35;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .font-bold { font-weight: bold; }
+        .font-black { font-weight: 900; }
+        .uppercase { text-transform: uppercase; }
+        .divider {
+            border-bottom: 1.5px dashed #000;
+            margin: 6px 0;
+        }
+        .solid-divider {
+            border-bottom: 2px solid #000;
+            margin: 6px 0;
+        }
+        .barcode-box {
+            background: #fff;
+            padding: 4px 0;
+            margin: 4px 0;
+            text-align: center;
+        }
+        .barcode-svg {
+            width: 100%;
+            height: 75px;
+            background: #fff;
+            shape-rendering: crispEdges;
+        }
+        .table-item {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 6px 0;
+        }
+        .table-item th, .table-item td {
+            padding: 4px 2px;
+            font-size: 11px;
+            vertical-align: top;
+        }
+        .table-item th {
+            border-bottom: 1.5px solid #000;
+            text-align: left;
+        }
+
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+            }
+            .btn-container {
+                display: none !important;
+            }
+            .paper-k80 {
+                width: 76mm;
+                border: none;
+                box-shadow: none;
+                padding: 2mm 1mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="btn-container">
+        <button class="btn" onclick="window.print()">🖨️ IN NGAY (MÃ VẠCH JSBARCODE CHUẨN MÁY QUÉT 100%)</button>
+    </div>
+
+    <!-- K80 Paper Content -->
+    <div class="paper-k80">
+        <!-- Header -->
+        <div class="text-center">
+            <h1 style="font-size: 18px; font-weight: 900;" class="uppercase">PACKING LIST</h1>
+            <p style="font-size: 11px; font-weight: bold;">TikTok Shop Partner</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Tracking Barcode -->
+        <div class="barcode-box">
+            <p style="font-size: 11px; font-weight: 900;" class="uppercase">Mã Vận Đơn (Tracking No):</p>
+            <svg id="barcode-tracking" class="barcode-svg"></svg>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Details -->
+        <div style="font-size: 11px; line-height: 1.4;">
+            <p><strong>Mã đơn hàng:</strong> 585440292557391474</p>
+            <p><strong>Khách hàng:</strong> <span style="font-size: 13px; font-weight: 900;">Bá Mạnh</span></p>
+            <p><strong>Ngày tạo:</strong> 09/08/2026 13:30:30</p>
+            <p><strong>Hạn giao:</strong> 12/08/2026 23:59</p>
+        </div>
+
+        <div class="solid-divider"></div>
+
+        <!-- Order Barcode -->
+        <div class="barcode-box">
+            <p style="font-size: 10px; font-weight: bold;" class="uppercase">Mã Đơn Hàng (Order ID):</p>
+            <svg id="barcode-order" class="barcode-svg" style="height: 60px;"></svg>
+        </div>
+
+        <div class="solid-divider"></div>
+
+        <!-- Items Table -->
+        <p style="font-size: 12px; font-weight: 900;" class="uppercase">Danh sách sản phẩm:</p>
+        <table class="table-item">
+            <thead>
+                <tr>
+                    <th style="width: 60%;">Tên sản phẩm</th>
+                    <th style="width: 25%;">SKU</th>
+                    <th style="width: 15%; text-align: right;">SL</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="font-weight: bold;">Lật đật con gà lườm mắt hung dữ siêu đáng yêu</td>
+                    <td>Mặc định</td>
+                    <td style="text-align: right; font-weight: 900; font-size: 13px;">1</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="divider"></div>
+
+        <!-- Qty Total -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 6px 0;">
+            <span style="font-weight: bold; font-size: 12px;" class="uppercase">Tổng số lượng (Qty Total):</span>
+            <span style="background: #000; color: #fff; padding: 2px 8px; font-weight: 900; font-size: 14px; border-radius: 3px;">1</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="text-center" style="font-size: 10px; margin-top: 8px; color: #333;">
+            <p style="font-weight: bold;">TikTok Shop Packing Slip</p>
+            <p>Cảm ơn quý khách đã mua hàng!</p>
+        </div>
+    </div>
+
+    <!-- Render Barcode via JsBarcode -->
+    <script>
+        function renderBarcodes() {
+            try {
+                if (typeof JsBarcode === 'function') {
+                    JsBarcode("#barcode-tracking", "862255510390", {
+                        format: "CODE128",
+                        width: 2.2,
+                        height: 75,
+                        displayValue: true,
+                        font: "monospace",
+                        fontSize: 16,
+                        fontOptions: "bold",
+                        margin: 15,
+                        background: "#ffffff",
+                        lineColor: "#000000"
+                    });
+
+                    JsBarcode("#barcode-order", "585440292557391474", {
+                        format: "CODE128",
+                        width: 1.8,
+                        height: 60,
+                        displayValue: true,
+                        font: "monospace",
+                        fontSize: 13,
+                        fontOptions: "bold",
+                        margin: 12,
+                        background: "#ffffff",
+                        lineColor: "#000000"
+                    });
+                }
+            } catch (e) {
+                console.error("JsBarcode render error:", e);
+            }
+        }
+
+        window.onload = renderBarcodes;
+    </script>
+</body>
+</html>

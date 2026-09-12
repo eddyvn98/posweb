@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { INVOICE_TYPE_OPTIONS, PAYMENT_METHOD_OPTIONS } from './constants'
 import { Field, SelectField, SummaryRow } from './Fields'
 import { formatBytes, getSupplierLabel, numberValue } from './utils'
+import { matchProduct, sortSearchResults } from '../../lib/searchUtils'
+import { AlertTriangle, Check } from 'lucide-react'
 
 export function GeneralInfoSection({
     formData,
@@ -73,16 +75,9 @@ export function ProductItemsSection({ formData, products, onAddItem, onRemoveIte
     const [query, setQuery] = useState('')
 
     const filteredProducts = useMemo(() => {
-        const normalizedQuery = String(query || '').trim().toLowerCase()
-
-        return products
-            .filter((product) => {
-                if (!normalizedQuery) return true
-
-                return String(product.name || '').toLowerCase().includes(normalizedQuery)
-                    || String(product.barcode || '').toLowerCase().includes(normalizedQuery)
-            })
-            .slice(0, 8)
+        if (!query || !query.trim()) return products.slice(0, 8)
+        const matched = products.filter((p) => matchProduct(p, query))
+        return sortSearchResults(matched, query).slice(0, 8)
     }, [products, query])
 
     return (
@@ -100,7 +95,7 @@ export function ProductItemsSection({ formData, products, onAddItem, onRemoveIte
 
             <div className="space-y-3">
                 {isPickerOpen && (
-                    <div className="rounded-2xl border border-primary/20 bg-rose-50/40 p-4">
+                    <div className="rounded-2xl border border-primary/20 bg-sky-50/40 p-4">
                         <label className="block text-sm font-bold text-gray-700 mb-2">Tìm sản phẩm đã nhập</label>
                         <input
                             className="input w-full"
@@ -169,14 +164,9 @@ function ItemRow({ item, index, products, onRemove, onChange, onMatch }) {
     const isUnmatched = !item.product_id && item.product_name
 
     const filteredMatchProducts = useMemo(() => {
-        const q = String(matchQuery || '').trim().toLowerCase()
-        return products
-            .filter((p) =>
-                !q ||
-                String(p.name || '').toLowerCase().includes(q) ||
-                String(p.barcode || '').toLowerCase().includes(q)
-            )
-            .slice(0, 8)
+        if (!matchQuery || !matchQuery.trim()) return products.slice(0, 8)
+        const matched = products.filter((p) => matchProduct(p, matchQuery))
+        return sortSearchResults(matched, matchQuery).slice(0, 8)
     }, [products, matchQuery])
 
     return (
@@ -185,13 +175,13 @@ function ItemRow({ item, index, products, onRemove, onChange, onMatch }) {
                 <div className="min-w-0 flex items-center gap-2 flex-wrap">
                     <p className="font-black text-gray-800">{item.product_name || `Sản phẩm ${index + 1}`}</p>
                     {isUnmatched && (
-                        <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 text-[11px] font-black whitespace-nowrap">
-                            ⚠ Chưa khớp SP
+                        <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 text-[11px] font-black whitespace-nowrap inline-flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3 text-amber-700" /> Chưa khớp SP
                         </span>
                     )}
                     {item.product_id && (
-                        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[11px] font-black whitespace-nowrap">
-                            ✓ Đã khớp
+                        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[11px] font-black whitespace-nowrap inline-flex items-center gap-1">
+                            <Check className="w-3 h-3 text-green-600" /> Đã khớp
                         </span>
                     )}
                 </div>
@@ -328,7 +318,7 @@ export function ActionSection({ status, loading, unmatchedCount = 0, onSaveDraft
             <p className="text-2xl font-black text-gray-800 mb-4">Trạng thái: {String(status || 'draft').toUpperCase()}</p>
             {unmatchedCount > 0 && (
                 <div className="mb-4 rounded-2xl bg-amber-100 border border-amber-300 px-4 py-3 text-sm font-bold text-amber-800">
-                    ⚠ Còn {unmatchedCount} sản phẩm chưa khớp – hãy bấm "Khớp SP" trước khi Xác nhận. Lưu nháp vẫn được.
+                    ℹ️ Có {unmatchedCount} sản phẩm chưa khớp – Khi Xác nhận, hệ thống sẽ <strong>tự động tạo sản phẩm mới</strong> vào kho cho các mặt hàng này.
                 </div>
             )}
             <div className="flex flex-col md:flex-row gap-3">
@@ -337,11 +327,11 @@ export function ActionSection({ status, loading, unmatchedCount = 0, onSaveDraft
                 </button>
                 <button
                     type="button"
-                    disabled={loading || unmatchedCount > 0}
+                    disabled={loading}
                     onClick={onConfirm}
-                    className="flex-1 h-12 rounded-xl bg-stone-200 text-stone-700 font-black disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 h-12 rounded-xl bg-stone-800 text-white font-black hover:bg-stone-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    Xác nhận{unmatchedCount > 0 ? ` (còn ${unmatchedCount} chưa khớp)` : ''}
+                    Xác nhận{unmatchedCount > 0 ? ` (tự tạo ${unmatchedCount} SP mới)` : ''}
                 </button>
             </div>
         </section>

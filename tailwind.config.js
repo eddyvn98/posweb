@@ -8,17 +8,17 @@ export default {
         extend: {
             colors: {
                 primary: {
-                    DEFAULT: '#e91e63',
-                    dark: '#c2185b',
-                    light: '#f8bbd9'
+                    DEFAULT: '#0284c7',
+                    dark: '#0369a1',
+                    light: '#e0f2fe'
                 },
                 background: {
-                    main: '#fff5f8',
+                    main: '#f0f9ff',
                     card: '#ffffff'
                 }
             },
             fontFamily: {
-                sans: ['system-ui', '-apple-system', 'Roboto', 'sans-serif']
+                sans: ['"Be Vietnam Pro"', 'Inter', 'system-ui', '-apple-system', 'sans-serif']
             },
             fontSize: {
                 'total': ['1.75rem', { lineHeight: '2rem', fontWeight: '700' }],

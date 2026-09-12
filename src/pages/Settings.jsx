@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../lib/api'
 import { useNotification } from '../contexts/NotificationContext'
+import InvoiceModal from '../components/InvoiceModal'
+import { Printer } from 'lucide-react'
 
 export default function Settings() {
     const { user, shop, updateShopInfo } = useAuth()
@@ -11,6 +13,7 @@ export default function Settings() {
     const [editingShop, setEditingShop] = useState(false)
     const [clearingCache, setClearingCache] = useState(false)
     const [changingPassword, setChangingPassword] = useState(false)
+    const [testSale, setTestSale] = useState(null)
 
     const [shopData, setShopData] = useState({
         name: shop?.name || '',
@@ -121,12 +124,12 @@ export default function Settings() {
     return (
         <div className="min-h-screen bg-transparent pb-20 p-4">
             <div className="mb-6 mt-2">
-                <h1 className="text-3xl font-black text-gray-800 tracking-tight uppercase">Settings</h1>
-                <p className="text-gray-400 font-medium italic">Shop and account configuration</p>
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Cài đặt</h1>
+                <p className="text-xs text-gray-500 font-medium">Cấu hình cửa hàng và tài khoản</p>
             </div>
 
             <div className="max-w-2xl space-y-6">
-                <div className="bg-white rounded-3xl p-6 border border-pink-50 shadow-sm">
+                <div className="bg-white rounded-3xl p-6 border border-sky-50 shadow-sm">
                     <h2 className="text-lg font-black text-gray-800 mb-4 uppercase">Account</h2>
                     <div className="space-y-3">
                         <div>
@@ -136,7 +139,7 @@ export default function Settings() {
                     </div>
                 </div>
 
-                <div className="bg-white rounded-3xl p-6 border border-pink-50 shadow-sm">
+                <div className="bg-white rounded-3xl p-6 border border-sky-50 shadow-sm">
                     <h2 className="text-lg font-black text-gray-800 mb-4 uppercase">Change Password</h2>
                     <form onSubmit={handleChangePassword} className="space-y-3">
                         <input
@@ -169,18 +172,18 @@ export default function Settings() {
                         <button
                             type="submit"
                             disabled={changingPassword}
-                            className="w-full btn bg-primary text-white font-black rounded-2xl hover:bg-pink-600 transition disabled:opacity-50"
+                            className="w-full btn bg-primary text-white font-black rounded-2xl hover:bg-sky-700 transition disabled:opacity-50"
                         >
                             {changingPassword ? 'Saving...' : 'Change Password'}
                         </button>
                     </form>
                 </div>
 
-                <div className="bg-white rounded-3xl p-6 border border-pink-50 shadow-sm">
+                <div className="bg-white rounded-3xl p-6 border border-sky-50 shadow-sm">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-lg font-black text-gray-800 uppercase">Shop Info</h2>
                         {!editingShop && (
-                            <button onClick={() => setEditingShop(true)} className="text-sm btn bg-pink-100 text-pink-600 font-bold px-3 py-1 rounded-xl hover:bg-pink-200 transition">
+                            <button onClick={() => setEditingShop(true)} className="text-sm btn bg-sky-100 text-sky-700 font-bold px-3 py-1 rounded-xl hover:bg-sky-200 transition">
                                 Edit
                             </button>
                         )}
@@ -197,9 +200,9 @@ export default function Settings() {
                                 <textarea name="address" value={shopData.address} onChange={handleShopChange} rows="2" className="input w-full resize-none" />
                             </div>
                             <div className="flex gap-3 pt-2">
-                                <button type="button" onClick={() => setEditingShop(false)} className="flex-1 btn bg-gray-100 text-gray-700 font-black rounded-2xl hover:bg-gray-200 transition">Cancel</button>
-                                <button type="submit" disabled={loading} className="flex-1 btn bg-primary text-white font-black rounded-2xl hover:bg-pink-600 transition disabled:opacity-50">
-                                    {loading ? 'Saving...' : 'Save'}
+                                <button type="button" onClick={() => setEditingShop(false)} className="flex-1 btn-secondary h-11 font-bold">Hủy</button>
+                                <button type="submit" disabled={loading} className="flex-1 btn-primary h-11 font-bold">
+                                    {loading ? 'Đang lưu...' : 'Lưu'}
                                 </button>
                             </div>
                         </form>
@@ -217,17 +220,61 @@ export default function Settings() {
                     )}
                 </div>
 
-                <div className="bg-white rounded-3xl p-6 border border-pink-50 shadow-sm">
+                <div className="bg-white rounded-3xl p-6 border border-sky-50 shadow-sm">
+                    <h2 className="text-lg font-black text-gray-800 mb-4 uppercase flex items-center gap-2">
+                        <Printer className="w-5 h-5 text-primary" /> Máy in hóa đơn
+                    </h2>
+                    <p className="text-xs text-gray-500 mb-4">
+                        POSWeb hỗ trợ in trực tiếp qua trình duyệt web trên tất cả loại máy in nhiệt (K80, K57, Xprinter, Epson, Canon...).
+                    </p>
+                    
+                    <div className="space-y-4">
+                        <div className="p-4 bg-sky-50/50 rounded-2xl border border-sky-100 space-y-2">
+                            <p className="text-xs font-bold text-gray-700 uppercase">Cấu hình in khuyến nghị:</p>
+                            <ul className="text-xs text-gray-600 space-y-1 list-disc pl-4">
+                                <li><strong>Khổ giấy:</strong> Chọn <span className="text-primary font-bold">80mm (K80)</span> hoặc <span className="text-primary font-bold">58mm (K57)</span></li>
+                                <li><strong>Lề (Margins):</strong> Chọn <span className="text-primary font-bold">None</span> (Không lề)</li>
+                                <li><strong>Đầu/Chân trang (Headers & Footers):</strong> <span className="text-red-500 font-bold">Bỏ tích</span></li>
+                            </ul>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setTestSale({
+                                code: 'TEST-8888',
+                                created_at: new Date().toISOString(),
+                                total_amount: 150000,
+                                payment_method: 'cash',
+                                items: [
+                                    { product_name: 'Sản phẩm thử nghiệm 1', quantity: 2, price: 50000 },
+                                    { product_name: 'Sản phẩm thử nghiệm 2', quantity: 1, price: 50000 }
+                                ]
+                            })}
+                            className="w-full btn bg-sky-600 text-white font-black py-3 rounded-2xl hover:bg-sky-700 transition shadow-md shadow-sky-100 flex items-center justify-center gap-2"
+                        >
+                            <Printer className="w-4 h-4" /> <span>In thử hóa đơn mẫu</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-3xl p-6 border border-sky-50 shadow-sm">
                     <h2 className="text-lg font-black text-gray-800 mb-4 uppercase">System</h2>
                     <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
                         <p className="text-sm font-bold text-blue-800 mb-1">Clear offline cache</p>
                         <p className="text-xs text-blue-700 mb-3">Server SQLite data will not be affected.</p>
-                        <button onClick={handleClearCache} disabled={clearingCache} className="w-full btn bg-blue-500 text-white font-bold py-2 rounded-xl hover:bg-blue-600 transition disabled:opacity-50">
+                        <button onClick={handleClearCache} disabled={clearingCache} className="w-full btn-primary h-10 font-bold">
                             {clearingCache ? 'Clearing...' : 'Clear cache on this device'}
                         </button>
                     </div>
                 </div>
             </div>
+
+            {testSale && (
+                <InvoiceModal
+                    sale={testSale}
+                    onClose={() => setTestSale(null)}
+                />
+            )}
         </div>
     )
 }

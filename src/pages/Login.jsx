@@ -85,7 +85,7 @@ export default function Login() {
         <div className="min-h-screen flex items-center justify-center bg-background-main p-4">
             <div className="card w-full max-w-md">
                 <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold text-primary mb-2">POS Shop</h1>
+                    <h1 className="text-2xl font-bold text-primary mb-2">PosWebFree</h1>
                     <p className="text-text-muted">
                         {isSignUp ? 'Đăng ký cửa hàng mới' : 'Đăng nhập để quản lý cửa hàng'}
                     </p>

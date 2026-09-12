@@ -14,6 +14,8 @@ import History from './pages/History'
 import Reports from './pages/Reports'
 import Imports from './pages/Imports'
 import SheetImport from './pages/SheetImport'
+import PriceTagPrint from './pages/PriceTagPrint'
+import TikTokPrintK80 from './pages/TikTokPrintK80'
 import Cashbook from './pages/Cashbook'
 import Settings from './pages/Settings'
 import CartBar from './components/CartBar'
@@ -75,6 +77,30 @@ function App() {
                                     <Route path="/imports-sheet" element={
                                         <ProtectedRoute>
                                             <Layout><SheetImport /></Layout>
+                                        </ProtectedRoute>
+                                    } />
+
+                                    <Route path="/price-tags" element={
+                                        <ProtectedRoute>
+                                            <Layout><PriceTagPrint /></Layout>
+                                        </ProtectedRoute>
+                                    } />
+
+                                    <Route path="/tiktok-print" element={
+                                        <ProtectedRoute>
+                                            <Layout><TikTokPrintK80 /></Layout>
+                                        </ProtectedRoute>
+                                    } />
+
+                                    <Route path="/shopee-print" element={
+                                        <ProtectedRoute>
+                                            <Layout><TikTokPrintK80 /></Layout>
+                                        </ProtectedRoute>
+                                    } />
+
+                                    <Route path="/shipping-print" element={
+                                        <ProtectedRoute>
+                                            <Layout><TikTokPrintK80 /></Layout>
                                         </ProtectedRoute>
                                     } />
 

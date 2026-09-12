@@ -35,7 +35,7 @@ export const ensureFolderExists = async (accessToken, shopName, year, month) => 
         // Tạo path
         const parentId = 'root'
         const folders = [
-            'OpenPOS-Backups',
+            'PosWebFree-Backups',
             shopName,
             year.toString(),
             month.toString().padStart(2, '0')

@@ -1,47 +1,128 @@
 import api from './api'
+import { getSalesHistory } from './db'
+
+export const parseLocalDateString = (input) => {
+    if (!input) return new Date().toISOString().split('T')[0]
+    
+    let raw = typeof input === 'object' ? (input.sale_local_date || input.sale_date || input.created_at) : input
+    if (!raw) return new Date().toISOString().split('T')[0]
+
+    if (typeof raw === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw.trim())) {
+            return raw.trim()
+        }
+        const clean = raw.includes(' ') && !raw.includes('T') ? raw.replace(' ', 'T') : raw
+        const d = new Date(clean)
+        if (!isNaN(d.getTime())) {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, '0')
+            const day = String(d.getDate()).padStart(2, '0')
+            return `${y}-${m}-${day}`
+        }
+    } else if (input instanceof Date || typeof raw === 'number') {
+        const d = new Date(raw)
+        if (!isNaN(d.getTime())) {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, '0')
+            const day = String(d.getDate()).padStart(2, '0')
+            return `${y}-${m}-${day}`
+        }
+    }
+    
+    return new Date().toISOString().split('T')[0]
+}
 
 export const getMonthlyRevenue = async (shopId, year, month) => {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01T00:00:00Z`
     const endDate = `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}T23:59:59Z`
 
     try {
-        const response = await api.get('/sales', { params: { startDate, endDate } })
-        const data = response.data
+        const [salesRes, productsRes, localSales] = await Promise.all([
+            api.get('/sales', { params: { startDate, endDate } }).catch(() => ({ data: [] })),
+            api.get('/products').catch(() => ({ data: [] })),
+            getSalesHistory(1000).catch(() => [])
+        ])
 
-        const getLocalDate = (dateString) => {
-            const date = new Date(dateString)
-            date.setHours(date.getHours() + 7)
-            return date.toISOString().split('T')[0]
+        const remoteSales = salesRes.data || []
+        const productsList = productsRes.data || []
+        const productsMap = productsList.reduce((acc, p) => {
+            if (p.id) acc[p.id] = p
+            return acc
+        }, {})
+
+        // Merge remote sales and local sales (deduplicate by code or id)
+        const salesMap = new Map()
+        remoteSales.forEach(s => {
+            const key = s.code || s.id
+            if (key) salesMap.set(key, s)
+        })
+        localSales.forEach(s => {
+            const key = s.code || s.id || s.local_id
+            if (key && !salesMap.has(key)) {
+                salesMap.set(key, s)
+            }
+        })
+
+        const allSales = Array.from(salesMap.values())
+
+        // Filter sales for requested year and month
+        const data = allSales.filter(sale => {
+            const localDate = parseLocalDateString(sale)
+            const [sYear, sMonth] = localDate.split('-').map(Number)
+            return sYear === Number(year) && sMonth === Number(month)
+        })
+
+        const calcSaleCost = (sale) => {
+            if (!sale.items || !Array.isArray(sale.items)) return 0
+            return sale.items.reduce((sum, item) => {
+                const cost = Number(item.cost_price ?? productsMap[item.product_id]?.cost_price ?? 0)
+                const qty = Number(item.quantity || 1)
+                return sum + (cost * qty)
+            }, 0)
         }
 
         const nonVoidSales = data.filter(s => !s.is_void)
+        
         const grouped = nonVoidSales.reduce((acc, sale) => {
             const method = sale.payment_method || 'cash'
-            if (!acc[method]) acc[method] = { count: 0, total: 0, sales: [] }
+            const cost = calcSaleCost(sale)
+            if (!acc[method]) acc[method] = { count: 0, total: 0, totalCost: 0, profit: 0, sales: [] }
             acc[method].count += 1
-            acc[method].total += sale.total_amount
+            acc[method].total += (sale.total_amount || 0)
+            acc[method].totalCost += cost
+            acc[method].profit += ((sale.total_amount || 0) - cost)
             acc[method].sales.push(sale)
             return acc
         }, {})
 
         const byDay = data.reduce((acc, sale) => {
             if (sale.is_void) return acc
-            const date = getLocalDate(sale.sale_date)
-            if (!acc[date]) acc[date] = { date, revenue: 0, count: 0, sales: [] }
-            acc[date].revenue += sale.total_amount
+            const date = parseLocalDateString(sale)
+            const cost = calcSaleCost(sale)
+            if (!acc[date]) acc[date] = { date, revenue: 0, cost: 0, profit: 0, count: 0, sales: [] }
+            acc[date].revenue += (sale.total_amount || 0)
+            acc[date].cost += cost
+            acc[date].profit += ((sale.total_amount || 0) - cost)
             acc[date].count += 1
             acc[date].sales.push(sale)
             return acc
         }, {})
 
-        const totalRevenue = nonVoidSales.reduce((sum, s) => sum + s.total_amount, 0)
+        const totalRevenue = nonVoidSales.reduce((sum, s) => sum + (s.total_amount || 0), 0)
+        const totalCost = nonVoidSales.reduce((sum, s) => sum + calcSaleCost(s), 0)
+        const totalProfit = totalRevenue - totalCost
+        const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
         const avgPerSale = nonVoidSales.length > 0 ? Math.round(totalRevenue / nonVoidSales.length) : 0
 
         return {
             year, month, startDate: startDate.split('T')[0], endDate: endDate.split('T')[0],
             byMethod: grouped,
             byDay: Object.values(byDay).sort((a, b) => a.date.localeCompare(b.date)),
-            totalRevenue, totalSales: nonVoidSales.length,
+            totalRevenue,
+            totalCost,
+            totalProfit,
+            profitMargin: Math.round(profitMargin * 10) / 10,
+            totalSales: nonVoidSales.length,
             totalVoids: data.filter(s => s.is_void).length,
             avgPerSale, rawData: data
         }
@@ -91,14 +172,8 @@ export const getCashbookReport = async (shopId, year, month) => {
         const flows = flowsRes.data
         const sales = salesRes.data.filter(s => !s.is_void)
 
-        const getLocalDate = (dateString) => {
-            const date = new Date(dateString)
-            date.setHours(date.getHours() + 7)
-            return date.toISOString().split('T')[0]
-        }
-
         const salesByDate = sales.reduce((acc, s) => {
-            const localDate = getLocalDate(s.sale_date)
+            const localDate = parseLocalDateString(s)
             if (!acc[localDate]) acc[localDate] = { date: localDate, total: 0, count: 0 }
             acc[localDate].total += s.total_amount
             acc[localDate].count += 1

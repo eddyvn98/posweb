@@ -37,14 +37,14 @@ export const initDB = async () => {
 export const saveProductsToLocal = async (products) => {
     const db = await initDB()
     const tx = db.transaction('products', 'readwrite')
-    // We clear old cache to ensure data freshness on full sync
     await tx.store.clear()
 
-    for (const product of products) {
+    const validProducts = (products || []).filter(p => p && p.id && (p.name || p.barcode))
+
+    for (const product of validProducts) {
         await tx.store.add({
             ...product,
-            // Normalize name for simple search (lowercase, no accents if needed)
-            search_normalize: product.name.toLowerCase()
+            search_normalize: String(product.name || '').toLowerCase()
         })
     }
     await tx.done
@@ -175,6 +175,30 @@ export const markSaleSynced = async (localId) => {
         await store.put(sale)
     }
     await tx.done
+}
+
+export const voidSaleInLocal = async (identifier, reason = 'Bán nhầm') => {
+    const db = await initDB()
+    const tx = db.transaction('sales_queue', 'readwrite')
+    const store = tx.objectStore('sales_queue')
+
+    let sale = null
+    if (typeof identifier === 'number') {
+        sale = await store.get(identifier)
+    }
+    if (!sale) {
+        const all = await store.getAll()
+        sale = all.find(s => s.local_id === identifier || s.id === identifier || s.code === identifier)
+    }
+
+    if (sale) {
+        sale.is_void = 1
+        sale.void_reason = reason
+        sale.void_at = new Date().toISOString()
+        await store.put(sale)
+    }
+    await tx.done
+    return sale
 }
 
 export const deleteSyncedSales = async () => {

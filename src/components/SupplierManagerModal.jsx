@@ -40,7 +40,7 @@ export default function SupplierManagerModal({ suppliers, onClose, onRefresh }) 
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
                     <div className="flex items-center justify-between gap-3 mb-6">
-                        <h2 className="text-2xl font-black text-gray-800">Nhà cung cấp</h2>
+                        <h2 className="text-xl font-bold text-gray-900">Nhà cung cấp</h2>
                         <button onClick={openCreate} className="btn-primary px-4 h-10 rounded-xl text-sm font-bold">
                             + Thêm mới
                         </button>

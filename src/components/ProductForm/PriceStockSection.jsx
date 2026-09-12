@@ -1,4 +1,6 @@
-﻿export default function PriceStockSection({ price, costPrice, stockQuantity, onChange, onPriceBlur }) {
+import SmartPriceInput from '../Common/SmartPriceInput'
+
+export default function PriceStockSection({ price, costPrice, stockQuantity, onChange, onPriceBlur }) {
     const quantityOptions = [20, 50, 100]
 
     return (
@@ -6,27 +8,35 @@
             <div className="grid grid-cols-2 gap-3">
                 <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Giá bán *</label>
-                    <input
-                        type="number" required min="0" step="1" inputMode="numeric"
-                        className="input w-full font-mono text-lg font-bold text-primary p-2 h-11"
+                    <SmartPriceInput
+                        required min="0" step="1"
+                        className="input w-full font-mono text-lg font-bold text-primary px-3 h-11"
+                        inputClassName="text-lg font-bold text-primary font-mono"
+                        suffixClassName="text-lg font-bold text-primary/45 font-mono"
                         value={price}
                         onChange={(e) => onChange('price', e.target.value)}
                         onBlur={(e) => onPriceBlur('price', e.target.value)}
                         placeholder="0"
                     />
-                    <div className="text-[10px] text-gray-500 mt-1">
-                        {Number(price) > 0 ? new Intl.NumberFormat('vi-VN').format(price) : '0'} đ
+                    <div className="text-[10px] font-bold text-primary mt-1">
+                        {Number(price) > 0 ? new Intl.NumberFormat('vi-VN').format(Number(price) < 1000 ? Number(price) * 1000 : price) : '0'} đ
                     </div>
                 </div>
                 <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Giá vốn</label>
-                    <input
-                        type="number" min="0" step="1" inputMode="numeric"
-                        className="input w-full p-2 h-11"
+                    <SmartPriceInput
+                        min="0" step="1"
+                        className="input w-full font-mono text-base font-bold text-gray-800 px-3 h-11"
+                        inputClassName="text-base font-bold text-gray-800 font-mono"
+                        suffixClassName="text-base font-bold text-gray-400/60 font-mono"
                         value={costPrice}
                         onChange={(e) => onChange('cost_price', e.target.value)}
                         onBlur={(e) => onPriceBlur('cost_price', e.target.value)}
+                        placeholder="0"
                     />
+                    <div className="text-[10px] font-bold text-gray-500 mt-1">
+                        {Number(costPrice) > 0 ? new Intl.NumberFormat('vi-VN').format(Number(costPrice) < 1000 ? Number(costPrice) * 1000 : costPrice) : '0'} đ
+                    </div>
                 </div>
             </div>
 
@@ -49,6 +59,8 @@
                     className="input w-full p-2 h-11"
                     value={stockQuantity}
                     onChange={(e) => onChange('stock_quantity', e.target.value)}
+                    onFocus={(e) => e.target.select()}
+                    onClick={(e) => e.target.select()}
                 />
             </div>
         </div>
