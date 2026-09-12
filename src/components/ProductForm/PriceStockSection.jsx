@@ -1,11 +1,11 @@
-﻿export default function PriceStockSection({ price, costPrice, stockQuantity, onChange, onPriceBlur }) {
+export default function PriceStockSection({ price, onlinePrice, promoPrice, costPrice, stockQuantity, onChange, onPriceBlur }) {
     const quantityOptions = [20, 50, 100]
 
     return (
         <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
                 <div>
-                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Giá bán *</label>
+                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Giá offline *</label>
                     <input
                         type="number" required min="0" step="1" inputMode="numeric"
                         className="input w-full font-mono text-lg font-bold text-primary p-2 h-11"
@@ -17,6 +17,30 @@
                     <div className="text-[10px] text-gray-500 mt-1">
                         {Number(price) > 0 ? new Intl.NumberFormat('vi-VN').format(price) : '0'} đ
                     </div>
+                </div>
+                <div>
+                    <label className="block text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">Giá online</label>
+                    <input
+                        type="number" min="0" step="1" inputMode="numeric"
+                        className="input w-full font-mono text-lg font-bold text-blue-600 p-2 h-11"
+                        value={onlinePrice ?? ''}
+                        onChange={(e) => onChange('online_price', e.target.value)}
+                        onBlur={(e) => onPriceBlur('online_price', e.target.value)}
+                        placeholder="Dùng giá offline"
+                    />
+                    <div className="text-[10px] text-gray-500 mt-1">Để trống = dùng giá offline</div>
+                </div>
+                <div>
+                    <label className="block text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Giá KM online</label>
+                    <input
+                        type="number" min="0" step="1" inputMode="numeric"
+                        className="input w-full font-mono text-lg font-bold text-emerald-600 p-2 h-11"
+                        value={promoPrice ?? ''}
+                        onChange={(e) => onChange('promo_price', e.target.value)}
+                        onBlur={(e) => onPriceBlur('promo_price', e.target.value)}
+                        placeholder="Không giảm"
+                    />
+                    <div className="text-[10px] text-gray-500 mt-1">Thấp hơn giá online để hiện gạch ngang</div>
                 </div>
                 <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Giá vốn</label>

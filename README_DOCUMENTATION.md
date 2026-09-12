@@ -38,10 +38,21 @@ Ly do: domain `posweb.vivutrade.io.vn` dang chay theo Docker + Cloudflare Tunnel
 
 - [css.md](css.md)
 
+## Customer Storefront
+
+- Mở storefront tại `/shop`.
+- Các luồng chính: sản phẩm, chi tiết, giỏ hàng, checkout, đơn mua, hồ sơ và địa chỉ nhận hàng.
+- Storefront ưu tiên ba nhóm: văn phòng phẩm, vật dụng nhà cửa nhỏ và đồ chơi.
+- Thông tin mặc định của storefront: Văn phòng phẩm 302 Vườn Lài, 302 Vườn Lài, An Phú Đông, Quận 12, TP.HCM; dùng cho thông điệp địa phương, SEO/geo và cam kết giao khu vực.
+- Homepage có trust bar, bộ sưu tập mua nhanh (dưới 50.000đ, bán chạy, mới về), badge sản phẩm, popup voucher trì hoãn trên phiên đầu, sticky cart mobile, mua lại, sản phẩm vừa xem và gợi ý mua kèm.
+- Giá trong form sản phẩm được tách thành `price` (offline), `online_price` (giá online) và `promo_price` (giá khuyến mãi online). Để trống giá online sẽ dùng giá offline; giá khuyến mãi hợp lệ phải thấp hơn giá online.
+- Storefront hiển thị giá hiệu lực, gạch ngang giá online gốc khi có khuyến mãi, đồng thời hỗ trợ voucher `SAVE20K`, `SHOP10` và `SAVE50K` với tự động chọn mức giảm tốt nhất.
+- Để kết nối tồn kho thật cho khách chưa đăng nhập, cấu hình biến frontend `VITE_PUBLIC_SHOP_ID` bằng `shops.id`; cũng có thể truyền `?shop_id=...` khi dùng thử.
+- Backend storefront dùng các endpoint `/api/storefront/products`, `/api/storefront/orders` và yêu cầu `DB_PROVIDER=sqlite` cho luồng ghi đơn atomic.
+
 ## Suggested Reading Order
 
 1. [START_HERE.md](START_HERE.md)
 2. [DEPLOY_DOCKER_CLOUDFLARE.md](DEPLOY_DOCKER_CLOUDFLARE.md)
 3. [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
 4. [SETUP_CHECKLIST.md](SETUP_CHECKLIST.md)
-

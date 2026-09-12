@@ -21,7 +21,7 @@ export default function CartBar() {
 
     // Auto-hide if cart is empty or on specific pages
     const hidePages = ['/login', '/sales', '/history']
-    if (cart.length === 0 || hidePages.includes(location.pathname)) {
+    if (cart.length === 0 || hidePages.includes(location.pathname) || location.pathname.startsWith('/shop')) {
         return null
     }
 

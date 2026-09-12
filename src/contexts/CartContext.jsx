@@ -8,6 +8,7 @@ export function useCart() {
 
 export function CartProvider({ children }) {
     const [cart, setCart] = useState([])
+    const [cartLoaded, setCartLoaded] = useState(false)
 
     // Load from LocalStorage on mount
     useEffect(() => {
@@ -18,13 +19,16 @@ export function CartProvider({ children }) {
             }
         } catch (e) {
             console.error('Failed to load cart', e)
+        } finally {
+            setCartLoaded(true)
         }
     }, [])
 
     // Save to LocalStorage whenever cart changes
     useEffect(() => {
+        if (!cartLoaded) return
         localStorage.setItem('pos_cart', JSON.stringify(cart))
-    }, [cart])
+    }, [cart, cartLoaded])
 
     const addToCart = useCallback((product) => {
         setCart(currentCart => {

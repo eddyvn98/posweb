@@ -48,7 +48,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     const [categories, setCategories] = useState([])
     const [formData, setFormData] = useState({
         name: '', barcode: '', unit: getRememberedSelections().unit || DEFAULT_UNIT, category: getRememberedSelections().category || '',
-        price: '', cost_price: '', stock_quantity: 1, image_url: null
+        price: '', online_price: '', promo_price: '', cost_price: '', stock_quantity: 1, image_url: null
     })
 
     const draftId = useRef(uuidv4())
@@ -62,6 +62,8 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                 id: product?.id || draftId.current,
                 shop_id: shop.id,
                 price: currentData.price ? Number(currentData.price) : 0,
+                online_price: currentData.online_price ? Number(currentData.online_price) : null,
+                promo_price: currentData.promo_price ? Number(currentData.promo_price) : null,
                 cost_price: currentData.cost_price ? Number(currentData.cost_price) : 0,
                 stock_quantity: currentData.stock_quantity ? Number(currentData.stock_quantity) : 0,
                 is_active: true,
@@ -100,12 +102,14 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                 ...prev,
                 ...product,
                 unit: product.unit || remembered.unit || prev.unit || DEFAULT_UNIT,
-                category: product.category || remembered.category || prev.category || ''
+                category: product.category || remembered.category || prev.category || '',
+                online_price: product.online_price ?? '',
+                promo_price: product.promo_price ?? ''
             }))
         } else {
             setFormData({
                 name: '', barcode: '', unit: remembered.unit || DEFAULT_UNIT, category: remembered.category || '',
-                price: '', cost_price: '', stock_quantity: 1, image_url: null
+                price: '', online_price: '', promo_price: '', cost_price: '', stock_quantity: 1, image_url: null
             })
             draftId.current = uuidv4()
         }
@@ -200,6 +204,13 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
         if (e) e.preventDefault()
         setLoading(true)
         try {
+            const onlineBasePrice = Number(formData.online_price) > 0 ? Number(formData.online_price) : Number(formData.price)
+            const promoPrice = Number(formData.promo_price)
+            if (promoPrice > 0 && promoPrice >= onlineBasePrice) {
+                showNotification('Giá KM online phải thấp hơn giá online', 'error')
+                setLoading(false)
+                return
+            }
             let finalImageUrl = formData.image_url
             if (formData.image_url && formData.image_url.startsWith('data:image')) {
                 try {
@@ -218,6 +229,8 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                 id: product?.id || draftId.current,
                 shop_id: shop.id,
                 price: Number(formData.price),
+                online_price: formData.online_price ? Number(formData.online_price) : null,
+                promo_price: formData.promo_price ? Number(formData.promo_price) : null,
                 cost_price: Number(formData.cost_price),
                 stock_quantity: Number(formData.stock_quantity),
                 is_active: true,
@@ -316,6 +329,8 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
                         <PriceStockSection
                             price={formData.price}
+                            onlinePrice={formData.online_price}
+                            promoPrice={formData.promo_price}
                             costPrice={formData.cost_price}
                             stockQuantity={formData.stock_quantity}
                             onChange={(f, v) => setFormData(p => ({ ...p, [f]: v }))}
