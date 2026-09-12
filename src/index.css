@@ -222,6 +222,8 @@ body,
   .print\:hidden,
   .print\:hidden * {
     display: none !important;
+  }
+
   /* Collapse height and hide EVERYTHING on the page when printing by default */
   body * {
     visibility: hidden !important;

@@ -137,6 +137,8 @@ export function ShopProvider({ children }) {
         if (import.meta.env.VITE_PUBLIC_SHOP_ID) return String(import.meta.env.VITE_PUBLIC_SHOP_ID)
         if (typeof window === 'undefined') return ''
         return new URLSearchParams(window.location.search).get('shop_id') || ''
+    }, [])
+
     const publicApiConfig = useMemo(() => {
         const config = {
             headers: { 'X-Customer-Token': customerToken },

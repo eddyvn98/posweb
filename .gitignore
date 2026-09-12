@@ -38,3 +38,7 @@ bot_backend/backup_err.json
 .gitnexus/
 .claude/
 
+# Backups
+bot_backend/backups/
+
+
