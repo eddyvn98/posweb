@@ -149,6 +149,9 @@ function runMigrations() {
             CREATE INDEX IF NOT EXISTS idx_online_orders_customer
               ON online_orders (shop_id, customer_token, created_at DESC);
 
+            CREATE INDEX IF NOT EXISTS idx_online_orders_phone
+              ON online_orders (shop_id, customer_phone, created_at DESC);
+
             CREATE TABLE IF NOT EXISTS online_order_items (
               id TEXT PRIMARY KEY,
               order_id TEXT NOT NULL REFERENCES online_orders(id) ON DELETE CASCADE,

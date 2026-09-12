@@ -1,0 +1,137 @@
+/* ===== BUTTON SYSTEM STANDARDS (2026) ===== */
+@layer components {
+  /* Base Button Reset & Layout */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-semibold text-sm h-10 px-4 rounded-lg select-none whitespace-nowrap cursor-pointer transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100 border border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 min-w-0;
+  }
+
+  /* Size Variants */
+  .btn-xs {
+    @apply btn h-8 px-2.5 text-xs rounded-md font-semibold gap-1;
+  }
+
+  .btn-sm {
+    @apply btn h-9 px-3 text-xs rounded-lg font-semibold gap-1.5;
+  }
+
+  .btn-md {
+    @apply btn h-10 px-4 text-sm rounded-lg font-semibold gap-2;
+  }
+
+  .btn-lg {
+    @apply btn h-12 px-4 sm:px-5 text-sm rounded-xl font-bold gap-2;
+  }
+
+  .btn-xl {
+    @apply btn h-14 px-5 sm:px-6 text-base rounded-2xl font-bold gap-2.5;
+  }
+
+  /* Color Variants */
+  .btn-primary {
+    @apply bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white shadow-sm border-transparent;
+  }
+
+  .btn-secondary {
+    @apply bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 shadow-sm;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent hover:bg-slate-100 active:bg-slate-200 text-slate-600 border-transparent shadow-none;
+  }
+
+  .btn-success {
+    @apply bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm border-transparent;
+  }
+
+  .btn-danger {
+    @apply bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-sm border-transparent;
+  }
+
+  .btn-warning {
+    @apply bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 shadow-sm;
+  }
+
+  /* Icon Button Variants */
+  .btn-icon {
+    @apply p-0 w-10 h-10 shrink-0 rounded-lg flex items-center justify-center;
+  }
+
+  .btn-icon-sm {
+    @apply p-0 w-8 h-8 shrink-0 rounded-md flex items-center justify-center;
+  }
+
+  .btn-icon-lg {
+    @apply p-0 w-12 h-12 shrink-0 rounded-xl flex items-center justify-center;
+  }
+
+  /* ===== INPUT BASE (≥44px touch target) ===== */
+  .input {
+    @apply w-full transition-all duration-150;
+    min-height: var(--touch-min);
+    padding: 0.625rem 0.875rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    background: white;
+    color: var(--text-main);
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+  }
+
+  /* Hide number input spinners globally */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield !important;
+  }
+
+  /* ===== CARD ===== */
+  .card {
+    @apply bg-white rounded-xl p-4 border border-slate-200/80 shadow-sm hover:border-slate-300 transition-all duration-150;
+  }
+
+  /* ===== STICKY CHECKOUT (luôn hiện dưới cùng) ===== */
+  .sticky-checkout {
+    @apply sticky bottom-0 left-0 right-0;
+    @apply bg-white p-4 border-t border-slate-200 shadow-lg;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ===== STATUS BADGES ===== */
+  .badge-offline {
+    @apply inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border border-red-200 bg-red-50 text-red-700;
+  }
+
+  .badge-pending {
+    @apply inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border border-amber-200 bg-amber-50 text-amber-700;
+  }
+
+  .badge-synced {
+    @apply inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700;
+  }
+
+  /* ===== TYPOGRAPHY STANDARDS ===== */
+  .page-title {
+    @apply text-xl md:text-2xl font-bold tracking-tight text-slate-900;
+  }
+
+  .modal-title {
+    @apply text-lg font-bold tracking-tight text-slate-900;
+  }
+
+  .section-title {
+    @apply text-base font-semibold tracking-tight text-slate-800;
+  }
+
+  .table-header {
+    @apply text-xs font-semibold uppercase tracking-wider text-slate-500 bg-slate-50;
+  }
+}

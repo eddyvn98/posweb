@@ -14,7 +14,8 @@ import {
     TrendingUp, 
     History as HistoryIcon, 
     Settings as SettingsIcon,
-    FileText
+    FileText,
+    Globe
 } from 'lucide-react'
 
 export default function Layout({ children }) {
@@ -33,6 +34,7 @@ export default function Layout({ children }) {
     const sidebarItems = [
         { path: '/dashboard', label: 'Tổng quan', icon: HomeIcon },
         { path: '/sales', label: 'Bán hàng', icon: ShoppingCart },
+        { path: '/online-orders', label: 'Đơn online', icon: Globe },
         { path: '/products', label: 'Sản phẩm', icon: Package },
         { path: '/imports', label: 'Nhập hàng', icon: Download },
         { path: '/imports-sheet', label: 'Nhập sheet', icon: Receipt },
@@ -46,6 +48,7 @@ export default function Layout({ children }) {
 
     const mobileMenuItems = [
         { path: '/dashboard', label: 'Tổng quan', icon: HomeIcon },
+        { path: '/online-orders', label: 'Đơn online', icon: Globe },
         { path: '/shipping-print', label: 'In phiếu sàn K80', icon: FileText },
         { path: '/imports', label: 'Nhập hàng', icon: Download },
         { path: '/imports-sheet', label: 'Nhập sheet', icon: Receipt },

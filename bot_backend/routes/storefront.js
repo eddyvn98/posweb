@@ -189,11 +189,25 @@ router.get('/shop', (req, res) => {
 router.get('/orders', async (req, res) => {
   if (getDbProvider() !== 'sqlite') return res.status(501).json({ error: 'Storefront orders require SQLite provider' });
   const shopId = requireShopId(req, res);
-  const customerToken = requireCustomerToken(req, res);
-  if (!shopId || !customerToken) return;
+  if (!shopId) return;
+  const rawPhone = String(req.query.phone || '').replace(/[^\d+]/g, '').trim();
+  const customerToken = String(req.get('X-Customer-Token') || '').trim();
+
+  if (!rawPhone && (!customerToken || customerToken.length < 16)) {
+    return res.status(400).json({ error: 'Missing phone or customer token' });
+  }
+
   try {
-    const rows = db.prepare('SELECT * FROM online_orders WHERE shop_id = ? AND customer_token = ? ORDER BY created_at DESC').all(shopId, customerToken);
-    const itemsByOrder = db.prepare('SELECT order_id, product_id, product_name, quantity, price, image_url FROM online_order_items WHERE order_id IN (SELECT id FROM online_orders WHERE shop_id = ? AND customer_token = ?) ORDER BY rowid ASC').all(shopId, customerToken);
+    let rows = [];
+    let itemsByOrder = [];
+    if (rawPhone) {
+      const normalizedPhone = rawPhone.startsWith('+84') ? '0' + rawPhone.slice(3) : rawPhone;
+      rows = db.prepare('SELECT * FROM online_orders WHERE shop_id = ? AND (customer_phone = ? OR customer_phone = ?) ORDER BY created_at DESC').all(shopId, rawPhone, normalizedPhone);
+      itemsByOrder = db.prepare('SELECT order_id, product_id, product_name, quantity, price, image_url FROM online_order_items WHERE order_id IN (SELECT id FROM online_orders WHERE shop_id = ? AND (customer_phone = ? OR customer_phone = ?)) ORDER BY rowid ASC').all(shopId, rawPhone, normalizedPhone);
+    } else {
+      rows = db.prepare('SELECT * FROM online_orders WHERE shop_id = ? AND customer_token = ? ORDER BY created_at DESC').all(shopId, customerToken);
+      itemsByOrder = db.prepare('SELECT order_id, product_id, product_name, quantity, price, image_url FROM online_order_items WHERE order_id IN (SELECT id FROM online_orders WHERE shop_id = ? AND customer_token = ?) ORDER BY rowid ASC').all(shopId, customerToken);
+    }
     const grouped = new Map();
     itemsByOrder.forEach((item) => {
       if (!grouped.has(item.order_id)) grouped.set(item.order_id, []);
@@ -209,11 +223,21 @@ router.get('/orders', async (req, res) => {
 router.get('/orders/:id', async (req, res) => {
   if (getDbProvider() !== 'sqlite') return res.status(501).json({ error: 'Storefront orders require SQLite provider' });
   const shopId = requireShopId(req, res);
-  const customerToken = requireCustomerToken(req, res);
-  if (!shopId || !customerToken) return;
-  const order = getOrder(shopId, customerToken, req.params.id);
-  if (!order) return res.status(404).json({ error: 'Order not found' });
-  res.json(order);
+  if (!shopId) return;
+  const rawPhone = String(req.query.phone || '').replace(/[^\d+]/g, '').trim();
+  const customerToken = String(req.get('X-Customer-Token') || '').trim();
+
+  let row = null;
+  if (customerToken && customerToken.length >= 16) {
+    row = db.prepare('SELECT * FROM online_orders WHERE id = ? AND shop_id = ? AND customer_token = ?').get(req.params.id, shopId, customerToken);
+  }
+  if (!row && rawPhone) {
+    const normalizedPhone = rawPhone.startsWith('+84') ? '0' + rawPhone.slice(3) : rawPhone;
+    row = db.prepare('SELECT * FROM online_orders WHERE id = ? AND shop_id = ? AND (customer_phone = ? OR customer_phone = ?)').get(req.params.id, shopId, rawPhone, normalizedPhone);
+  }
+  if (!row) return res.status(404).json({ error: 'Order not found' });
+  const items = db.prepare('SELECT product_id, product_name, quantity, price, image_url FROM online_order_items WHERE order_id = ? ORDER BY rowid ASC').all(row.id);
+  res.json(orderFromRow(row, items));
 });
 
 router.post('/orders', async (req, res) => {
@@ -286,11 +310,24 @@ router.post('/orders', async (req, res) => {
 async function changeOrderStatus(req, res, status) {
   if (getDbProvider() !== 'sqlite') return res.status(501).json({ error: 'Storefront orders require SQLite provider' });
   const shopId = requireShopId(req, res);
-  const customerToken = requireCustomerToken(req, res);
-  if (!shopId || !customerToken) return;
+  if (!shopId) return;
+  const rawPhone = String(req.body?.phone || req.query?.phone || '').replace(/[^\d+]/g, '').trim();
+  const customerToken = String(req.get('X-Customer-Token') || '').trim();
+
+  if (!rawPhone && (!customerToken || customerToken.length < 16)) {
+    return res.status(400).json({ error: 'Missing phone or customer token' });
+  }
+
   try {
     const updated = db.transaction(() => {
-      const order = db.prepare('SELECT * FROM online_orders WHERE id = ? AND shop_id = ? AND customer_token = ?').get(req.params.id, shopId, customerToken);
+      let order = null;
+      if (customerToken && customerToken.length >= 16) {
+        order = db.prepare('SELECT * FROM online_orders WHERE id = ? AND shop_id = ? AND customer_token = ?').get(req.params.id, shopId, customerToken);
+      }
+      if (!order && rawPhone) {
+        const normalizedPhone = rawPhone.startsWith('+84') ? '0' + rawPhone.slice(3) : rawPhone;
+        order = db.prepare('SELECT * FROM online_orders WHERE id = ? AND shop_id = ? AND (customer_phone = ? OR customer_phone = ?)').get(req.params.id, shopId, rawPhone, normalizedPhone);
+      }
       if (!order) throw new Error('Order not found');
       if (order.status !== 'awaiting_shipment') throw new Error('Order cannot be changed');
       const now = new Date().toISOString();

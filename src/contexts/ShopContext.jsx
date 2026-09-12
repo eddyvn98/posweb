@@ -13,6 +13,8 @@ const THEME_KEY = 'pos_shop_theme'
 const CUSTOMER_TOKEN_KEY = 'pos_shop_customer_token'
 const VOUCHER_KEY = 'pos_shop_voucher'
 const WISHLIST_KEY = 'pos_shop_wishlist'
+const PROFILES_BY_PHONE_KEY = 'pos_shop_profiles_by_phone'
+const LAST_PHONE_KEY = 'pos_shop_last_phone'
 const DEFAULT_SHOP = {
     name: 'Văn phòng phẩm 302 Vườn Lài',
     address: '302 Vườn Lài, An Phú Đông, Quận 12, TP.HCM',
@@ -125,6 +127,8 @@ export function ShopProvider({ children }) {
     const [orders, setOrders] = useState(() => readJson(ORDERS_KEY, []))
     const [profile, setProfile] = useState(() => readJson(PROFILE_KEY, { name: '', phone: '', email: '' }))
     const [addresses, setAddresses] = useState(() => readJson(ADDRESSES_KEY, []))
+    const [lastPhone, setLastPhone] = useState(() => localStorage.getItem(LAST_PHONE_KEY) || '')
+    const [profilesByPhone, setProfilesByPhone] = useState(() => readJson(PROFILES_BY_PHONE_KEY, {}))
     const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'light')
     const [voucherSelection, setVoucherSelection] = useState(() => localStorage.getItem(VOUCHER_KEY) || '')
     const [wishlist, setWishlist] = useState(() => readJson(WISHLIST_KEY, []).map(String))
@@ -211,15 +215,70 @@ export function ShopProvider({ children }) {
             .catch(() => { /* demo storefront keeps local defaults */ })
     }, [publicApiConfig])
 
-    const loadOrders = useCallback(async () => {
+    const saveProfileForPhone = useCallback((phone, profileData) => {
+        const cleanPhone = String(phone || '').replace(/[^\d+]/g, '').trim()
+        if (!cleanPhone) return
+        setLastPhone(cleanPhone)
+        localStorage.setItem(LAST_PHONE_KEY, cleanPhone)
+        setProfilesByPhone((current) => {
+            const next = { ...current, [cleanPhone]: { ...(current[cleanPhone] || {}), ...profileData, phone: cleanPhone } }
+            localStorage.setItem(PROFILES_BY_PHONE_KEY, JSON.stringify(next))
+            return next
+        })
+    }, [])
+
+    const loadOrders = useCallback(async (targetPhone) => {
         if (!publicApiConfig) return
         try {
-            const response = await api.get('/storefront/orders', publicApiConfig)
-            if (Array.isArray(response.data)) setOrders(response.data)
+            const phoneToQuery = targetPhone !== undefined ? targetPhone : lastPhone
+            const config = {
+                ...publicApiConfig,
+                params: {
+                    ...(publicApiConfig.params || {}),
+                    ...(phoneToQuery ? { phone: phoneToQuery } : {}),
+                },
+            }
+            const response = await api.get('/storefront/orders', config)
+            if (Array.isArray(response.data)) {
+                setOrders((prev) => {
+                    const merged = new Map()
+                    response.data.forEach((o) => merged.set(o.id, o))
+                    prev.forEach((o) => { if (!merged.has(o.id)) merged.set(o.id, o) })
+                    return Array.from(merged.values())
+                })
+            }
         } catch (error) {
             console.warn('[shop] online orders unavailable, keeping local orders', error?.message)
         }
-    }, [publicApiConfig])
+    }, [lastPhone, publicApiConfig])
+
+    const lookupOrdersByPhone = useCallback(async (phone) => {
+        const cleanPhone = String(phone || '').replace(/[^\d+]/g, '').trim()
+        if (!cleanPhone) return orders
+        setLastPhone(cleanPhone)
+        localStorage.setItem(LAST_PHONE_KEY, cleanPhone)
+
+        if (publicApiConfig) {
+            try {
+                const response = await api.get('/storefront/orders', {
+                    ...publicApiConfig,
+                    params: { ...(publicApiConfig.params || {}), phone: cleanPhone },
+                })
+                if (Array.isArray(response.data)) {
+                    setOrders((prev) => {
+                        const merged = new Map()
+                        response.data.forEach((o) => merged.set(o.id, o))
+                        prev.forEach((o) => { if (!merged.has(o.id)) merged.set(o.id, o) })
+                        return Array.from(merged.values())
+                    })
+                    return response.data
+                }
+            } catch (error) {
+                console.warn('[shop] lookup orders by phone error:', error?.message)
+            }
+        }
+        return orders.filter((o) => String(o.customer?.phone || '').replace(/[^\d+]/g, '') === cleanPhone)
+    }, [orders, publicApiConfig])
 
     useEffect(() => { loadOrders() }, [loadOrders])
 
@@ -350,10 +409,18 @@ export function ShopProvider({ children }) {
             }
         }
 
+        saveProfileForPhone(customer.phone, {
+            name: customer.name,
+            phone: customer.phone,
+            address: address.address,
+            ward: address.ward,
+            city: address.city,
+        })
+
         setOrders((current) => [order, ...current])
         clearCart()
         return order
-    }, [cart, catalogSource, clearCart, publicApiConfig, publicShopId, selectedVoucher, shippingFee, shop, totalAfterVoucher, totalAmount])
+    }, [cart, catalogSource, clearCart, publicApiConfig, publicShopId, saveProfileForPhone, selectedVoucher, shippingFee, shop, totalAfterVoucher, totalAmount])
 
     const updateOrderStatus = useCallback(async (id, status) => {
         if (publicApiConfig && ['cancelled', 'completed'].includes(status)) {
@@ -379,6 +446,7 @@ export function ShopProvider({ children }) {
         orders, createOrder, updateOrderStatus, vouchers: voucherOptions, bestVoucher, selectedVoucher, voucherDiscount, totalAfterVoucher, selectVoucher, useBestVoucher,
         wishlist, toggleWishlist, isWishlisted,
         profile, saveProfile, addresses, saveAddress, removeAddress,
+        lastPhone, setLastPhone, profilesByPhone, saveProfileForPhone, lookupOrdersByPhone, loadOrders,
         theme, setTheme,
     }
 

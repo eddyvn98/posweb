@@ -18,6 +18,7 @@ import PriceTagPrint from './pages/PriceTagPrint'
 import TikTokPrintK80 from './pages/TikTokPrintK80'
 import Cashbook from './pages/Cashbook'
 import Settings from './pages/Settings'
+import OnlineOrders from './pages/OnlineOrders'
 import CartBar from './components/CartBar'
 import Layout from './components/Layout'
 import Shop from './pages/Shop'
@@ -62,6 +63,12 @@ function App() {
                                     <Route path="/history" element={
                                         <ProtectedRoute>
                                             <Layout><History /></Layout>
+                                        </ProtectedRoute>
+                                    } />
+
+                                    <Route path="/online-orders" element={
+                                        <ProtectedRoute>
+                                            <Layout><OnlineOrders /></Layout>
                                         </ProtectedRoute>
                                     } />
 

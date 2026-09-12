@@ -1,0 +1,20 @@
+/* ===== CSS VARIABLES (Tiêu chuẩn 2026 - Slate/Sky System) ===== */
+:root {
+  --color-primary: #0284c7;
+  --color-primary-dark: #0369a1;
+  --color-primary-light: #e0f2fe;
+
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --border-color: #e2e8f0;
+
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+
+  --status-success: #0284c7;
+  --status-warning: #d97706;
+  --status-error: #dc2626;
+
+  --touch-min: 44px;
+  --button-min: 44px;
+}

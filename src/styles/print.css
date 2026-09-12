@@ -1,0 +1,147 @@
+/* ===== PRINT STYLES (Receipt / Thermal Invoice) ===== */
+@media print {
+  @page {
+    size: auto;
+    margin: 0;
+  }
+
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    overflow: visible !important;
+  }
+
+  .no-print,
+  .no-print *,
+  .print\:hidden,
+  .print\:hidden * {
+    display: none !important;
+  }
+
+  /* Collapse height and hide EVERYTHING on the page when printing by default */
+  body * {
+    visibility: hidden !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Un-collapse root and all ancestor containers of printable elements */
+  #root,
+  :has(.printable-receipt),
+  :has(.printable-labels),
+  :has(.print\:block) {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    visibility: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  /* Restore printable elements and their children (excluding SVG nodes to prevent barcode rect height collapse) */
+  .printable-receipt,
+  .printable-receipt *:not(svg):not(svg *),
+  .printable-labels,
+  .printable-labels *:not(svg):not(svg *),
+  .print\:block,
+  .print\:block *:not(svg):not(svg *) {
+    visibility: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Specific SVG rendering rules for crisp barcode & vector printing on thermal / bill printers */
+  .printable-labels svg,
+  .printable-receipt svg,
+  .print\:block svg {
+    visibility: visible !important;
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: visible !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .printable-labels svg *,
+  .printable-receipt svg *,
+  .print\:block svg * {
+    visibility: visible !important;
+    overflow: visible !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .print\:block {
+    display: block !important;
+  }
+
+  /* Position printable receipt at top left of paper, spanning full paper width & auto height */
+  .printable-receipt {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 3mm 2mm !important;
+    background: white !important;
+    color: black !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11pt !important;
+    line-height: 1.3 !important;
+    box-sizing: border-box !important;
+  }
+
+  .printable-receipt * {
+    color: black !important;
+    background: transparent !important;
+  }
+
+  .printable-receipt .no-print,
+  .printable-receipt button {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  .printable-receipt table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    display: table !important;
+    margin-bottom: 8px !important;
+  }
+
+  .printable-receipt tr {
+    display: table-row !important;
+  }
+
+  .printable-receipt th,
+  .printable-receipt td {
+    display: table-cell !important;
+  }
+
+  .printable-receipt hr {
+    border: none !important;
+    border-top: 1px dashed black !important;
+    margin: 6px 0 !important;
+  }
+}
