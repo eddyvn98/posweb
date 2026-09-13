@@ -11,6 +11,8 @@ const cron = require('node-cron');
 const { initSchema } = require('./db/schema');
 const { getDbProvider, isMongoEnabled, isSqliteEnabled } = require('./db/provider');
 const { connectMongo, getMongoHealth } = require('./db/mongo');
+const { testPostgresConnection } = require('./db/postgres');
+const { syncSqliteToPostgres } = require('./services/postgresSyncService');
 const authRoutes = require('./routes/auth');
 const productsRoutes = require('./routes/products');
 const salesRoutes = require('./routes/sales');
@@ -21,6 +23,8 @@ const categoriesRoutes = require('./routes/categories');
 const suppliersRoutes = require('./routes/suppliers');
 const filesRoutes = require('./routes/files');
 const staffRoutes = require('./routes/staff');
+const storefrontRoutes = require('./routes/storefront');
+const webOrdersRoutes = require('./routes/webOrders');
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy for Secure cookies
@@ -32,7 +36,7 @@ if (isSqliteEnabled()) {
 }
 
 // Middlewares
-const allowedOrigins = ['http://localhost:5173', 'https://poswebfree.vivutrade.io.vn', 'https://t.me'];
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:4011', 'http://127.0.0.1:4011', 'https://poswebfree.vivutrade.io.vn', 'https://t.me'];
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin || allowedOrigins.includes(origin) || /^https:\/\/[a-zA-Z0-9-]+\.vivutrade\.io\.vn$/.test(origin)) {
@@ -90,6 +94,34 @@ app.use('/api/files', filesRoutes);
 app.use('/api/units', unitsRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/staff', staffRoutes);
+app.use('/api/storefront', storefrontRoutes);
+app.use('/api/web-orders', webOrdersRoutes);
+
+// Public image fetch proxy used by guest/demo seeding to bypass browser CORS.
+app.get('/api/images/fetch', async (req, res) => {
+    try {
+        const rawUrl = String(req.query.url || '').trim();
+        if (!rawUrl) return res.status(400).json({ error: 'Missing url' });
+        let parsed;
+        try {
+            parsed = new URL(rawUrl);
+        } catch {
+            return res.status(400).json({ error: 'Invalid url' });
+        }
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+            return res.status(400).json({ error: 'Unsupported protocol' });
+        }
+        const upstream = await fetch(parsed.toString());
+        if (!upstream.ok) return res.status(502).json({ error: `Upstream status ${upstream.status}` });
+        const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+        const arr = await upstream.arrayBuffer();
+        const base64 = Buffer.from(arr).toString('base64');
+        res.json({ dataUrl: `data:${contentType};base64,${base64}` });
+    } catch (error) {
+        console.error('Image fetch proxy error:', error.message);
+        res.status(500).json({ error: 'Failed to fetch image' });
+    }
+});
 
 // Telegram Bot Setup
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -107,9 +139,9 @@ if (BOT_TOKEN) {
         );
     });
 
-    bot.launch()
-        .then(() => console.log('🤖 Telegram Bot is running...'))
-        .catch(err => console.error('Bot launch error:', err));
+    // bot.launch()
+        // .then(() => console.log('🤖 Telegram Bot is running...'))
+        // .catch(err => console.error('Bot launch error:', err));
 
     app.get('/api/admin/config/webapp-url', (req, res) => {
         res.json({ url: WEB_APP_URL });
@@ -140,13 +172,14 @@ if (BOT_TOKEN) {
     });
 
     // Enable graceful stop
-    process.once('SIGINT', () => bot.stop('SIGINT'));
-    process.once('SIGTERM', () => bot.stop('SIGTERM'));
+    // process.once('SIGINT', () => bot.stop('SIGINT'));
+    // process.once('SIGTERM', () => bot.stop('SIGTERM'));
 } else {
     console.warn('⚠️ TELEGRAM_BOT_TOKEN missing. Bot will not run.');
 }
 
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+    const postgres = await testPostgresConnection();
     res.json({
         status: 'ok',
         provider: dbProvider,
@@ -157,7 +190,8 @@ app.get('/health', (req, res) => {
         mongo: {
             enabled: isMongoEnabled(),
             ...getMongoHealth()
-        }
+        },
+        postgres
     });
 });
 
@@ -181,6 +215,18 @@ async function startServer() {
             }
         });
 
+        cron.schedule('* * * * *', async () => {
+            try {
+                const result = await syncSqliteToPostgres();
+                if (!result.skipped) {
+                    const total = result.summary.reduce((sum, item) => sum + item.rows, 0);
+                    console.log(`[postgres-sync] synced ${total} rows`);
+                }
+            } catch (e) {
+                console.error('[postgres-sync] sync failed:', e.message);
+            }
+        });
+
         // Tự động backup khi khởi động (chạy sau 5s để đảm bảo DB đã sẵn sàng)
         setTimeout(async () => {
             try {
@@ -190,6 +236,20 @@ async function startServer() {
                 console.error('Auto backup failed:', e.message);
             }
         }, 5000);
+
+        setTimeout(async () => {
+            try {
+                const result = await syncSqliteToPostgres();
+                if (!result.skipped) {
+                    const total = result.summary.reduce((sum, item) => sum + item.rows, 0);
+                    console.log(`[postgres-sync] initial sync done, rows=${total}`);
+                } else {
+                    console.log(`[postgres-sync] skipped: ${result.reason}`);
+                }
+            } catch (e) {
+                console.error('[postgres-sync] initial sync failed:', e.message);
+            }
+        }, 7000);
     });
 }
 

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { formatReceiptCode } from '../lib/codeFormatter'
 import { getPrinterSettings, PRINT_PAPER_SIZES } from '../lib/printerSettings'
@@ -49,9 +49,11 @@ export default function InvoiceModal({ sale, onClose }) {
     }
 
     const handleShare = async () => {
-        const itemsText = sale.items?.map(item =>
-            `- ${item.product_name} x${item.quantity}: ${formatPrice(item.price * item.quantity)}đ`,
-        ).join('\n')
+        const itemsText = sale.items?.map(item => {
+            const attrs = item.attributes ? (typeof item.attributes === 'string' ? JSON.parse(item.attributes) : item.attributes) : null
+            const attrSuffix = attrs ? ` (${Object.values(attrs).join('/')})` : ''
+            return `- ${item.product_name}${attrSuffix} x${item.quantity}: ${formatPrice(item.price * item.quantity)}đ`
+        }).join('\n')
 
         const text = `
 🧾 HÓA ĐƠN BÁN LẺ - ${shopName}
@@ -126,7 +128,12 @@ Cảm ơn quý khách!
                                 <tr key={idx} className="border-b border-dashed border-gray-200">
                                     <td className="py-2 align-top font-bold">{item.quantity}</td>
                                     <td className="py-2 align-top break-words">
-                                        <div>{item.product_name}</div>
+                                        <div className="font-bold">{item.product_name}</div>
+                                        {item.attributes && (
+                                            <div className="text-[10px] text-gray-500 italic">
+                                                {Object.values(typeof item.attributes === 'string' ? JSON.parse(item.attributes) : item.attributes).join(' / ')}
+                                            </div>
+                                        )}
                                         {item.quantity > 1 && (
                                             <div className="text-[10px] text-gray-500">
                                                 x {formatPrice(item.price)}

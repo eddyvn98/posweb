@@ -21,8 +21,8 @@ const sqliteRepo = {
     }
 
     const stmt = db.prepare(`
-      INSERT INTO products (id, shop_id, barcode, name, unit, category, price, cost_price, stock_quantity, image_url, is_active)
-      VALUES (@id, @shop_id, @barcode, @name, @unit, @category, @price, @cost_price, @stock_quantity, @image_url, @is_active)
+      INSERT INTO products (id, shop_id, barcode, name, unit, category, price, cost_price, stock_quantity, image_url, is_active, parent_id, attributes)
+      VALUES (@id, @shop_id, @barcode, @name, @unit, @category, @price, @cost_price, @stock_quantity, @image_url, @is_active, @parent_id, @attributes)
       ON CONFLICT(id) DO UPDATE SET
         barcode = excluded.barcode,
         name = excluded.name,
@@ -32,7 +32,9 @@ const sqliteRepo = {
         cost_price = excluded.cost_price,
         stock_quantity = excluded.stock_quantity,
         image_url = excluded.image_url,
-        is_active = excluded.is_active
+        is_active = excluded.is_active,
+        parent_id = excluded.parent_id,
+        attributes = excluded.attributes
     `);
 
     stmt.run({
@@ -47,6 +49,8 @@ const sqliteRepo = {
       stock_quantity: Number(product.stock_quantity || 0),
       image_url: product.image_url || null,
       is_active: product.is_active ? 1 : 0,
+      parent_id: product.parent_id || null,
+      attributes: typeof product.attributes === 'object' ? JSON.stringify(product.attributes) : (product.attributes || '{}'),
     });
 
     return { success: true };
@@ -60,8 +64,8 @@ const sqliteRepo = {
   },
   async bulkUpsert(shop_id, products) {
     const stmt = db.prepare(`
-      INSERT INTO products (id, shop_id, barcode, name, unit, category, price, cost_price, stock_quantity, image_url, is_active)
-      VALUES (@id, @shop_id, @barcode, @name, @unit, @category, @price, @cost_price, @stock_quantity, @image_url, @is_active)
+      INSERT INTO products (id, shop_id, barcode, name, unit, category, price, cost_price, stock_quantity, image_url, is_active, parent_id, attributes)
+      VALUES (@id, @shop_id, @barcode, @name, @unit, @category, @price, @cost_price, @stock_quantity, @image_url, @is_active, @parent_id, @attributes)
       ON CONFLICT(id) DO UPDATE SET
         barcode = excluded.barcode,
         name = excluded.name,
@@ -71,7 +75,9 @@ const sqliteRepo = {
         cost_price = excluded.cost_price,
         stock_quantity = excluded.stock_quantity,
         image_url = excluded.image_url,
-        is_active = excluded.is_active
+        is_active = excluded.is_active,
+        parent_id = excluded.parent_id,
+        attributes = excluded.attributes
     `);
 
     const transaction = db.transaction((items) => {
@@ -86,6 +92,8 @@ const sqliteRepo = {
           stock_quantity: Number(product.stock_quantity || 0),
           image_url: product.image_url || null,
           is_active: product.is_active !== false ? 1 : 0,
+          parent_id: product.parent_id || null,
+          attributes: typeof product.attributes === 'object' ? JSON.stringify(product.attributes) : (product.attributes || '{}'),
         });
       }
     });
@@ -127,6 +135,8 @@ const mongoRepo = {
       stock_quantity: Number(product.stock_quantity || 0),
       image_url: product.image_url || null,
       is_active: !!product.is_active,
+      parent_id: product.parent_id || null,
+      attributes: product.attributes || {},
     };
 
     const orFilters = [];
@@ -166,6 +176,8 @@ const mongoRepo = {
         stock_quantity: Number(product.stock_quantity || 0),
         image_url: product.image_url || null,
         is_active: product.is_active !== false,
+        parent_id: product.parent_id || null,
+        attributes: product.attributes || {},
       };
 
       return {

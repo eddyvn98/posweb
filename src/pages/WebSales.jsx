@@ -1,206 +1,292 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import api from '../lib/api'
 import SEO from '../components/SEO'
+import { Check, Globe, Package, Save, Store, X } from '../components/Icons'
+import { useAuth } from '../contexts/AuthContext'
 import './WebSales.css'
 
+const money = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0)) + 'đ'
+const GUEST_STORE_SETTINGS_KEY = 'posweb:guest_storefront_settings'
+const GUEST_TEMPLATE = {
+    id: 'styla-fashion',
+    name: 'STYLA Fashion',
+    industry: 'Thời trang',
+    preview_image: '/previews/pro.png',
+}
+
+const defaultGuestSettings = (shopName = 'Shop Tham Quan') => ({
+    id: 'guest-storefront',
+    shop_id: 'guest_shop_v4',
+    slug: 'guest-shop-v4',
+    template_id: GUEST_TEMPLATE.id,
+    status: 'draft',
+    brand_name: shopName,
+    logo_url: '',
+    primary_color: '#111111',
+    hero_title: 'Sống chất mặc đẹp',
+    hero_subtitle: 'Khám phá sản phẩm mới nhất từ kho tham quan của bạn.',
+    hero_image_url: '/mocking/mocking/4.jpg',
+    featured_category_names: [],
+    config: {},
+})
+
 export default function WebSales() {
-    const [billingCycle, setBillingCycle] = useState('lifetime') // 'lifetime' or 'monthly'
-    const [selectedDomain, setSelectedDomain] = useState('shared') // 'shared' or 'private'
+    const { isGuest, shop } = useAuth()
+    const [templates, setTemplates] = useState([])
+    const [settings, setSettings] = useState(null)
+    const [orders, setOrders] = useState([])
+    const [activeTab, setActiveTab] = useState('builder')
+    const [saving, setSaving] = useState(false)
+    const [message, setMessage] = useState('')
 
-    const packages = [
-        {
-            id: 'startup',
-            name: 'Gói Khởi Nghiệp',
-            price: billingCycle === 'lifetime' ? '500.000' : '50.000',
-            save: billingCycle === 'lifetime' ? 'Tiết kiệm 20%' : '',
-            preview: '/previews/startup.png',
-            features: [
-                'Giao diện mẫu chuẩn SEO',
-                'Quản lý 100 sản phẩm',
-                'Tích hợp Zalo/Messenger',
-                'Băng thông 10GB/tháng',
-                'Hỗ trợ qua tài liệu'
-            ],
-            popular: false
-        },
-        {
-            id: 'pro',
-            name: 'Gói Chuyên Nghiệp',
-            price: billingCycle === 'lifetime' ? '5.000.000' : '450.000',
-            save: billingCycle === 'lifetime' ? 'Bán chạy nhất' : 'Khuyên dùng',
-            preview: '/previews/pro.png',
-            features: [
-                'Thiết kế giao diện riêng',
-                'Sản phẩm không giới hạn',
-                'Tích hợp thanh toán QR',
-                'Băng thông không giới hạn',
-                'Hỗ trợ kỹ thuật 24/7'
-            ],
-            popular: true
-        },
-        {
-            id: 'enterprise',
-            name: 'Gói Doanh Nghiệp',
-            price: billingCycle === 'lifetime' ? '50.000.000' : '4.500.000',
-            save: billingCycle === 'lifetime' ? 'Tối ưu nhất' : '',
-            preview: '/previews/enterprise.png',
-            features: [
-                'Toàn quyền sở hữu Source Code',
-                'App Mobile (iOS/Android)',
-                'Hệ thống quản lý chuỗi',
-                'Server riêng biệt tối ưu',
-                'Cố vấn chiến lược 1-1'
-            ],
-            popular: false
-        }
-    ]
-
-    const CheckIcon = () => (
-        <svg className="w-5 h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-        </svg>
+    const publicUrl = settings?.slug ? `${window.location.origin}/store/${settings.slug}` : ''
+    const selectedTemplate = useMemo(
+        () => templates.find((template) => template.id === settings?.template_id) || templates[0],
+        [templates, settings]
     )
 
-    return (
-        <div className="websales-page">
-            <SEO 
-                title="Thiết kế Website Bán hàng Chuyên nghiệp | OpenPOS"
-                description="Sở hữu website bán hàng chuẩn SEO, tích hợp POS chuyên nghiệp. Giá chỉ từ 500k. Domain riêng hoặc chung, sở hữu vĩnh viễn."
-            />
-            
-            <div className="bg-blobs">
-                <div className="blob blob-1"></div>
-                <div className="blob blob-2"></div>
-                <div className="blob blob-3"></div>
-            </div>
+    const fetchAll = async () => {
+        if (isGuest) {
+            const saved = localStorage.getItem(GUEST_STORE_SETTINGS_KEY)
+            setTemplates([GUEST_TEMPLATE])
+            setSettings(saved ? JSON.parse(saved) : defaultGuestSettings(shop?.name))
+            setOrders(JSON.parse(localStorage.getItem('posweb:guest_web_orders') || '[]'))
+            return
+        }
+        const [templateRes, settingsRes, ordersRes] = await Promise.all([
+            api.get('/storefront/templates'),
+            api.get('/storefront/settings'),
+            api.get('/web-orders'),
+        ])
+        setTemplates(templateRes.data || [])
+        setSettings(settingsRes.data)
+        setOrders(ordersRes.data || [])
+    }
 
-            <header className="websales-header animate-fade-in">
-                <div className="flex justify-center mb-6">
-                    <span className="premium-badge">
-                        <span className="pulse-dot"></span>
-                        Module Sắp ra mắt
-                    </span>
+    useEffect(() => {
+        fetchAll().catch((error) => {
+            console.error('Failed to load web sales builder', error)
+            setMessage('Không tải được dữ liệu website. Vui lòng thử lại.')
+        })
+    }, [isGuest, shop?.name])
+
+    const updateField = (field, value) => {
+        setSettings((current) => ({ ...current, [field]: value }))
+    }
+
+    const saveSettings = async () => {
+        if (!settings) return
+        setSaving(true)
+        setMessage('')
+        try {
+            const payload = {
+                slug: settings.slug,
+                template_id: settings.template_id,
+                brand_name: settings.brand_name,
+                logo_url: settings.logo_url,
+                primary_color: settings.primary_color,
+                hero_title: settings.hero_title,
+                hero_subtitle: settings.hero_subtitle,
+                hero_image_url: settings.hero_image_url,
+                featured_category_names: String(settings.featured_category_names_text || settings.featured_category_names?.join(',') || '')
+                    .split(',')
+                    .map((item) => item.trim())
+                    .filter(Boolean),
+                config: settings.config || {},
+            }
+            if (isGuest) {
+                const next = { ...settings, ...payload, status: settings.status || 'draft' }
+                localStorage.setItem(GUEST_STORE_SETTINGS_KEY, JSON.stringify(next))
+                setSettings(next)
+                setMessage('Đã lưu cấu hình demo cho shop tham quan.')
+                return
+            }
+            const res = await api.patch('/storefront/settings', payload)
+            setSettings(res.data)
+            setMessage('Đã lưu cấu hình website.')
+        } catch (error) {
+            setMessage(error.response?.data?.error || 'Không lưu được cấu hình.')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const publish = async () => {
+        setSaving(true)
+        setMessage('')
+        try {
+            if (isGuest) {
+                const next = { ...settings, status: 'published', published_at: new Date().toISOString() }
+                localStorage.setItem(GUEST_STORE_SETTINGS_KEY, JSON.stringify(next))
+                setSettings(next)
+                setMessage('Website demo đã publish. Bạn có thể mở link public ngay.')
+                return
+            }
+            const res = await api.post('/storefront/publish')
+            setSettings(res.data)
+            setMessage('Website đã publish. Khách có thể truy cập link public.')
+        } catch (error) {
+            setMessage(error.response?.data?.error || 'Không publish được website.')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const updateOrder = async (id, status) => {
+        try {
+            if (isGuest) {
+                const currentOrders = JSON.parse(localStorage.getItem('posweb:guest_web_orders') || '[]')
+                const nextOrders = currentOrders.map((order) => (
+                    order.id === id
+                        ? { ...order, status, confirmed_at: status === 'confirmed' ? new Date().toISOString() : order.confirmed_at }
+                        : order
+                ))
+                localStorage.setItem('posweb:guest_web_orders', JSON.stringify(nextOrders))
+                setOrders(nextOrders)
+                return
+            }
+            await api.patch(`/web-orders/${id}/status`, { status })
+            const res = await api.get('/web-orders')
+            setOrders(res.data || [])
+        } catch (error) {
+            setMessage(error.response?.data?.error || 'Không cập nhật được đơn web.')
+        }
+    }
+
+    if (!settings) {
+        return <div className="web-builder-page"><div className="web-builder-loading">Đang tải website builder...</div></div>
+    }
+
+    return (
+        <div className="web-builder-page">
+            <SEO title="Website Builder - POSweb" description="Tạo website bán hàng tự động lấy sản phẩm từ kho POS." />
+
+            <header className="web-builder-header">
+                <div>
+                    <span className="web-builder-kicker">Website Builder</span>
+                    <h1>Tạo web bán hàng từ kho hiện có</h1>
+                    <p>Chọn template, chỉnh nhận diện cơ bản và publish link cho khách mua hàng. Đơn web sẽ vào trạng thái chờ xác nhận.</p>
                 </div>
-                <h1>Giải pháp Web Bán hàng <br/><span className="gradient-text">Toàn diện & Chuyên nghiệp</span></h1>
-                <p>Nâng tầm thương hiệu với website bán hàng chuẩn SEO, đồng bộ 100% dữ liệu với hệ thống OpenPOS của bạn.</p>
+                <div className="web-builder-actions">
+                    <button className="web-builder-btn secondary" onClick={saveSettings} disabled={saving}>
+                        <Save className="w-4 h-4" /> Lưu
+                    </button>
+                    <button className="web-builder-btn primary" onClick={publish} disabled={saving}>
+                        <Globe className="w-4 h-4" /> Publish
+                    </button>
+                </div>
             </header>
 
-            <div className="pricing-toggle-container animate-slide-up">
-                <div className="pricing-toggle">
-                    <button 
-                        className={`toggle-btn ${billingCycle === 'monthly' ? 'active' : ''}`}
-                        onClick={() => setBillingCycle('monthly')}
-                    >
-                        Thuê bao tháng
-                    </button>
-                    <button 
-                        className={`toggle-btn ${billingCycle === 'lifetime' ? 'active' : ''}`}
-                        onClick={() => setBillingCycle('lifetime')}
-                    >
-                        Sở hữu vĩnh viễn
-                        <span className="save-tag">Ưu đãi</span>
-                    </button>
-                </div>
+            {message && <div className="web-builder-message">{message}</div>}
+
+            <div className="web-builder-tabs">
+                <button className={activeTab === 'builder' ? 'active' : ''} onClick={() => setActiveTab('builder')}>Builder</button>
+                <button className={activeTab === 'orders' ? 'active' : ''} onClick={() => setActiveTab('orders')}>Đơn web ({orders.filter((order) => order.status === 'pending').length})</button>
             </div>
 
-            <div className="pricing-grid">
-                {packages.map((pkg, idx) => (
-                    <div 
-                        key={pkg.id} 
-                        className={`pricing-card ${pkg.popular ? 'popular' : ''} animate-card`}
-                        style={{ animationDelay: `${idx * 0.1}s` }}
-                    >
-                        {pkg.popular && <div className="popular-badge">PHỔ BIẾN NHẤT</div>}
-                        {pkg.save && <div className="save-badge">{pkg.save}</div>}
-                        
-                        <div className="card-header">
-                            <h2 className="pkg-name">{pkg.name}</h2>
+            {activeTab === 'builder' ? (
+                <div className="web-builder-grid">
+                    <section className="web-builder-panel">
+                        <div className="panel-title">
+                            <Store className="w-5 h-5" />
+                            <div>
+                                <h2>Template</h2>
+                                <p>V1 có template fashion, cấu trúc đã sẵn để thêm ngành khác.</p>
+                            </div>
                         </div>
+                        <div className="template-list">
+                            {templates.map((template) => (
+                                <button
+                                    key={template.id}
+                                    className={`template-choice ${settings.template_id === template.id ? 'selected' : ''}`}
+                                    onClick={() => updateField('template_id', template.id)}
+                                >
+                                    <img src={template.preview_image || '/previews/pro.png'} alt={template.name} />
+                                    <span>{template.name}</span>
+                                    <small>{template.industry}</small>
+                                </button>
+                            ))}
+                        </div>
+                    </section>
 
-                        <div className="template-preview-wrapper">
-                            <div className="template-preview">
-                                <img src={pkg.preview} alt={pkg.name} loading="lazy" />
-                                <div className="preview-overlay">
-                                    <span>Xem Demo</span>
+                    <section className="web-builder-panel">
+                        <div className="panel-title">
+                            <Globe className="w-5 h-5" />
+                            <div>
+                                <h2>Branding cơ bản</h2>
+                                <p>Dữ liệu sản phẩm vẫn lấy từ kho, phần này chỉ quyết định cách trình bày.</p>
+                            </div>
+                        </div>
+                        <div className="builder-form">
+                            <label>Tên brand<input value={settings.brand_name || ''} onChange={(e) => updateField('brand_name', e.target.value)} /></label>
+                            <label>Slug public<input value={settings.slug || ''} onChange={(e) => updateField('slug', e.target.value)} /></label>
+                            <label>Màu chính<input type="color" value={settings.primary_color || '#111111'} onChange={(e) => updateField('primary_color', e.target.value)} /></label>
+                            <label>Logo URL<input value={settings.logo_url || ''} onChange={(e) => updateField('logo_url', e.target.value)} placeholder="/logo.png" /></label>
+                            <label>Hero title<input value={settings.hero_title || ''} onChange={(e) => updateField('hero_title', e.target.value)} /></label>
+                            <label>Hero subtitle<textarea value={settings.hero_subtitle || ''} onChange={(e) => updateField('hero_subtitle', e.target.value)} /></label>
+                            <label>Hero image URL<input value={settings.hero_image_url || ''} onChange={(e) => updateField('hero_image_url', e.target.value)} placeholder="/mocking/mocking/4.jpg" /></label>
+                            <label>Danh mục nổi bật<input value={settings.featured_category_names_text ?? settings.featured_category_names?.join(', ') ?? ''} onChange={(e) => updateField('featured_category_names_text', e.target.value)} placeholder="Nam, Nữ, Phụ kiện" /></label>
+                        </div>
+                    </section>
+
+                    <section className="web-builder-preview">
+                        <div className="preview-toolbar">
+                            <div>
+                                <span>{selectedTemplate?.name || 'Template'}</span>
+                                <strong className={settings.status === 'published' ? 'published' : ''}>{settings.status}</strong>
+                            </div>
+                            {publicUrl && <a href={publicUrl} target="_blank" rel="noreferrer">Mở web</a>}
+                        </div>
+                        <div className="mini-storefront" style={{ '--accent': settings.primary_color || '#111111' }}>
+                            <div className="mini-nav">
+                                <b>{settings.brand_name}</b>
+                                <span>Trang chủ</span>
+                                <span>Sản phẩm</span>
+                                <span>Liên hệ</span>
+                            </div>
+                            <div className="mini-hero">
+                                <div>
+                                    <small>NEW ARRIVALS</small>
+                                    <h3>{settings.hero_title}</h3>
+                                    <p>{settings.hero_subtitle}</p>
+                                    <button>Mua ngay</button>
+                                </div>
+                                <div className="mini-photo">
+                                    {settings.hero_image_url ? <img src={settings.hero_image_url} alt="" /> : <Package className="w-12 h-12" />}
                                 </div>
                             </div>
+                            <div className="public-url-box">{publicUrl || 'Publish để có link public'}</div>
                         </div>
-
-                        <div className="price-container">
-                            <div className="price-main">
-                                <span className="currency">₫</span>
-                                <span className="price-value">{pkg.price}</span>
+                    </section>
+                </div>
+            ) : (
+                <section className="web-orders-panel">
+                    {orders.length === 0 ? (
+                        <div className="empty-orders">Chưa có đơn từ website.</div>
+                    ) : orders.map((order) => (
+                        <article key={order.id} className="web-order-row">
+                            <div>
+                                <strong>{order.code}</strong>
+                                <p>{order.customer_name} · {order.customer_phone}</p>
+                                <small>{order.customer_address || 'Chưa có địa chỉ'}</small>
                             </div>
-                            <span className="price-unit">/{billingCycle === 'lifetime' ? 'trọn đời' : 'tháng'}</span>
-                        </div>
-
-                        <div className="divider"></div>
-
-                        <ul className="feature-list">
-                            {pkg.features.map((feat, i) => (
-                                <li key={i} className="feature-item">
-                                    <div className="icon-wrapper">
-                                        <CheckIcon />
-                                    </div>
-                                    <span>{feat}</span>
-                                </li>
-                            ))}
-                        </ul>
-
-                        <button 
-                            className={`btn-choose ${pkg.popular ? 'primary' : 'secondary'}`}
-                            onClick={() => alert(`Cảm ơn bạn! Module ${pkg.name} đang được hoàn thiện. Chúng tôi sẽ liên hệ sớm.`)}
-                        >
-                            Đăng ký nhận ưu đãi ngay
-                        </button>
-                    </div>
-                ))}
-            </div>
-
-            <div className="domain-section animate-slide-up">
-                <div className="section-header">
-                    <h2>Tùy chọn Tên miền</h2>
-                    <p>Linh hoạt lựa chọn địa chỉ truy cập cho cửa hàng của bạn</p>
-                </div>
-                <div className="domain-grid">
-                    <div 
-                        className={`domain-card ${selectedDomain === 'shared' ? 'selected' : ''}`}
-                        onClick={() => setSelectedDomain('shared')}
-                    >
-                        <div className="domain-icon free">FREE</div>
-                        <h3 className="domain-title">Tên miền chung</h3>
-                        <p className="domain-desc">Sử dụng định dạng của OpenPOS, hoàn toàn miễn phí.</p>
-                        <div className="domain-preview">yourshop.vivutrade.io.vn</div>
-                    </div>
-                    <div 
-                        className={`domain-card ${selectedDomain === 'private' ? 'selected' : ''}`}
-                        onClick={() => setSelectedDomain('private')}
-                    >
-                        <div className="domain-icon pro">PRO</div>
-                        <h3 className="domain-title">Tên miền riêng</h3>
-                        <p className="domain-desc">Khẳng định thương hiệu với tên miền riêng (com, net, vn...)</p>
-                        <div className="domain-preview">www.yourbrand.com</div>
-                    </div>
-                </div>
-            </div>
-
-            <section className="contact-section animate-fade-in">
-                <div className="contact-card">
-                    <div className="contact-content">
-                        <h2 className="text-3xl font-black mb-4">Bạn cần hỗ trợ tư vấn?</h2>
-                        <p className="text-gray-500 mb-8 max-w-lg mx-auto">Đội ngũ kỹ thuật của chúng tôi luôn sẵn sàng hỗ trợ bạn xây dựng giải pháp bán hàng tối ưu nhất.</p>
-                        <div className="contact-buttons">
-                            <a href="https://zalo.me/0932690949" target="_blank" rel="noopener noreferrer" className="btn-contact zalo">
-                                <span className="icon">Z</span>
-                                <span>Liên hệ qua Zalo</span>
-                            </a>
-                            <a href="https://t.me/htt711" target="_blank" rel="noopener noreferrer" className="btn-contact telegram">
-                                <span className="icon">T</span>
-                                <span>Liên hệ qua Telegram</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                            <div className="order-items">
+                                {(order.items || []).map((item) => (
+                                    <span key={item.product_id}>{item.product_name} x{item.quantity}</span>
+                                ))}
+                            </div>
+                            <div className="order-total">{money(order.total_amount)}</div>
+                            <span className={`order-status ${order.status}`}>{order.status}</span>
+                            {order.status === 'pending' && (
+                                <div className="order-actions">
+                                    <button onClick={() => updateOrder(order.id, 'confirmed')}><Check className="w-4 h-4" /> Xác nhận</button>
+                                    <button onClick={() => updateOrder(order.id, 'cancelled')}><X className="w-4 h-4" /> Hủy</button>
+                                </div>
+                            )}
+                        </article>
+                    ))}
+                </section>
+            )}
         </div>
     )
 }

@@ -39,9 +39,16 @@ export const matchProduct = (product, query) => {
     // 2. Chứa mã vạch
     if (barcode.includes(q)) return true
 
-    // 3. Khớp từ khóa tìm kiếm trong tên (không dấu)
+    // 3. Khớp từ khóa tìm kiếm trong tên, nhóm, phân loại (không dấu)
     const terms = q.split(/\s+/).filter(t => t.length > 0)
-    const isMatchAllTerms = terms.every(term => name.includes(term))
+    const category = normalizeString(product.category)
+    const classifications = typeof product.classifications === 'string' 
+        ? normalizeString(product.classifications) 
+        : normalizeString(JSON.stringify(product.classifications || {}))
+
+    const searchableText = `${name} ${category} ${classifications}`
+    
+    const isMatchAllTerms = terms.every(term => searchableText.includes(term))
     if (isMatchAllTerms) return true
 
     // 4. Khớp theo chữ cái đầu (Initials)

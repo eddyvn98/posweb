@@ -68,6 +68,7 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
             created_at: new Date().toISOString(),
             items: cart.map(item => ({
                 product_name: item.name,
+                attributes: item.attributes,
                 quantity: item.quantity,
                 price: item.price
             }))
@@ -101,6 +102,7 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
                 items: cart.map(item => ({
                     product_id: item.product_id,
                     product_name: item.name,
+                    attributes: item.attributes,
                     quantity: item.quantity,
                     price: item.price
                 }))
@@ -152,6 +154,15 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
                                         <div key={idx} className="flex justify-between items-center text-xs">
                                             <div className="flex-1 min-w-0 mr-4">
                                                 <p className="font-bold text-gray-700 truncate">{item.name}</p>
+                                                {item.attributes && (
+                                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                                        {Object.values(typeof item.attributes === 'string' ? JSON.parse(item.attributes) : item.attributes).map((val, vIdx) => (
+                                                            <span key={vIdx} className="text-[8px] font-bold bg-gray-100 text-gray-500 px-1 rounded uppercase">
+                                                                {val}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
                                                 <p className="text-[10px] text-gray-400">x{item.quantity}</p>
                                             </div>
                                             <p className="font-black text-gray-600 shrink-0">{new Intl.NumberFormat('vi-VN').format(item.price * item.quantity)}đ</p>

@@ -220,8 +220,8 @@ export default function Imports() {
     }, [imports])
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            <div className="bg-white shadow-sm px-4 py-3 md:py-4 sticky top-0 z-10 border-b">
+        <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
+            <div className="bg-white shadow-sm px-4 py-3 md:py-4 border-b shrink-0">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
                     <div>
                         <h1 className="text-xl font-black text-gray-800 uppercase tracking-tighter">Nhập hàng</h1>
@@ -253,7 +253,7 @@ export default function Imports() {
                 </div>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24 custom-scrollbar">
                 {/* ✨ REDESIGNED AI IMPORT SECTION */}
                 <section className="rounded-3xl border border-primary/10 bg-white p-4 md:p-6 shadow-sm overflow-hidden relative group">
                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none transition-opacity group-hover:opacity-10">

@@ -28,16 +28,22 @@ export const AuthProvider = ({ children }) => {
                 } catch {
                     localStorage.removeItem('pos_user')
                     localStorage.removeItem('pos_shop')
-                    setCurrentShopId('guest_shop')
+                    setCurrentShopId('guest_shop_v4')
                 }
             } else {
-                setCurrentShopId('guest_shop')
-                setShop({ id: 'guest_shop', name: 'Shop Tham Quan', currency: 'VND' })
+                setCurrentShopId('guest_shop_v4')
+                setShop({ id: 'guest_shop_v4', name: 'Shop Tham Quan', currency: 'VND' })
             }
             
-            // Populate mock data if in guest mode
-            await seedGuestData()
+            // Render UI immediately; seed guest data in background to avoid white screen.
             setLoading(false)
+            seedGuestData()
+                .then(() => {
+                    window.dispatchEvent(new CustomEvent('posweb:guest-seeded'))
+                })
+                .catch((err) => {
+                    console.error('Guest seed failed:', err)
+                })
         }
         init()
     }, [])

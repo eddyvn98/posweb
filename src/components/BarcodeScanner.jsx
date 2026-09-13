@@ -118,7 +118,7 @@ export default function BarcodeScanner({ onDetected, active }) {
     }, [active, onDetected])
 
     return (
-        <div className="relative w-full aspect-[4/3] bg-black flex items-center justify-center overflow-hidden rounded-xl border border-gray-200">
+        <div className="relative w-full aspect-video bg-black flex items-center justify-center overflow-hidden rounded-xl border border-gray-200">
             {error ? (
                 <div className="text-white text-center p-6 bg-red-500/10 w-full h-full flex flex-col items-center justify-center gap-2">
                     <span className="text-2xl">⚠️</span>
@@ -137,11 +137,8 @@ export default function BarcodeScanner({ onDetected, active }) {
                     
                     {/* UI Overlay */}
                     <div className="absolute inset-0 pointer-events-none">
-                        {/* Dimmed background around scan area */}
-                        <div className="absolute inset-0 bg-black/30"></div>
-                        
                         {/* Scan Area Box */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] h-[40%] bg-transparent rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.4)] border border-white/20">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[50%] bg-transparent rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] border border-white/30">
                             {/* Corners */}
                             <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-md"></div>
                             <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-md"></div>
@@ -152,11 +149,8 @@ export default function BarcodeScanner({ onDetected, active }) {
                             <div className="absolute top-0 left-0 w-full h-0.5 bg-primary shadow-[0_0_15px_rgba(233,30,99,0.8)] animate-scan"></div>
                         </div>
                         
-                        <div className="absolute bottom-4 left-0 right-0 text-center flex flex-col items-center gap-2">
-                            <span className="bg-black/60 backdrop-blur-md text-white text-[10px] px-4 py-1.5 rounded-full font-black uppercase tracking-widest border border-white/10">
-                                CÔNG NGHỆ QUÉT MÃ VẠCH, QR NGAY TRÊN WEB ĐỘC QUYỀN
-                            </span>
-                            <p className="text-[10px] text-white/60 font-bold uppercase tracking-tight">Đưa mã vạch vào khung để quét</p>
+                        <div className="absolute bottom-4 left-0 right-0 text-center flex flex-col items-center gap-1.5">
+                            <p className="text-[9px] text-white/70 font-bold uppercase tracking-widest">Đưa mã vạch vào khung để quét</p>
                         </div>
                     </div>
 

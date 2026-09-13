@@ -1,5 +1,6 @@
 export const FEATURE_KEYS = {
-    SUPPLIER_DEBT: 'supplier_debt_management'
+    SUPPLIER_DEBT: 'supplier_debt_management',
+    PRODUCT_VARIANTS: 'product_variants'
 }
 
 export function parseFeatureFlags(rawFlags) {

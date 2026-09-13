@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchLocalProducts, getAllLocalProducts } from '../lib/db'
 import api from '../lib/api'
@@ -29,7 +29,8 @@ import {
     AlertTriangle,
     QrCode,
     RefreshCw,
-    Menu
+    Menu,
+    Store
 } from '../components/Icons'
 
 export default function Sales() {
@@ -98,16 +99,31 @@ export default function Sales() {
         enabled: true,
     })
 
+    const [groupedProducts, setGroupedProducts] = useState([])
+    const [selectedParent, setSelectedParent] = useState(null)
+    const [showVariantSelector, setShowVariantSelector] = useState(false)
+    const variantCountsByParentId = useMemo(() => {
+        const counts = new Map()
+        allProducts.forEach(product => {
+            if (!product.parent_id) return
+            counts.set(product.parent_id, (counts.get(product.parent_id) || 0) + 1)
+        })
+        return counts
+    }, [allProducts])
+
     useEffect(() => {
         const loadData = async () => {
             try {
                 const localProds = await getAllLocalProducts()
                 setAllProducts(localProds)
-                setFilteredProducts(localProds.slice(0, 100))
+                
+                // Grouping logic for initial load
+                const parents = localProds.filter(p => !p.parent_id)
+                setGroupedProducts(parents)
             } catch (err) {
                 console.error('Failed to load local products for sales', err)
                 setAllProducts([])
-                setFilteredProducts([])
+                setGroupedProducts([])
             }
 
             try {
@@ -126,11 +142,22 @@ export default function Sales() {
     }, [isGuest])
 
     useEffect(() => {
-        let results = allProducts
+        let results = allProducts.filter(p => !p.parent_id)
         if (selectedCategory !== 'all') results = results.filter(p => p.category === selectedCategory)
+        
         if (query.trim()) {
             const q = query.toLowerCase()
-            results = results.filter(p => p.name.toLowerCase().includes(q) || p.barcode?.toLowerCase().includes(q))
+            // In sales, search should also look into child barcodes but return parent for display
+            results = allProducts.filter(p => !p.parent_id).filter(parent => {
+                const matchesParent = parent.name.toLowerCase().includes(q) || parent.barcode?.toLowerCase().includes(q)
+                if (matchesParent) return true
+                
+                const hasMatchingChild = allProducts.some(child => 
+                    child.parent_id === parent.id && 
+                    (child.barcode?.toLowerCase().includes(q) || child.sku?.toLowerCase().includes(q))
+                )
+                return hasMatchingChild
+            })
         }
         setFilteredProducts(results.slice(0, 100))
     }, [query, selectedCategory, allProducts])
@@ -139,18 +166,49 @@ export default function Sales() {
         setQuery('')
         setScanError(null)
         
+        // 1. Try to find direct match (could be a variant)
         const match = allProducts.find(p => p.barcode === code || p.id === code)
         if (match) {
-            addToCart(match)
-            setLastScanned(match.name)
-            playBeep('success')
+            // If it's a child, add to cart directly
+            if (match.parent_id) {
+                const parent = allProducts.find(p => p.id === match.parent_id)
+                const cartItem = {
+                    ...match,
+                    name: parent?.name || match.name
+                }
+                addToCart(cartItem)
+                setLastScanned(cartItem.name + (match.attributes ? ` (${Object.values(match.attributes).join('/')})` : ''))
+                playBeep('success')
+            } else {
+                // If it's a parent, check if it has children
+                const children = allProducts.filter(c => c.parent_id === match.id)
+                if (children.length > 0) {
+                    setSelectedParent(match)
+                    setShowVariantSelector(true)
+                } else {
+                    addToCart(match)
+                    setLastScanned(match.name)
+                    playBeep('success')
+                }
+            }
             setTimeout(() => setLastScanned(null), 2000)
         } else {
             setQuickSalePreset({ barcode: code, name: `SP ${code}` })
-            setShouldReopenCamera(showCamera) // Ghi nhớ nếu camera đang mở
+            setShouldReopenCamera(showCamera)
             setShowQuickSale(true)
-            setShowCamera(false) // Tự động đóng camera để hiện panel nhập giá
+            setShowCamera(false)
             playBeep('error')
+        }
+    }
+
+    const handleProductClick = (product) => {
+        const children = allProducts.filter(c => c.parent_id === product.id)
+        if (children.length > 0) {
+            setSelectedParent(product)
+            setShowVariantSelector(true)
+        } else {
+            addToCart(product)
+            playBeep('success')
         }
     }
 
@@ -208,6 +266,7 @@ export default function Sales() {
                             <RefreshCw className="w-4 h-4" /> <span>TRẢ HÀNG</span>
                         </button>
                         <button onClick={() => navigate('/app/history')} className="h-10 px-3 bg-blue-500 text-white font-bold rounded-xl shadow-sm active:scale-95 text-[10px] flex items-center gap-1 shrink-0 uppercase"><History className="w-4 h-4" /> <span>LỊCH SỬ</span></button>
+                        <button onClick={() => navigate('/app/web-sales')} className="h-10 px-3 bg-gray-900 text-white font-bold rounded-xl shadow-sm active:scale-95 text-[10px] flex items-center gap-1 shrink-0 uppercase"><Store className="w-4 h-4" /> <span>WEBSITE</span></button>
                     </div>
 
                     {/* Mobile Collapse Search Button (only if hidden) */}
@@ -271,7 +330,7 @@ export default function Sales() {
                                 {filteredProducts.length === 0 ? (<div className="text-center py-10 opacity-30"><Search className="w-10 h-10 mx-auto mb-2" /><p className="text-sm font-bold">Không tìm thấy</p></div>) : (
                                     <div className="grid grid-cols-1 gap-1.5">
                                         {filteredProducts.map(p => (
-                                            <div key={p.id} onClick={() => { addToCart(p); setQuery(''); playBeep('success') }} className="flex items-center gap-3 p-2 bg-gray-50/50 hover:bg-primary/5 rounded-2xl active:scale-[0.99] transition-all cursor-pointer border border-transparent hover:border-primary/10">
+                                            <div key={p.id} onClick={() => { handleProductClick(p); setQuery(''); }} className="flex items-center gap-3 p-2 bg-gray-50/50 hover:bg-primary/5 rounded-2xl active:scale-[0.99] transition-all cursor-pointer border border-transparent hover:border-primary/10">
                                                 <div className="w-10 h-10 rounded-xl overflow-hidden bg-white border border-gray-100 shrink-0">{p.image_url ? <img src={getProductImageUrl(p.image_url)} alt={p.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-lg"><Package className="w-6 h-6 opacity-20" /></div>}</div>
                                                 <div className="flex-1 min-w-0"><p className="font-bold text-gray-800 text-xs truncate uppercase">{p.name}</p><p className="text-primary font-black text-xs mt-0.5">{new Intl.NumberFormat('vi-VN').format(p.price)}đ</p></div>
                                                 <div className="h-8 w-8 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm">
@@ -336,7 +395,13 @@ export default function Sales() {
                         ) : (
                             <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-3 2xl:grid-cols-5 gap-3 lg:gap-4">
                                 {filteredProducts.map(p => (
-                                    <ProductCard key={p.id} product={p} onAdd={(prod) => { addToCart(prod); playBeep('success') }} />
+                                    <ProductCard 
+                                        key={p.id} 
+                                        product={p} 
+                                        onAdd={() => handleProductClick(p)} 
+                                        hasVariants={variantCountsByParentId.has(p.id)}
+                                        variantCount={variantCountsByParentId.get(p.id) || 0}
+                                    />
                                 ))}
                             </div>
                         )}
@@ -455,7 +520,7 @@ export default function Sales() {
                                 className="w-12 h-12 bg-gray-600 text-white rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-all border-2 border-white"
                                 title="Đổi bên"
                             >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M7 16V4m0 0L3 8m4-4l4 4m6-4v12m0 0l4-4m-4 4l-4-4" /></svg>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path d="M20 7H4m0 0l4-4m-4 4l4 4M4 17h16m0 0l-4-4m4 4l-4 4" /></svg>
                             </button>
                         </div>
                         <div className={`flex items-center gap-2 ${fabPosition === 'right' ? 'flex-row' : 'flex-row-reverse'}`}>
@@ -565,6 +630,95 @@ export default function Sales() {
                 />
             )}
             {lastSale && <InvoiceModal sale={lastSale} onClose={() => setLastSale(null)} />}
+
+            {/* 🎨 VARIANT SELECTOR MODAL */}
+            {showVariantSelector && selectedParent && (
+                <div className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowVariantSelector(false)} />
+                    <div className="relative bg-white w-full max-w-lg rounded-t-[32px] sm:rounded-[32px] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
+                        {/* Header */}
+                        <div className="p-6 border-b flex justify-between items-center bg-white sticky top-0 z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                                    <Package className="w-6 h-6 text-primary" />
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-gray-800 text-lg uppercase leading-none mb-1">{selectedParent.name}</h3>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Chọn phiên bản để bán</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowVariantSelector(false)} className="p-2 bg-gray-50 text-gray-400 rounded-full hover:bg-gray-100 transition-all">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Variants List */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                            {allProducts.filter(c => c.parent_id === selectedParent.id).map(variant => (
+                                <div 
+                                    key={variant.id} 
+                                    onClick={() => {
+                                        // Ensure cart item has an image (fallback to parent)
+                                        const cartItem = {
+                                            ...variant,
+                                            name: selectedParent.name,
+                                            image_url: variant.image_url || selectedParent.image_url
+                                        }
+                                        addToCart(cartItem)
+                                        playBeep('success')
+                                        setShowVariantSelector(false)
+                                    }}
+                                    className="p-3 bg-gray-50 hover:bg-primary/5 border border-gray-100 hover:border-primary/20 rounded-2xl flex items-center gap-4 group transition-all cursor-pointer active:scale-[0.98]"
+                                >
+                                    {/* Variant Image Preview */}
+                                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-white border border-gray-100 shrink-0 relative">
+                                        <img 
+                                            src={getProductImageUrl(variant.image_url || selectedParent.image_url)} 
+                                            alt={variant.name} 
+                                            className="w-full h-full object-cover" 
+                                        />
+                                        {!variant.image_url && selectedParent.image_url && (
+                                            <div className="absolute top-0 left-0 bg-black/40 px-1 py-0.5 rounded-br-lg">
+                                                <span className="text-[6px] font-black text-white uppercase italic">Gốc</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex flex-wrap gap-1.5 mb-1">
+                                            {variant.attributes && Object.entries(typeof variant.attributes === 'string' ? JSON.parse(variant.attributes) : variant.attributes).map(([key, val]) => (
+                                                <span key={key} className="text-[10px] font-black bg-white border border-gray-200 px-2 py-0.5 rounded-md text-gray-600 uppercase">
+                                                    {val}
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="text-sm font-black text-primary">{new Intl.NumberFormat('vi-VN').format(variant.price)}đ</div>
+                                                {variant.barcode && <div className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">#{variant.barcode}</div>}
+                                            </div>
+                                            <div className="text-right mr-4">
+                                                <div className={`text-[9px] font-bold ${variant.stock_quantity > 0 ? 'text-green-500' : 'text-red-400'}`}>
+                                                    Kho: {variant.stock_quantity}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-sm shrink-0">
+                                        <Plus className="w-5 h-5" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Footer Hint */}
+                        <div className="p-4 bg-gray-50 border-t flex items-center justify-center gap-2 text-[10px] font-bold text-gray-400 italic">
+                            <Zap className="w-3 h-3 text-orange-400" />
+                            Quét mã vạch biến thể để thêm nhanh mà không cần bảng này
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

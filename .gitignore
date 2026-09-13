@@ -51,3 +51,5 @@ bot_backend/db/posweb.db
 # Mongo local data
 **/mongo-local/
 **/mongo-legacy-data/
+
+.claude/

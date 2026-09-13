@@ -10,6 +10,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import ResetPassword from './pages/ResetPassword'
+import Storefront from './pages/Storefront'
 
 // App pages (protected)
 import Home from './pages/Home'
@@ -42,6 +43,7 @@ function App() {
                                     <Route path="/login" element={<Login />} />
                                     <Route path="/register" element={<Login />} />
                                     <Route path="/reset-password" element={<ResetPassword />} />
+                                    <Route path="/store/:slug" element={<Storefront />} />
 
                                     {/* ── Protected app routes ───────────────────────── */}
                                     <Route path="/app" element={

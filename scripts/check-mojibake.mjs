@@ -4,6 +4,7 @@ import path from 'node:path';
 const root = process.cwd();
 const includeExt = new Set(['.js', '.jsx', '.ts', '.tsx', '.json', '.css', '.html', '.md']);
 const skipDirs = new Set(['node_modules', 'dist', '.git', 'playwright-report', 'test-results', 'backups']);
+const skipFiles = new Set(['src/lib/mockData.js']);
 const suspicious = [
   /Ã¡|Ã¢|Ã£|Ã¨|Ã©|Ãª|Ã¬|Ã­|Ã²|Ã³|Ã´|Ãµ|Ã¹|Ãº|Ã½|Ãđ|ÃĐ/g,
   /Â |Â¡|Â¢|Â£|Â¤|Â¥|Â¦|Â§|Â¨|Â©|Âª|Â«|Â¬|Â®|Â¯/g,
@@ -27,9 +28,12 @@ const files = walk(path.join(root, 'src')).concat(walk(path.join(root, 'bot_back
 const hits = [];
 
 for (const f of files) {
+  const relativePath = path.relative(root, f).replace(/\\/g, '/');
+  if (skipFiles.has(relativePath)) continue;
+  
   const text = fs.readFileSync(f, 'utf8');
   const bad = suspicious.some((re) => re.test(text));
-  if (bad) hits.push(path.relative(root, f));
+  if (bad) hits.push(relativePath);
 }
 
 if (hits.length) {

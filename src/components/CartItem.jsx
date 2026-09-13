@@ -33,6 +33,15 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove }) {
                 <div className="flex items-start justify-between gap-1 mb-1">
                     <h3 className="font-bold text-[13px] text-gray-800 leading-tight truncate flex-1">
                         {item.name}
+                        {item.attributes && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                                {Object.entries(typeof item.attributes === 'string' ? JSON.parse(item.attributes) : item.attributes).map(([key, val]) => (
+                                    <span key={key} className="text-[9px] font-black bg-primary/5 text-primary border border-primary/10 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                                        {val}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </h3>
                     
                     <div className="flex items-center gap-1.5 shrink-0 scale-[0.8] origin-right -mt-1">

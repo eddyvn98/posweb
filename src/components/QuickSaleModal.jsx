@@ -209,7 +209,7 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
                         onClick={nextStep}
                         className="btn-primary w-full h-14 text-[15px] font-black shadow-lg shadow-primary/10 hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-widest rounded-2xl"
                     >
-                        {step === 3 ? 'Xác nhận bán' : 'Tiếp tục (Enter)'}
+                        {step === 3 ? 'Thêm vào giỏ hàng' : 'Tiếp tục (Enter)'}
                     </button>
                 </div>
             </div>

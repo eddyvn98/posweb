@@ -1,0 +1,7 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Solid Pink Bag + Handle Shape -->
+  <path d="M32 15C32 12.2386 34.2386 10 37 10H63C65.7614 10 68 12.2386 68 15V22H86L82 90H18L14 22H32V15Z" fill="#FF1493"/>
+  
+  <!-- Lightning Bolt Cutout (Negative Space) -->
+  <path d="M50 15H42V35H32L65 65H55L45 90L72 55H62L68 35H58V15H50Z" fill="white"/>
+</svg>

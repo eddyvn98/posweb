@@ -26,6 +26,9 @@ function runMigrations() {
             console.log('Migrated: products.category');
         }
 
+        addColumnIfMissing('products', 'parent_id', 'TEXT');
+        addColumnIfMissing('products', 'attributes', "TEXT DEFAULT '{}'");
+
         addColumnIfMissing('shops', 'bank_name', 'TEXT');
         addColumnIfMissing('shops', 'bank_account_name', 'TEXT');
         addColumnIfMissing('shops', 'bank_account_number', 'TEXT');
@@ -127,7 +130,65 @@ function runMigrations() {
               total_amount REAL NOT NULL DEFAULT 0,
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS website_templates (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              industry TEXT NOT NULL,
+              preview_image TEXT,
+              config_json TEXT DEFAULT '{}',
+              is_active BOOLEAN DEFAULT 1,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS storefront_settings (
+              id TEXT PRIMARY KEY,
+              shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+              slug TEXT NOT NULL UNIQUE,
+              template_id TEXT NOT NULL,
+              status TEXT CHECK (status IN ('draft', 'published', 'paused')) DEFAULT 'draft',
+              brand_name TEXT NOT NULL,
+              logo_url TEXT,
+              primary_color TEXT DEFAULT '#111111',
+              hero_title TEXT,
+              hero_subtitle TEXT,
+              hero_image_url TEXT,
+              featured_category_names_json TEXT DEFAULT '[]',
+              config_json TEXT DEFAULT '{}',
+              published_at DATETIME,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE(shop_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS web_orders (
+              id TEXT PRIMARY KEY,
+              shop_id TEXT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+              code TEXT NOT NULL,
+              customer_name TEXT NOT NULL,
+              customer_phone TEXT NOT NULL,
+              customer_address TEXT,
+              note TEXT,
+              total_amount REAL NOT NULL DEFAULT 0,
+              status TEXT CHECK (status IN ('pending', 'confirmed', 'cancelled')) DEFAULT 'pending',
+              items_json TEXT NOT NULL DEFAULT '[]',
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              confirmed_at DATETIME
+            );
         `);
+
+        db.prepare(`
+            INSERT OR IGNORE INTO website_templates (id, name, industry, preview_image, config_json, is_active)
+            VALUES (?, ?, ?, ?, ?, 1)
+        `).run(
+            'styla-fashion',
+            'STYLA Fashion',
+            'Thời trang',
+            '/previews/pro.png',
+            JSON.stringify({
+                layout: 'styla',
+                sections: ['hero', 'collections', 'featuredProducts', 'benefits', 'newsletter']
+            })
+        );
     } catch (err) {
         console.error('Error running migrations:', err.message);
     }

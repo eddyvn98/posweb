@@ -55,6 +55,8 @@ export const getProductImageUrl = (url) => {
     }
     if (url.startsWith('data:image')) return url
     if (url.startsWith('http')) return url
+    // Local static assets under /public should be served directly (not through /api)
+    if (url.startsWith('/mocking/')) return url
 
     // Fallback for relative paths if any
     const base = api.defaults.baseURL || '/api'

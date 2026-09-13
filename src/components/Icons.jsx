@@ -14,6 +14,17 @@ export function Icon({ children, className = "w-5 h-5", strokeWidth = 2 }) {
     )
 }
 
+export const List = (props) => (
+    <Icon {...props}>
+        <line x1="8" y1="6" x2="21" y2="6" />
+        <line x1="8" y1="12" x2="21" y2="12" />
+        <line x1="8" y1="18" x2="21" y2="18" />
+        <line x1="3" y1="6" x2="3.01" y2="6" />
+        <line x1="3" y1="12" x2="3.01" y2="12" />
+        <line x1="3" y1="18" x2="3.01" y2="18" />
+    </Icon>
+)
+
 export const Package = (props) => (
     <Icon {...props}>
         <path d="M16.5 9.4 7.5 4.21" />
@@ -438,5 +449,13 @@ export const ArrowDownRight = (props) => (
 export const ChevronRight = (props) => (
     <Icon {...props}>
         <polyline points="9 18 15 12 9 6" />
+    </Icon>
+)
+
+export const ImageIcon = (props) => (
+    <Icon {...props}>
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" />
+        <polyline points="21 15 16 10 5 21" />
     </Icon>
 )

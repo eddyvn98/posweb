@@ -81,8 +81,34 @@ export default function Landing() {
                         alt="Giao diện quản lý bán hàng chuyên nghiệp trên OpenPOS" 
                         className="hero-screenshot"
                     />
+                    <img 
+                        src="/mobile_web_scanner_mockup.png" 
+                        alt="Giao diện di động thân thiện" 
+                        className="hero-mobile-screenshot"
+                    />
                 </div>
 
+            </section>
+
+            <section className="mobile-feature">
+                <div className="mobile-feature-content">
+                    <div className="section-tag">Mobile First</div>
+                    <h2>Biến điện thoại thành máy quét chuyên nghiệp</h2>
+                    <p>Không cần máy quét barcode đắt tiền, không cần cài đặt ứng dụng phức tạp. Chỉ cần mở POSweb trên trình duyệt điện thoại, bạn có thể quét mã vạch sản phẩm để bán hàng và nhập kho ngay lập tức.</p>
+                    <ul className="feature-list">
+                        <li><div className="list-icon">✓</div> <span>Quét mã cực nhanh bằng camera điện thoại</span></li>
+                        <li><div className="list-icon">✓</div> <span>Không cần tải App từ Store</span></li>
+                        <li><div className="list-icon">✓</div> <span>Hoạt động mượt mà trên cả iOS và Android</span></li>
+                        <li><div className="list-icon">✓</div> <span>Tiết kiệm chi phí đầu tư thiết bị</span></li>
+                    </ul>
+                </div>
+                <div className="mobile-feature-mockup">
+                    <img 
+                        src="/mobile_web_scanner_mockup.png" 
+                        alt="Quét mã vạch trên web bằng điện thoại" 
+                        className="mobile-screenshot" 
+                    />
+                </div>
             </section>
 
             <section className="features" id="features">

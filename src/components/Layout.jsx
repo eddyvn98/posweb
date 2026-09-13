@@ -9,6 +9,7 @@ function NavIcon({ id, className = 'w-5 h-5' }) {
     if (id === 'dashboard') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}><path d="M3 12h8V3H3zM13 21h8v-8h-8zM13 3h8v6h-8zM3 21h8v-6H3z" /></svg>
     if (id === 'sales') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}><path d="M3 7h18M6 7V5h12v2M5 7v12h14V7M9 12h6M9 16h4" /></svg>
     if (id === 'products') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}><path d="M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7" /></svg>
+    if (id === 'website') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}><path d="M3 5h18v14H3z" /><path d="M3 9h18" /><path d="M8 21h8" /><path d="M12 19v2" /></svg>
     if (id === 'imports') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}><path d="M12 3v12M8 11l4 4 4-4M4 21h16" /></svg>
     if (id === 'reports') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}><path d="M4 20V9M10 20V4M16 20v-7M22 20H2" /></svg>
     if (id === 'cashbook') return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className={className}><path d="M4 20h16M6 16l4-4 3 3 5-6" /></svg>
@@ -23,13 +24,14 @@ function NavIcon({ id, className = 'w-5 h-5' }) {
 export default function Layout() {
     const navigate = useNavigate()
     const location = useLocation()
-    const { signOut, isGuest } = useAuth()
+    const { signOut, isGuest, shop } = useAuth()
     const { isOnline, pendingCount } = useSync()
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
     const mainItems = [
         { path: '/app/sales', label: 'Bán hàng', icon: 'sales' },
         { path: '/app/products', label: 'Kho hàng', icon: 'products' },
+        { path: '/app/web-sales', label: 'Website', icon: 'website' },
         { path: '/app/reports', label: 'Báo cáo', icon: 'reports' },
     ]
 
@@ -37,7 +39,9 @@ export default function Layout() {
         { path: '/app/dashboard', label: 'Tổng quan', icon: 'dashboard' },
         { path: '/app/sales', label: 'Bán hàng', icon: 'sales' },
         { path: '/app/products', label: 'Kho hàng', icon: 'products' },
+        { path: '/app/web-sales', label: 'Website', icon: 'website' },
         { path: '/app/imports', label: 'Nhập hàng', icon: 'imports' },
+        { path: '/app/web-sales', label: 'Website', icon: 'website' },
         { path: '/app/reports', label: 'Báo cáo', icon: 'reports' },
         { path: '/app/cashbook', label: 'Sổ quỹ', icon: 'cashbook' },
         { path: '/app/history', label: 'Lịch sử', icon: 'history' },
@@ -60,7 +64,15 @@ export default function Layout() {
         <div className="min-h-screen bg-pink-50/30 flex flex-col md:flex-row">
             <aside className="hidden md:flex w-64 bg-white border-r border-pink-100 flex-col sticky top-0 h-screen z-20">
                 <div className="p-6">
-                    <h1 className="text-2xl font-black text-primary tracking-tighter italic">OpenPOS</h1>
+                    <div className="flex items-center gap-2.5">
+                        <img src="/logo.png" alt="POSweb Free" className="w-9 h-9 rounded-xl" />
+                        <h1 className="text-2xl font-black text-primary tracking-tighter italic">POSweb <span className="text-gray-400 not-italic ml-1">Free</span></h1>
+                    </div>
+                    {shop?.name && (
+                        <p className="mt-2 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-1 truncate">
+                            {shop.name}
+                        </p>
+                    )}
                 </div>
                 <nav className="flex-1 px-4 space-y-2">
                     {sidebarItems.map((item) => (

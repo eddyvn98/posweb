@@ -1,4 +1,4 @@
-﻿const { Schema } = require('mongoose');
+const { Schema } = require('mongoose');
 
 const ProductSchema = new Schema({
   id: { type: String, required: true, index: true },
@@ -12,6 +12,8 @@ const ProductSchema = new Schema({
   stock_quantity: { type: Number, default: 0 },
   image_url: { type: String, default: null },
   is_active: { type: Boolean, default: true },
+  parent_id: { type: String, default: null, index: true },
+  attributes: { type: Object, default: {} },
   created_at: { type: Date, default: Date.now },
 }, {
   collection: 'products',
@@ -21,5 +23,6 @@ const ProductSchema = new Schema({
 ProductSchema.index({ shop_id: 1, barcode: 1 }, { unique: true });
 ProductSchema.index({ shop_id: 1, is_active: 1 });
 ProductSchema.index({ shop_id: 1, name: 1 });
+ProductSchema.index({ shop_id: 1, parent_id: 1 });
 
 module.exports = ProductSchema;

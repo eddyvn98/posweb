@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import api from '../lib/api'
 import { matchProduct } from '../lib/searchUtils'
 import { getAllLocalProducts } from '../lib/db'
@@ -11,7 +11,7 @@ import { useSync } from '../contexts/SyncContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getProductImageUrl } from '../lib/imageUtils'
 import { useNavigate } from 'react-router-dom'
-import { Search, Package, Plus, X, Check, LayoutGrid, FileSpreadsheet, Wrench, Zap, QrCode } from '../components/Icons'
+import { Search, Package, Plus, X, Check, LayoutGrid, FileSpreadsheet, Wrench, Zap, QrCode, ChevronDown, ChevronRight } from '../components/Icons'
 import BarcodeScanner from '../components/BarcodeScanner'
 import './Products.css'
 
@@ -41,6 +41,16 @@ export default function Products() {
 
     const [selectedProducts, setSelectedProducts] = useState([])
     const [isSelectionMode, setIsSelectionMode] = useState(false)
+    const [expandedRows, setExpandedRows] = useState([]) // [parentId, ...]
+
+    const toggleExpanded = (parentId) => {
+        setExpandedRows(prev => 
+            prev.includes(parentId) 
+            ? prev.filter(id => id !== parentId) 
+            : [...prev, parentId]
+        )
+    }
+
     const [filter, setFilter] = useState('all')
     const [sortBy, setSortBy] = useState('name_asc')
     const [categories, setCategories] = useState([])
@@ -139,25 +149,79 @@ export default function Products() {
     }, [])
 
     useEffect(() => {
-        let processed = [...allProducts]
+        const onGuestSeeded = () => {
+            fetchProducts()
+        }
+        window.addEventListener('posweb:guest-seeded', onGuestSeeded)
+        return () => window.removeEventListener('posweb:guest-seeded', onGuestSeeded)
+    }, [isGuest])
+
+    useEffect(() => {
+        // 1. Identify Parents and Children
+        const parents = allProducts.filter(p => !p.parent_id);
+        const children = allProducts.filter(p => p.parent_id);
+
+        let processed = parents.map(parent => {
+            const myChildren = children.filter(c => c.parent_id === parent.id);
+            if (myChildren.length === 0) return { ...parent, hasVariants: false };
+
+            // Aggregate data
+            const totalStock = myChildren.reduce((sum, c) => sum + (Number(c.stock_quantity) || 0), 0);
+            const prices = myChildren.map(c => Number(c.price)).filter(p => p > 0);
+            const minPrice = prices.length > 0 ? Math.min(...prices) : parent.price;
+            const maxPrice = prices.length > 0 ? Math.max(...prices) : parent.price;
+            
+            // Join children barcodes for searchability
+            const childBarcodes = myChildren.map(c => c.barcode).filter(b => b).join(' ');
+
+            return {
+                ...parent,
+                hasVariants: true,
+                variantCount: myChildren.length,
+                stock_quantity: totalStock,
+                minPrice,
+                maxPrice,
+                variants: myChildren,
+                childBarcodes, // Searchable field
+                // Keep prices consistent for sorting
+                price: minPrice 
+            };
+        });
+
+        // 2. Apply Filters
         if (query && query.trim()) {
-            processed = processed.filter((product) => matchProduct(product, query))
+            const q = query.trim().toLowerCase();
+            processed = processed.filter((product) => {
+                const matchBase = matchProduct(product, q);
+                const matchChildBarcode = product.childBarcodes && product.childBarcodes.toLowerCase().includes(q);
+                return matchBase || matchChildBarcode;
+            });
         }
         if (filter === 'low_stock') {
-            processed = processed.filter((product) => product.stock_quantity < 10)
+            processed = processed.filter((product) => product.stock_quantity < 10);
         }
         if (selectedCategory) {
-            processed = processed.filter((product) => product.category === selectedCategory)
+            processed = processed.filter((product) => {
+                const isMainCategory = product.category === selectedCategory
+                if (isMainCategory) return true
+                
+                // Also check classifications
+                const classifs = typeof product.classifications === 'string' 
+                    ? JSON.parse(product.classifications) 
+                    : (product.classifications || {})
+                return Object.values(classifs).some(v => String(v) === selectedCategory)
+            });
         }
 
+        // 3. Sorting
         processed.sort((a, b) => {
-            if (sortBy === 'name_asc') return a.name.localeCompare(b.name)
-            if (sortBy === 'price_asc') return a.price - b.price
-            if (sortBy === 'price_desc') return b.price - a.price
-            if (sortBy === 'stock_asc') return a.stock_quantity - b.stock_quantity
-            return 0
-        })
-        setProducts(processed)
+            if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
+            if (sortBy === 'price_asc') return a.price - b.price;
+            if (sortBy === 'price_desc') return b.price - a.price;
+            if (sortBy === 'stock_asc') return a.stock_quantity - b.stock_quantity;
+            return 0;
+        });
+        setProducts(processed);
     }, [allProducts, query, filter, sortBy, selectedCategory])
 
     const handleCreate = () => {
@@ -218,7 +282,7 @@ export default function Products() {
     }
 
     return (
-        <div className="h-screen flex flex-col bg-white">
+        <div className="h-full flex flex-col bg-white overflow-hidden">
             <div className="bg-white p-3 md:p-4 flex flex-col gap-3 md:gap-4 border-b shadow-sm z-30">
                 {/* Row 1: Title and Main Actions */}
                 <div className="flex flex-row items-center justify-between gap-3">
@@ -358,16 +422,11 @@ export default function Products() {
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="absolute inset-0 border-[30px] border-black/30 pointer-events-none flex items-center justify-center">
-                             <div className="w-64 h-40 border-2 border-red-500/50 rounded-lg relative">
-                                <div className="absolute inset-x-0 top-1/2 h-0.5 bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-scan"></div>
-                             </div>
-                        </div>
                     </div>
                 )}
             </div>
 
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 {loadingProducts ? (
                     <div className="flex items-center justify-center h-full text-gray-400 font-bold">Đang tải...</div>
                 ) : products.length === 0 ? (
@@ -410,18 +469,38 @@ export default function Products() {
 
                                         {/* Product Info */}
                                         <div className="space-y-1">
-                                            <h3 className="text-[12px] font-black text-gray-900 line-clamp-2 leading-tight h-8">{product.name}</h3>
-                                            <div className="flex items-center gap-1.5 py-0.5">
-                                                <span className="text-[10px] font-mono bg-gray-100 text-gray-800 px-2.5 py-1 rounded-lg font-black border border-gray-200 tracking-wider shadow-sm">#{product.barcode || '---'}</span>
+                                            <div className="flex items-start justify-between gap-1">
+                                                <h3 className="text-[12px] font-black text-gray-900 line-clamp-2 leading-tight h-8 flex-1">{product.name}</h3>
+                                                {product.hasVariants && (
+                                                    <span className="bg-blue-50 text-blue-600 p-1 rounded-lg shadow-sm shrink-0" title="Sản phẩm có biến thể">
+                                                        <LayoutGrid className="w-3 h-3" />
+                                                    </span>
+                                                )}
                                             </div>
-                                            <div className="flex justify-between items-center pt-1">
+                                            <div className="flex items-center gap-1.5 py-0.5">
+                                                <span className="text-[10px] font-mono bg-gray-100 text-gray-800 px-2.5 py-1 rounded-lg font-black border border-gray-200 tracking-wider shadow-sm">
+                                                    {product.hasVariants ? `${product.variantCount} phiên bản` : `#${product.barcode || '---'}`}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1 mt-1">
                                                 <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter truncate">{product.category || 'Chưa nhóm'}</p>
+                                                {product.classifications && Object.entries(typeof product.classifications === 'string' ? JSON.parse(product.classifications) : product.classifications).map(([k, v]) => (
+                                                    <span key={k} className="text-[8px] bg-gray-100 text-gray-500 px-1 rounded font-bold uppercase truncate max-w-[60px]">
+                                                        {v}
+                                                    </span>
+                                                ))}
                                             </div>
                                             <div className="pt-1 flex flex-col">
-                                                <span className="text-sm font-black text-primary leading-none">{new Intl.NumberFormat('vi-VN').format(product.price)}đ</span>
+                                                {product.hasVariants ? (
+                                                    <span className="text-[11px] font-black text-primary leading-none">
+                                                        {new Intl.NumberFormat('vi-VN').format(product.minPrice)} - {new Intl.NumberFormat('vi-VN').format(product.maxPrice)}đ
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-sm font-black text-primary leading-none">{new Intl.NumberFormat('vi-VN').format(product.price)}đ</span>
+                                                )}
                                                 <div className="flex items-center gap-1 mt-1">
                                                     <div className={`h-1 w-1 rounded-full ${product.stock_quantity < 10 ? 'bg-red-500 animate-pulse' : 'bg-green-400'}`}></div>
-                                                    <span className="text-[9px] font-bold text-gray-400 uppercase">Tồn:</span>
+                                                    <span className="text-[9px] font-bold text-gray-400 uppercase">Tồn {product.hasVariants ? 'tổng' : ''}:</span>
                                                     <span className={`text-[10px] font-black ${product.stock_quantity < 10 ? 'text-red-500' : 'text-gray-700'}`}>{product.stock_quantity}</span>
                                                 </div>
                                             </div>
@@ -448,11 +527,12 @@ export default function Products() {
                         </div>
                     </div>
                 ) : (
-                    <div className="sheet-container h-full">
+                    <div className="sheet-container flex-1 pb-24">
                         <table className="sheet-table">
                             <thead>
                                 <tr>
                                     <th className="row-index">#</th>
+                                    <th className="col-img w-10 text-center">Ảnh</th>
                                     <th className="col-name">Tên sản phẩm</th>
                                     <th className="col-barcode">Mã vạch</th>
                                     <th className="col-category">Nhóm</th>
@@ -464,75 +544,177 @@ export default function Products() {
                             <tbody>
                                 {products.map((product, idx) => {
                                     const isSelected = selectedProducts.includes(product.id)
+                                    const isExpanded = expandedRows.includes(product.id)
+                                    
                                     return (
-                                        <tr key={product.id} className={isSelected ? 'selected' : ''}>
-                                            <td className="row-index" onClick={() => toggleSelect(product.id)}>
-                                                {isSelected ? <Check className="w-4 h-4 mx-auto" /> : idx + 1}
-                                            </td>
-                                            <td>
-                                                <input 
-                                                    className="sheet-input font-bold" 
-                                                    defaultValue={product.name}
-                                                    onBlur={(e) => handleUpdateInline(product, 'name', e.target.value)}
-                                                    disabled={isGuest}
-                                                    autoComplete="off"
-                                                    spellCheck="false"
-                                                    onDoubleClick={() => handleEdit(product)}
-                                                />
-                                            </td>
-                                            <td>
-                                                <input 
-                                                    className="sheet-input font-mono text-[11px]" 
-                                                    defaultValue={product.barcode}
-                                                    onBlur={(e) => handleUpdateInline(product, 'barcode', e.target.value)}
-                                                    disabled={isGuest}
-                                                    autoComplete="off"
-                                                    spellCheck="false"
-                                                />
-                                            </td>
-                                            <td>
-                                                <select 
-                                                    className="sheet-input bg-transparent"
-                                                    value={product.category || ''}
-                                                    onChange={(e) => handleUpdateInline(product, 'category', e.target.value)}
-                                                    disabled={isGuest}
-                                                >
-                                                    <option value="">--</option>
-                                                    {categories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
-                                                </select>
-                                            </td>
-                                            <td className="text-center">
-                                                <input 
-                                                    type="number"
-                                                    className={`sheet-input text-center font-bold ${product.stock_quantity < 10 ? 'text-red-500' : ''}`}
-                                                    defaultValue={product.stock_quantity}
-                                                    onBlur={(e) => handleUpdateInline(product, 'stock_quantity', Number(e.target.value))}
-                                                    disabled={isGuest}
-                                                    autoComplete="off"
-                                                />
-                                            </td>
-                                            <td className="text-center">
-                                                <input 
-                                                    className="sheet-input text-center" 
-                                                    defaultValue={product.unit}
-                                                    onBlur={(e) => handleUpdateInline(product, 'unit', e.target.value)}
-                                                    disabled={isGuest}
-                                                    autoComplete="off"
-                                                    spellCheck="false"
-                                                />
-                                            </td>
-                                            <td className="text-right">
-                                                <input 
-                                                    type="number"
-                                                    className="sheet-input text-right font-black text-primary" 
-                                                    defaultValue={product.price}
-                                                    onBlur={(e) => handleUpdateInline(product, 'price', Number(e.target.value))}
-                                                    disabled={isGuest}
-                                                    autoComplete="off"
-                                                    onDoubleClick={() => handleEdit(product)}
-                                                />
-                                            </td>
-                                        </tr>
+                                        <React.Fragment key={product.id}>
+                                            <tr className={`${isSelected ? 'selected' : ''} ${product.hasVariants ? 'cursor-pointer hover:bg-gray-50/50' : ''}`}>
+                                                <td className="row-index" onClick={() => product.hasVariants ? toggleExpanded(product.id) : toggleSelect(product.id)}>
+                                                    <div className="flex items-center justify-center">
+                                                        {product.hasVariants ? (
+                                                            isExpanded ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-gray-400" />
+                                                        ) : (
+                                                            isSelected ? <Check className="w-4 h-4 mx-auto" /> : idx + 1
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="text-center p-1">
+                                                    <div className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden mx-auto flex items-center justify-center">
+                                                        {product.image_url ? (
+                                                            <img src={getProductImageUrl(product.image_url)} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <Package className="w-4 h-4 opacity-10" />
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="pl-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <input 
+                                                            className="sheet-input font-bold" 
+                                                            defaultValue={product.name}
+                                                            onBlur={(e) => handleUpdateInline(product, 'name', e.target.value)}
+                                                            disabled={isGuest}
+                                                            autoComplete="off"
+                                                            spellCheck="false"
+                                                            onDoubleClick={() => handleEdit(product)}
+                                                        />
+                                                        {product.hasVariants && (
+                                                            <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-black shrink-0 uppercase">
+                                                                {product.variantCount} biến thể
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <input 
+                                                        className="sheet-input font-mono text-[11px]" 
+                                                        defaultValue={product.barcode}
+                                                        onBlur={(e) => handleUpdateInline(product, 'barcode', e.target.value)}
+                                                        disabled={isGuest || product.hasVariants}
+                                                        placeholder={product.hasVariants ? 'Dùng mã riêng cho từng mẫu' : 'Mã vạch'}
+                                                        autoComplete="off"
+                                                        spellCheck="false"
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <select 
+                                                            className="sheet-input bg-transparent"
+                                                            value={product.category || ''}
+                                                            onChange={(e) => handleUpdateInline(product, 'category', e.target.value)}
+                                                            disabled={isGuest}
+                                                        >
+                                                            <option value="">--</option>
+                                                            {categories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+                                                        </select>
+                                                        <div className="flex flex-wrap gap-1 px-1">
+                                                            {product.classifications && Object.entries(typeof product.classifications === 'string' ? JSON.parse(product.classifications) : product.classifications).map(([k, v]) => (
+                                                                <span key={k} className="text-[9px] text-gray-400 bg-gray-50 border border-gray-100 px-1 rounded">
+                                                                    {v}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="text-center">
+                                                    <input 
+                                                        type="number"
+                                                        className={`sheet-input text-center font-bold ${product.stock_quantity < 10 ? 'text-red-500' : ''}`}
+                                                        value={product.stock_quantity}
+                                                        onChange={(e) => product.hasVariants ? null : handleUpdateInline(product, 'stock_quantity', Number(e.target.value))}
+                                                        disabled={isGuest || product.hasVariants}
+                                                        autoComplete="off"
+                                                    />
+                                                </td>
+                                                <td className="text-center">
+                                                    <input 
+                                                        className="sheet-input text-center" 
+                                                        defaultValue={product.unit}
+                                                        onBlur={(e) => handleUpdateInline(product, 'unit', e.target.value)}
+                                                        disabled={isGuest}
+                                                        autoComplete="off"
+                                                        spellCheck="false"
+                                                    />
+                                                </td>
+                                                <td className="text-right">
+                                                    {product.hasVariants ? (
+                                                        <div className="px-2 text-[11px] font-black text-primary opacity-60" onDoubleClick={() => handleEdit(product)}>
+                                                            {new Intl.NumberFormat('vi-VN').format(product.minPrice)} ~ {new Intl.NumberFormat('vi-VN').format(product.maxPrice)}
+                                                        </div>
+                                                    ) : (
+                                                        <input 
+                                                            type="number"
+                                                            className="sheet-input text-right font-black text-primary" 
+                                                            defaultValue={product.price}
+                                                            onBlur={(e) => handleUpdateInline(product, 'price', Number(e.target.value))}
+                                                            disabled={isGuest}
+                                                            autoComplete="off"
+                                                            onDoubleClick={() => handleEdit(product)}
+                                                        />
+                                                    )}
+                                                </td>
+                                            </tr>
+
+                                            {/* Sub-rows for Variants */}
+                                            {isExpanded && product.variants?.map((v, vIdx) => (
+                                                <tr key={v.id} className="bg-gray-50/30 border-l-4 border-l-primary/30">
+                                                    <td className="row-index text-[10px] text-gray-300 font-bold italic">
+                                                        {idx + 1}.{vIdx + 1}
+                                                    </td>
+                                                    <td className="text-center p-1">
+                                                        <div className="w-6 h-6 rounded-md bg-white border border-gray-100 overflow-hidden mx-auto flex items-center justify-center relative group/vimg">
+                                                            <img 
+                                                                src={getProductImageUrl(v.image_url || product.image_url)} 
+                                                                className="w-full h-full object-cover" 
+                                                            />
+                                                            {!v.image_url && product.image_url && (
+                                                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/vimg:opacity-100 transition-opacity flex items-center justify-center">
+                                                                    <span className="text-[6px] text-white font-black uppercase">Gốc</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="pl-8">
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {v.attributes && Object.entries(typeof v.attributes === 'string' ? JSON.parse(v.attributes) : v.attributes).map(([key, val]) => (
+                                                                <span key={key} className="text-[10px] font-black bg-white border border-gray-200 px-2 py-0.5 rounded text-gray-500 uppercase">
+                                                                    {val}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <input 
+                                                            className="sheet-input font-mono text-[10px] bg-transparent" 
+                                                            defaultValue={v.barcode}
+                                                            onBlur={(e) => handleUpdateInline(v, 'barcode', e.target.value)}
+                                                            disabled={isGuest}
+                                                            placeholder="Mã vạch riêng"
+                                                        />
+                                                    </td>
+                                                    <td><div className="sheet-input opacity-20">—</div></td>
+                                                    <td className="text-center">
+                                                        <input 
+                                                            type="number"
+                                                            className="sheet-input text-center font-bold bg-transparent"
+                                                            defaultValue={v.stock_quantity}
+                                                            onBlur={(e) => handleUpdateInline(v, 'stock_quantity', Number(e.target.value))}
+                                                            disabled={isGuest}
+                                                        />
+                                                    </td>
+                                                    <td><div className="sheet-input opacity-20">—</div></td>
+                                                    <td className="text-right">
+                                                        <input 
+                                                            type="number"
+                                                            className="sheet-input text-right font-black text-primary bg-transparent" 
+                                                            defaultValue={v.price}
+                                                            onBlur={(e) => handleUpdateInline(v, 'price', Number(e.target.value))}
+                                                            disabled={isGuest}
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </React.Fragment>
                                     )
                                 })}
                             </tbody>
@@ -561,7 +743,7 @@ export default function Products() {
                     className={`fixed bottom-24 ${fabPosition === 'right' ? 'right-4' : 'left-4'} w-14 h-14 bg-primary text-white rounded-full shadow-[0_8px_30px_rgb(233,30,99,0.4)] flex flex-col items-center justify-center z-[50] active:scale-90 transition-all md:hidden border-2 border-white`}
                 >
                     <QrCode className="w-6 h-6" />
-                    <span className="text-[8px] font-black mt-0.5 uppercase">Quét</span>
+                    <span className="text-[8px] font-black mt-0.5 uppercase">Thêm</span>
                 </button>
             )}
         </div>

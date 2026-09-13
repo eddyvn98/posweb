@@ -413,23 +413,47 @@ export default function Settings() {
 
                 <div className="bg-white rounded-3xl p-6 border border-pink-50 shadow-sm">
                     <h2 className="text-lg font-black text-gray-800 mb-4 uppercase">Nâng cao</h2>
-                    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <p className="text-sm font-black text-gray-800">Quản lý công nợ nhà cung cấp</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Bật nếu shop cần theo dõi dư nợ, nợ đầu kỳ và trả nợ NCC. Tắt sẽ ẩn các phần liên quan công nợ.
-                                </p>
+                    <div className="space-y-4">
+                        {/* Supplier Debt Toggle */}
+                        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-sm font-black text-gray-800">Quản lý công nợ nhà cung cấp</p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Bật nếu shop cần theo dõi dư nợ, nợ đầu kỳ và trả nợ NCC. Tắt sẽ ẩn các phần liên quan công nợ.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={hasFeatureEnabled(shopData.feature_flags, FEATURE_KEYS.SUPPLIER_DEBT)}
+                                    onClick={() => handleFeatureToggle(FEATURE_KEYS.SUPPLIER_DEBT)}
+                                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors ${hasFeatureEnabled(shopData.feature_flags, FEATURE_KEYS.SUPPLIER_DEBT) ? 'bg-primary' : 'bg-gray-300'}`}
+                                >
+                                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${hasFeatureEnabled(shopData.feature_flags, FEATURE_KEYS.SUPPLIER_DEBT) ? 'translate-x-6 mt-1' : 'translate-x-1 mt-1'}`} />
+                                </button>
                             </div>
-                            <button
-                                type="button"
-                                role="switch"
-                                aria-checked={hasFeatureEnabled(shopData.feature_flags, FEATURE_KEYS.SUPPLIER_DEBT)}
-                                onClick={() => handleFeatureToggle(FEATURE_KEYS.SUPPLIER_DEBT)}
-                                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors ${hasFeatureEnabled(shopData.feature_flags, FEATURE_KEYS.SUPPLIER_DEBT) ? 'bg-primary' : 'bg-gray-300'}`}
-                            >
-                                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${hasFeatureEnabled(shopData.feature_flags, FEATURE_KEYS.SUPPLIER_DEBT) ? 'translate-x-6 mt-1' : 'translate-x-1 mt-1'}`} />
-                            </button>
+                        </div>
+
+                        {/* Product Variants Toggle */}
+                        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-sm font-black text-gray-800">Biến thể sản phẩm (Size, Màu...)</p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Bật nếu shop bán hàng có nhiều thuộc tính khác nhau trên cùng một mã sản phẩm. Tắt sẽ dùng chế độ bán hàng đơn giản.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={hasFeatureEnabled(shopData.feature_flags, FEATURE_KEYS.PRODUCT_VARIANTS)}
+                                    onClick={() => handleFeatureToggle(FEATURE_KEYS.PRODUCT_VARIANTS)}
+                                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors ${hasFeatureEnabled(shopData.feature_flags, FEATURE_KEYS.PRODUCT_VARIANTS) ? 'bg-primary' : 'bg-gray-300'}`}
+                                >
+                                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${hasFeatureEnabled(shopData.feature_flags, FEATURE_KEYS.PRODUCT_VARIANTS) ? 'translate-x-6 mt-1' : 'translate-x-1 mt-1'}`} />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
