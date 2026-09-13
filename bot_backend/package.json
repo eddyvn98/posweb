@@ -6,6 +6,7 @@
     "scripts": {
         "start": "node server.js",
         "dev": "node --watch server.js",
+        "test": "node --test tests/*.test.js",
         "migrate:mongo": "node scripts/migrate_sqlite_to_mongo.js",
         "verify:mongo-counts": "node scripts/verify_mongo_counts.js",
         "smoke:core": "node scripts/smoke_core_api.js",

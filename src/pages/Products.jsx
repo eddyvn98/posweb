@@ -270,9 +270,21 @@ export default function Products() {
                                     <p className="text-[10px] text-slate-400 truncate font-mono">{product.barcode}</p>
                                 </div>
                                 <div className="mt-2.5 pt-2 border-t border-slate-100 flex justify-between items-center">
-                                    <div className="font-bold text-slate-900 text-base font-mono tabular-nums">
-                                        {new Intl.NumberFormat('vi-VN').format(product.price)}
-                                        <span className="text-xs font-normal text-slate-500 ml-0.5">đ</span>
+                                    <div>
+                                        <div className="font-bold text-slate-900 text-base font-mono tabular-nums leading-none">
+                                            {new Intl.NumberFormat('vi-VN').format(product.price)}
+                                            <span className="text-xs font-normal text-slate-500 ml-0.5">đ</span>
+                                        </div>
+                                        {Number(product.online_price) > 0 && (
+                                            <div className="text-[11px] font-medium text-blue-600 font-mono mt-1">
+                                                Onl: {new Intl.NumberFormat('vi-VN').format(product.online_price)}đ
+                                                {Number(product.promo_price) > 0 && Number(product.promo_price) < Number(product.online_price) && (
+                                                    <span className="text-emerald-600 ml-1">
+                                                        (KM: {new Intl.NumberFormat('vi-VN').format(product.promo_price)}đ)
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex gap-1.5" onClick={(event) => event.stopPropagation()}>
                                         {!isSelectionMode && (

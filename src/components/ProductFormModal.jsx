@@ -57,14 +57,23 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
         if (!currentData.name?.trim() && !currentData.barcode?.trim() && !currentData.image_url) return
 
         try {
+            const rawPrice = Number(currentData.price)
+            const finalPrice = rawPrice > 0 && rawPrice < 1000 ? rawPrice * 1000 : (rawPrice || 0)
+            const rawCost = Number(currentData.cost_price)
+            const finalCostPrice = rawCost > 0 && rawCost < 1000 ? rawCost * 1000 : (rawCost || 0)
+            const rawOnlinePrice = currentData.online_price ? Number(currentData.online_price) : null
+            const finalOnlinePrice = rawOnlinePrice > 0 && rawOnlinePrice < 1000 ? rawOnlinePrice * 1000 : rawOnlinePrice
+            const rawPromoPrice = currentData.promo_price ? Number(currentData.promo_price) : null
+            const finalPromoPrice = rawPromoPrice > 0 && rawPromoPrice < 1000 ? rawPromoPrice * 1000 : rawPromoPrice
+
             const data = {
                 ...currentData,
                 id: product?.id || draftId.current,
                 shop_id: shop.id,
-                price: currentData.price ? Number(currentData.price) : 0,
-                online_price: currentData.online_price ? Number(currentData.online_price) : null,
-                promo_price: currentData.promo_price ? Number(currentData.promo_price) : null,
-                cost_price: currentData.cost_price ? Number(currentData.cost_price) : 0,
+                price: finalPrice,
+                online_price: finalOnlinePrice,
+                promo_price: finalPromoPrice,
+                cost_price: finalCostPrice,
                 stock_quantity: currentData.stock_quantity ? Number(currentData.stock_quantity) : 0,
                 is_active: true,
                 created_at: product?.created_at || new Date().toISOString()
@@ -266,8 +275,17 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
     }
 
     const handlePriceBlur = (field, value) => {
+        if (value === '' || value === null || value === undefined) {
+            const updated = { ...formData, [field]: '' }
+            setFormData(updated)
+            handleAutoSave(updated)
+            return
+        }
         const num = Number(String(value || 0).replace(',', '.'))
-        if (num > 0 && num < 1000) setFormData(p => ({ ...p, [field]: num * 1000 }))
+        const finalVal = num > 0 && num < 1000 ? num * 1000 : (num || '')
+        const updated = { ...formData, [field]: finalVal }
+        setFormData(updated)
+        handleAutoSave(updated)
     }
 
     return (
@@ -344,10 +362,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                             costPrice={formData.cost_price}
                             stockQuantity={formData.stock_quantity}
                             onChange={(f, v) => setFormData(p => ({ ...p, [f]: v }))}
-                            onPriceBlur={(f, v) => {
-                                handlePriceBlur(f, v)
-                                handleAutoSave()
-                            }}
+                            onPriceBlur={(f, v) => handlePriceBlur(f, v)}
                         />
 
                         <div className="grid grid-cols-2 gap-3">

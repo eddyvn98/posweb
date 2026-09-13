@@ -24,27 +24,39 @@ export default function PriceStockSection({ price, onlinePrice, promoPrice, cost
                 </div>
                 <div>
                     <label className="block text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">Giá online</label>
-                    <input
-                        type="number" min="0" step="1" inputMode="numeric"
-                        className="input w-full font-mono text-lg font-bold text-blue-600 p-2 h-11"
-                        value={onlinePrice ?? ''}
+                    <SmartPriceInput
+                        min="0" step="1"
+                        className="input w-full font-mono text-lg font-bold text-blue-600 px-3 h-11"
+                        inputClassName="text-lg font-bold text-blue-600 font-mono"
+                        suffixClassName="text-lg font-bold text-blue-400/50 font-mono"
+                        value={onlinePrice}
                         onChange={(e) => onChange('online_price', e.target.value)}
                         onBlur={(e) => onPriceBlur('online_price', e.target.value)}
                         placeholder="Dùng giá offline"
                     />
-                    <div className="text-[10px] text-gray-500 mt-1">Để trống = dùng giá offline</div>
+                    <div className="text-[10px] font-bold text-blue-600 mt-1">
+                        {Number(onlinePrice) > 0
+                            ? `${new Intl.NumberFormat('vi-VN').format(Number(onlinePrice) < 1000 ? Number(onlinePrice) * 1000 : onlinePrice)} đ`
+                            : 'Để trống = dùng giá offline'}
+                    </div>
                 </div>
                 <div>
                     <label className="block text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Giá KM online</label>
-                    <input
-                        type="number" min="0" step="1" inputMode="numeric"
-                        className="input w-full font-mono text-lg font-bold text-emerald-600 p-2 h-11"
-                        value={promoPrice ?? ''}
+                    <SmartPriceInput
+                        min="0" step="1"
+                        className="input w-full font-mono text-lg font-bold text-emerald-600 px-3 h-11"
+                        inputClassName="text-lg font-bold text-emerald-600 font-mono"
+                        suffixClassName="text-lg font-bold text-emerald-400/50 font-mono"
+                        value={promoPrice}
                         onChange={(e) => onChange('promo_price', e.target.value)}
                         onBlur={(e) => onPriceBlur('promo_price', e.target.value)}
                         placeholder="Không giảm"
                     />
-                    <div className="text-[10px] text-gray-500 mt-1">Thấp hơn giá online để hiện gạch ngang</div>
+                    <div className="text-[10px] font-bold text-emerald-600 mt-1">
+                        {Number(promoPrice) > 0
+                            ? `${new Intl.NumberFormat('vi-VN').format(Number(promoPrice) < 1000 ? Number(promoPrice) * 1000 : promoPrice)} đ`
+                            : 'Thấp hơn giá online để hiện gạch ngang'}
+                    </div>
                 </div>
                 <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Giá vốn</label>
