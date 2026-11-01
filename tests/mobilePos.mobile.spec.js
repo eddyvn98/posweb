@@ -201,4 +201,51 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
     }
   })
 
+  test('P0: ten offline sales survive reload and sync exactly once after reconnect', async ({ page }) => {
+    await setup(page)
+    const captured = new Map()
+    let attempt = 0
+    await page.route('**/api/sales', async route => {
+      if (route.request().method() !== 'POST') return route.continue()
+      attempt++
+      const sale = route.request().postDataJSON()
+      const previous = captured.get(sale.id)
+      if (previous) expect(previous).toEqual(sale)
+      captured.set(sale.id, sale)
+      return route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ success: true, id: sale.id }) })
+    })
+    await page.goto('/sales')
+    await page.evaluate(async () => {
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('pos_db')
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
+      })
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('sales_queue', 'readwrite')
+        const store = tx.objectStore('sales_queue')
+        for (let i = 0; i < 10; i++) {
+          store.add({
+            id: 'offline-p0-' + i, code: 'P0-' + i, shop_id: 'qa-shop-a',
+            total_amount: 15000, payment_method: 'cash',
+            items: [{ product_id: 'qa-a', product_name: 'Notebook A', quantity: 1, price: 15000 }],
+            synced: 0, created_at: new Date().toISOString(), sale_date: new Date().toISOString()
+          })
+        }
+        tx.oncomplete = resolve
+        tx.onerror = () => reject(tx.error)
+      })
+      db.close()
+    })
+    await page.reload()
+    await expect.poll(async () => (await dbRows(page, 'sales_queue')).filter(s => s.synced === 1).length,
+      { timeout: 20000 }).toBe(10)
+    expect(captured.size).toBe(10)
+    expect(attempt).toBe(10)
+    await page.reload()
+    await page.waitForTimeout(350)
+    expect(attempt).toBe(10)
+  })
+
 })
