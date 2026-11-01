@@ -80,10 +80,13 @@ export default function Products() {
 
     const fetchProducts = async () => {
         try {
-            const [apiRes, localProducts] = await Promise.all([
+            const [apiResult, localResult] = await Promise.allSettled([
                 api.get('/products'),
                 getAllLocalProducts()
             ])
+
+            const localProducts = localResult.status === 'fulfilled' ? (localResult.value || []) : []
+            const apiProducts = apiResult.status === 'fulfilled' && apiResult.value?.data ? apiResult.value.data : []
 
             const merged = new Map()
 
@@ -94,12 +97,21 @@ export default function Products() {
 
             // The authenticated inventory response is authoritative for
             // offline price, online price, promotion price, and stock.
-            ;(apiRes.data || []).forEach((product) => {
+            ;(apiProducts || []).forEach((product) => {
                 const key = product.barcode || product.id
                 if (key && (product.name?.trim() || product.barcode?.trim())) merged.set(key, product)
             })
 
-            setAllProducts(Array.from(merged.values()))
+            const finalProducts = Array.from(merged.values())
+            setAllProducts(finalProducts)
+
+            if (apiResult.status === 'rejected') {
+                if (finalProducts.length > 0) {
+                    showNotification('Đang hiển thị danh sách từ bộ nhớ offline', 'warning')
+                } else {
+                    showNotification('Lỗi tải sản phẩm và không có dữ liệu offline', 'error')
+                }
+            }
         } catch (error) {
             console.error('Failed to fetch products', error)
             showNotification('Lỗi tải sản phẩm', 'error')

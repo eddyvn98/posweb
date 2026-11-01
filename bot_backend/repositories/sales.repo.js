@@ -21,17 +21,33 @@ const sqliteRepo = {
       if (sale.items && sale.items.length > 0) {
         for (const item of sale.items) {
           const itemId = uuidv4();
-          db.prepare('INSERT INTO sale_items (id, sale_id, product_id, quantity, price, product_name) VALUES (?, ?, ?, ?, ?, ?)')
-            .run(itemId, saleId, item.product_id || null, item.quantity, item.price, item.product_name);
 
           if (item.product_id) {
-            const product = db.prepare('SELECT stock_quantity FROM products WHERE id = ?').get(item.product_id);
-            const currentStock = product ? product.stock_quantity : 0;
-            const newStock = currentStock - item.quantity;
-            db.prepare('UPDATE products SET stock_quantity = ? WHERE id = ?').run(newStock, item.product_id);
+            let product = db.prepare('SELECT id, stock_quantity FROM products WHERE id = ? AND shop_id = ?').get(item.product_id, shop_id);
+            if (!product) {
+              const anyProduct = db.prepare('SELECT id FROM products WHERE id = ?').get(item.product_id);
+              if (!anyProduct) {
+                // Auto-create product record for quick sale / offline item to satisfy FOREIGN KEY constraint
+                db.prepare('INSERT INTO products (id, shop_id, name, price, stock_quantity, unit, is_active) VALUES (?, ?, ?, ?, 0, ?, 1)')
+                  .run(item.product_id, shop_id, item.product_name || 'Khách lẻ', item.price || 0, 'Cái');
+                product = { id: item.product_id, stock_quantity: 0 };
+              }
+            }
 
-            db.prepare('INSERT INTO inventory_logs (id, shop_id, product_id, change_amount, current_stock, type, note) VALUES (?, ?, ?, ?, ?, ?, ?)')
-              .run(uuidv4(), shop_id, item.product_id, -item.quantity, newStock, 'sale', 'Ban hang');
+            db.prepare('INSERT INTO sale_items (id, sale_id, product_id, quantity, price, product_name) VALUES (?, ?, ?, ?, ?, ?)')
+              .run(itemId, saleId, item.product_id, item.quantity, item.price, item.product_name);
+
+            if (product) {
+              const currentStock = Number(product.stock_quantity || 0);
+              const newStock = currentStock - Number(item.quantity || 0);
+              db.prepare('UPDATE products SET stock_quantity = ? WHERE id = ? AND shop_id = ?').run(newStock, item.product_id, shop_id);
+
+              db.prepare('INSERT INTO inventory_logs (id, shop_id, product_id, change_amount, current_stock, type, note) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                .run(uuidv4(), shop_id, item.product_id, -Number(item.quantity || 0), newStock, 'sale', 'Ban hang');
+            }
+          } else {
+            db.prepare('INSERT INTO sale_items (id, sale_id, product_id, quantity, price, product_name) VALUES (?, ?, ?, ?, ?, ?)')
+              .run(itemId, saleId, null, item.quantity, item.price, item.product_name);
           }
         }
       }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { playBeep, unlockAudio } from '../lib/soundUtils'
-import { searchLocalProducts, saveProductsToLocal } from '../lib/db'
+import { searchLocalProducts, saveProductsToLocal, upsertProductsToLocal } from '../lib/db'
 import BarcodeScanner from '../components/BarcodeScanner'
 import api from '../lib/api'
 import { useCart } from '../contexts/CartContext'
@@ -198,7 +198,7 @@ export default function Sales() {
                 if (resp.data && Array.isArray(resp.data)) {
                     match = resp.data.find(p => p.barcode === cleanCode || p.id === cleanCode)
                     if (match) {
-                        await saveProductsToLocal([match])
+                        await upsertProductsToLocal([match])
                     }
                 }
             } catch (err) {
@@ -379,7 +379,7 @@ export default function Sales() {
                     <div className="flex-1 relative">
                         <input
                             ref={searchInputRef}
-                            autoFocus
+                            autoFocus={typeof window !== 'undefined' && window.innerWidth >= 768}
                             type="text"
                             className="w-full h-10 pl-9 pr-8 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:ring-primary focus:border-primary focus:bg-white transition-all outline-none"
                             placeholder="Mã/Tên SP... (Esc để thoát)"
@@ -503,7 +503,7 @@ export default function Sales() {
             )}
             {/* 📷 CAMERA SCANNER MODAL */}
             {showCameraScanner && (
-                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex flex-col justify-end sm:justify-center items-center p-2 sm:p-4 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-xs flex flex-col justify-end sm:justify-center items-center p-2 sm:p-4 animate-in fade-in duration-200">
                     <div className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl flex flex-col animate-in slide-in-from-bottom-5 duration-300">
                         {/* Header */}
                         <div className="p-3.5 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between">

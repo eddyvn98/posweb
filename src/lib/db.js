@@ -50,6 +50,21 @@ export const saveProductsToLocal = async (products) => {
     await tx.done
 }
 
+export const upsertProductsToLocal = async (products) => {
+    const db = await initDB()
+    const tx = db.transaction('products', 'readwrite')
+
+    const validProducts = (products || []).filter(p => p && p.id && (p.name || p.barcode))
+
+    for (const product of validProducts) {
+        await tx.store.put({
+            ...product,
+            search_normalize: String(product.name || '').toLowerCase()
+        })
+    }
+    await tx.done
+}
+
 export const searchLocalProducts = async (query) => {
     const db = await initDB()
 
@@ -128,11 +143,12 @@ export const removePendingProduct = async (id) => {
 // === SALES (WRITE STORE) ===
 export const saveOfflineSale = async (saleData) => {
     const db = await initDB()
-    // synced is 0 (false) initially
+    // Preserve synced status if already synced (e.g. 1 from online checkout)
+    const isSynced = saleData.synced !== undefined ? Number(saleData.synced) : 0
     return db.add('sales_queue', {
         ...saleData,
-        synced: 0,
-        created_at: new Date().toISOString()
+        synced: isSynced,
+        created_at: saleData.created_at || new Date().toISOString()
     })
 }
 
