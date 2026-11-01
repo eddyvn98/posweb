@@ -6,6 +6,7 @@ const SaleItem = require('../mongo/models/SaleItem');
 const Product = require('../mongo/models/Product');
 const InventoryLog = require('../mongo/models/InventoryLog');
 const CashFlow = require('../mongo/models/CashFlow');
+const { createMongoSale } = require('../services/mongoSaleWriter');
 
 const sqliteRepo = {
   async createSale(shop_id, user_id, sale, options = {}) {
@@ -112,66 +113,7 @@ const sqliteRepo = {
 
 const mongoRepo = {
   async createSale(shop_id, user_id, sale, options = {}) {
-    const saleId = sale.id || uuidv4();
-    // Avoid replaying an already committed sale when an ACK is lost.
-    const existingSale = await Sale.findOne({ id: saleId, shop_id }).lean();
-    if (existingSale) return options.withMeta ? { id: saleId, created: false } : saleId;
-    try {
-      await Sale.create({
-      id: saleId,
-      shop_id,
-      code: sale.code,
-      total_amount: sale.total_amount,
-      payment_method: sale.payment_method,
-      sale_date: sale.sale_date ? new Date(sale.sale_date) : new Date(),
-      created_by: user_id,
-      });
-    } catch (error) {
-      if (error.code === 11000 && await Sale.findOne({ id: saleId, shop_id }).lean()) {
-        return options.withMeta ? { id: saleId, created: false } : saleId;
-      }
-      throw error;
-    }
-
-    if (sale.items && sale.items.length > 0) {
-      for (const item of sale.items) {
-        const product = item.product_id && !item.is_quick_sale
-          ? await Product.findOne({ id: item.product_id, shop_id })
-          : null;
-        await SaleItem.create({
-          id: uuidv4(),
-          sale_id: saleId,
-          product_id: product ? item.product_id : null,
-          quantity: item.quantity,
-          price: item.price,
-          product_name: item.product_name,
-        });
-
-        if (product) {
-          const newStock = Number(product.stock_quantity || 0) - Number(item.quantity || 0);
-          await Product.updateOne({ id: item.product_id, shop_id }, { $set: { stock_quantity: newStock } });
-          await InventoryLog.create({
-            id: uuidv4(), shop_id, product_id: item.product_id,
-            change_amount: -Number(item.quantity || 0), current_stock: newStock,
-            type: 'sale', note: 'Ban hang',
-            created_at: sale.sale_date ? new Date(sale.sale_date) : new Date(),
-          });
-        }
-      }
-    }
-
-    await CashFlow.create({
-      id: uuidv4(),
-      shop_id,
-      amount: Number(sale.total_amount || 0),
-      type: 'in',
-      category: 'sale',
-      description: `Thu tien ban hang don ${sale.code}`,
-      ref_id: saleId,
-      created_at: sale.sale_date ? new Date(sale.sale_date) : new Date(),
-    });
-
-    return options.withMeta ? { id: saleId, created: true } : saleId;
+    return createMongoSale(shop_id, user_id, sale, options);
   },
 
   async getSales(shop_id, startDate, endDate) {
@@ -233,14 +175,14 @@ const mongoRepo = {
 const dualRepo = {
   ...mongoRepo,
   async createSale(shop_id, user_id, sale, options = {}) {
-    const outcome = await mongoRepo.createSale(shop_id, user_id, sale, { withMeta: true });
-    const saleId = outcome.id;
-    try {
-      await sqliteRepo.createSale(shop_id, user_id, { ...sale, id: saleId });
-    } catch (e) {
-      console.error('[dual][sales] sqlite write failed:', e.message);
-    }
-    return options.withMeta ? outcome : saleId;
+    const mongo = await mongoRepo.createSale(shop_id, user_id, sale, { withMeta: true });
+    // Mongo is the primary store. A failed SQLite mirror MUST be retryable.
+    // Even if Mongo already has the sale, retry the missing SQLite mirror.
+    const mirror = await sqliteRepo.createSale(
+      shop_id, user_id, { ...sale, id: mongo.id }, { withMeta: true }
+    );
+    const outcome = { id: mongo.id, created: mongo.created || mirror.created };
+    return options.withMeta ? outcome : outcome.id;
   },
   async voidSale(shop_id, saleId, reason) {
     const ok = await mongoRepo.voidSale(shop_id, saleId, reason);
