@@ -239,6 +239,8 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
       db.close()
     })
     await page.reload()
+    await expect(page.getByPlaceholder('Mã/Tên SP... (Esc để thoát)')).toBeVisible()
+    await page.evaluate(() => window.dispatchEvent(new Event('online')))
     await expect.poll(async () => (await dbRows(page, 'sales_queue')).filter(s => s.synced === 1).length,
       { timeout: 20000 }).toBe(10)
     expect(captured.size).toBe(10)
