@@ -6,8 +6,10 @@ async function createSale(req, res) {
     const sale = req.body;
 
     try {
-        const resultId = await getSalesRepo().createSale(shop_id, user_id, sale);
+        const outcome = await getSalesRepo().createSale(shop_id, user_id, sale, { withMeta: true });
+        const resultId = outcome.id;
 
+        if (outcome.created) {
         const shop = await getAuthRepo().getShopById(shop_id);
         const { syncSale, syncCashFlow } = require('../../services/googleSheetService');
         const shopName = shop ? shop.name : 'Cua hang';
@@ -21,6 +23,7 @@ async function createSale(req, res) {
             ref_id: resultId,
             created_at: sale.sale_date
         }, shopName);
+        }
 
         res.json({ success: true, id: resultId });
     } catch (error) {

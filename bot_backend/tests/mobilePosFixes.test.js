@@ -103,3 +103,14 @@ test('barcode collision never deletes or overwrites another existing product', a
     )
   } finally { f.db.close() }
 })
+
+test('repository returns created:false on idempotent replay (to avoid duplicate sheet sync)', async () => {
+  const f = fixture()
+  try {
+    const sale = f.sale('qa-sheet-1', null)
+    assert.deepEqual(await f.sales.createSale('shop-a', 'user-a', sale, { withMeta: true }),
+      { id: 'qa-sheet-1', created: true })
+    assert.deepEqual(await f.sales.createSale('shop-a', 'user-a', sale, { withMeta: true }),
+      { id: 'qa-sheet-1', created: false })
+  } finally { f.db.close() }
+})

@@ -238,6 +238,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
             const data = {
                 ...formData,
+                barcode: String(formData.barcode || '').trim() || `NB-${(product?.id || draftId.current).slice(0,12)}`,
                 image_url: finalImageUrl,
                 id: product?.id || draftId.current,
                 shop_id: shop.id,

@@ -8,7 +8,7 @@ const InventoryLog = require('../mongo/models/InventoryLog');
 const CashFlow = require('../mongo/models/CashFlow');
 
 const sqliteRepo = {
-  async createSale(shop_id, user_id, sale) {
+  async createSale(shop_id, user_id, sale, options = {}) {
     const saleId = sale.id || uuidv4();
     // Client-generated sale.id is the idempotency key; code is display-only.
     // Preserve code matching only for legacy clients that do not send an id.
@@ -16,7 +16,7 @@ const sqliteRepo = {
       ? db.prepare('SELECT id FROM sales WHERE id = ? AND shop_id = ?').get(saleId, shop_id)
       : db.prepare('SELECT id FROM sales WHERE code = ? AND shop_id = ?').get(sale.code, shop_id);
     if (existing) {
-      return existing.id;
+      return options.withMeta ? { id: existing.id, created: false } : existing.id;
     }
     const transaction = db.transaction(() => {
       db.prepare('INSERT INTO sales (id, shop_id, code, total_amount, payment_method, sale_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
@@ -51,7 +51,8 @@ const sqliteRepo = {
       return saleId;
     });
 
-    return transaction();
+    const resultId = transaction();
+    return options.withMeta ? { id: resultId, created: true } : resultId;
   },
 
   async getSales(shop_id, startDate, endDate) {
@@ -110,11 +111,11 @@ const sqliteRepo = {
 };
 
 const mongoRepo = {
-  async createSale(shop_id, user_id, sale) {
+  async createSale(shop_id, user_id, sale, options = {}) {
     const saleId = sale.id || uuidv4();
     // Avoid replaying an already committed sale when an ACK is lost.
     const existingSale = await Sale.findOne({ id: saleId, shop_id }).lean();
-    if (existingSale) return saleId;
+    if (existingSale) return options.withMeta ? { id: saleId, created: false } : saleId;
     try {
       await Sale.create({
       id: saleId,
@@ -126,7 +127,9 @@ const mongoRepo = {
       created_by: user_id,
       });
     } catch (error) {
-      if (error.code === 11000 && await Sale.findOne({ id: saleId, shop_id }).lean()) return saleId;
+      if (error.code === 11000 && await Sale.findOne({ id: saleId, shop_id }).lean()) {
+        return options.withMeta ? { id: saleId, created: false } : saleId;
+      }
       throw error;
     }
 
@@ -168,7 +171,7 @@ const mongoRepo = {
       created_at: sale.sale_date ? new Date(sale.sale_date) : new Date(),
     });
 
-    return saleId;
+    return options.withMeta ? { id: saleId, created: true } : saleId;
   },
 
   async getSales(shop_id, startDate, endDate) {
@@ -229,14 +232,15 @@ const mongoRepo = {
 
 const dualRepo = {
   ...mongoRepo,
-  async createSale(shop_id, user_id, sale) {
-    const saleId = await mongoRepo.createSale(shop_id, user_id, sale);
+  async createSale(shop_id, user_id, sale, options = {}) {
+    const outcome = await mongoRepo.createSale(shop_id, user_id, sale, { withMeta: true });
+    const saleId = outcome.id;
     try {
       await sqliteRepo.createSale(shop_id, user_id, { ...sale, id: saleId });
     } catch (e) {
       console.error('[dual][sales] sqlite write failed:', e.message);
     }
-    return saleId;
+    return options.withMeta ? outcome : saleId;
   },
   async voidSale(shop_id, saleId, reason) {
     const ok = await mongoRepo.voidSale(shop_id, saleId, reason);
