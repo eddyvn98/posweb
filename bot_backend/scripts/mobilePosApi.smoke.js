@@ -71,6 +71,24 @@ async function main() {
   assert.equal(products.find(p => p.id === knownId).stock_quantity, 6,
     'Twelve simultaneous retries must decrement stock only once')
 
+  // Authenticated API must reject forged totals, negative units, and cross-shop sale payloads.
+  const invalidPayloads = [
+    { id: randomUUID(), total_amount: -24000, items: [{ product_id: knownId, product_name: 'QA', quantity: -2, price: 12000 }] },
+    { id: randomUUID(), total_amount: 1, items: [{ product_id: knownId, product_name: 'QA', quantity: 2, price: 12000 }] },
+    { id: randomUUID(), total_amount: 24000, items: [{ product_id: knownId, product_name: 'QA', quantity: 2, price: -12000 }] },
+    { id: randomUUID(), shop_id: randomUUID(), total_amount: 24000,
+      items: [{ product_id: knownId, product_name: 'QA', quantity: 2, price: 12000 }] }
+  ]
+  for (const attempted of invalidPayloads) {
+    const result = await request('/api/sales', 'POST', {
+      shop_id: shopId, code: 'QA-BAD-' + attempted.id,
+      payment_method: 'cash', sale_date: new Date().toISOString(), ...attempted
+    }, token)
+    assert.ok([400, 403].includes(result.status), 'Invalid sale incorrectly accepted: ' + JSON.stringify(result))
+  }
+  products = (await request('/api/products', 'GET', null, token)).data
+  assert.equal(products.find(p => p.id === knownId).stock_quantity, 6)
+
   const collision = await request('/api/products/upsert', 'POST', {
     id: knownId, shop_id: shopId, barcode: 'QA-B-' + suffix, name: 'collision attempt',
     unit: 'Cái', price: 1000, stock_quantity: 0, is_active: true,
