@@ -162,6 +162,14 @@ function runMigrations() {
               price REAL NOT NULL,
               image_url TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+              token_hash TEXT PRIMARY KEY,
+              user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+              expires_at TEXT NOT NULL,
+              created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_password_reset_expires ON password_reset_tokens (expires_at);
         `);
 
         addColumnIfMissing('online_orders', 'subtotal_amount', 'REAL NOT NULL DEFAULT 0');
