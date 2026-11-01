@@ -348,4 +348,57 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
     await second.close()
   })
 
+  test('thumb reach: mobile product primary actions stay in bottom half', async ({ page }) => {
+    await setup(page)
+    await page.goto('/products')
+    const toolbar = page.getByTestId('mobile-product-toolbar')
+    await expect(toolbar).toBeVisible()
+    for (const name of ['Tìm sản phẩm', 'Quét mã sản phẩm', 'Bộ lọc sản phẩm', 'Quét lô', 'Tạo mới']) {
+      const element = name === 'Tạo mới' || name === 'Quét lô'
+        ? toolbar.getByRole('button', { name, exact: true })
+        : name === 'Tìm sản phẩm'
+          ? toolbar.getByRole('textbox', { name })
+          : toolbar.getByRole('button', { name })
+      const box = await element.boundingBox()
+      expect(box).not.toBeNull()
+      expect(box.y + box.height / 2).toBeGreaterThan(page.viewportSize().height / 2)
+      expect(box.y + box.height).toBeLessThan(page.viewportSize().height - 55)
+      expect(box.height).toBeGreaterThanOrEqual(44)
+    }
+    const create = toolbar.getByRole('button', { name: 'Tạo mới' })
+    await create.click()
+    await expect(page.getByPlaceholder(/Bia Heineken/i)).toBeVisible()
+  })
+
+  test('mobile product filter and sort open next to thumb controls', async ({ page }) => {
+    await setup(page)
+    await page.goto('/products')
+    await page.getByRole('button', { name: 'Bộ lọc sản phẩm' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Lọc và sắp xếp sản phẩm' })
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('button', { name: 'Lọc hàng sắp hết' }).click()
+    await dialog.getByRole('button', { name: 'Xem kết quả' }).click()
+    await expect(dialog).toHaveCount(0)
+    await expect(page.getByText('Notebook A').first()).toBeVisible()
+  })
+
+  test('thumb reach: sales search, scan and quick actions above bottom navigation', async ({ page }) => {
+    await setup(page, { withCart: true })
+    await page.goto('/sales')
+    const bar = page.getByTestId('mobile-sales-actions')
+    await expect(bar).toBeVisible()
+    for (const name of ['Quét mã bằng camera', 'Bán nhanh', 'Lịch sử']) {
+      const button = bar.getByRole('button', { name })
+      const rect = await button.boundingBox()
+      expect(rect).not.toBeNull()
+      expect(rect.y + rect.height / 2).toBeGreaterThan(page.viewportSize().height / 2)
+      expect(rect.y + rect.height).toBeLessThan(page.viewportSize().height - 55)
+      expect(rect.height).toBeGreaterThanOrEqual(44)
+    }
+    const search = bar.getByRole('textbox', { name: '' })
+    await expect(search).toBeVisible()
+    const box = await search.boundingBox()
+    expect(box.y + box.height / 2).toBeGreaterThan(page.viewportSize().height / 2)
+  })
+
 })
