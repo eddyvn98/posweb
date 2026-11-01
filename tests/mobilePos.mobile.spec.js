@@ -143,4 +143,62 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
       nodes.map(el => Number.parseInt(getComputedStyle(el).zIndex) || 0))
     expect(Math.max(...overlays)).toBeGreaterThan(100)
   })
+  test('barcode API fallback upserts without erasing offline inventory', async ({ page }) => {
+    await setup(page)
+    await page.goto('/sales')
+    await expect.poll(async () => (await dbRows(page, 'products')).length).toBeGreaterThanOrEqual(2)
+    const input = page.getByPlaceholder('Mã/Tên SP... (Esc để thoát)')
+    await input.fill('QA-C')
+    await input.press('Enter')
+    await expect.poll(async () => (await dbRows(page, 'products')).some(p => p.id === 'qa-c')).toBe(true)
+    expect((await dbRows(page, 'products')).map(p => p.id).sort()).toEqual(['qa-a', 'qa-b', 'qa-c'])
+  })
+
+  test('editing product barcode to another item is rejected without deletion', async ({ page }) => {
+    await setup(page)
+    await page.goto('/products')
+    await expect(page.getByText('Notebook A').first()).toBeVisible()
+    await page.getByText('Notebook A').first().click()
+    await page.locator('#barcode-input').fill('QA-B')
+    await page.getByRole('button', { name: 'Lưu', exact: true }).click()
+    await expect.poll(async () => (await dbRows(page, 'products')).filter(p => p.id === 'qa-b').length).toBe(1)
+    expect((await dbRows(page, 'products')).find(p => p.id === 'qa-a').barcode).toBe('QA-A')
+  })
+
+  test('clearing quantity is non-destructive until user confirms', async ({ page }) => {
+    await setup(page, { withCart: true })
+    await page.goto('/sales')
+    const item = page.locator('#cart-item-qa-a')
+    await expect(item).toBeVisible()
+    await item.locator('input[inputmode="numeric"]').fill('')
+    await expect(item).toBeVisible()
+    const b = await item.getByRole('button', { name: 'Giảm số lượng' }).boundingBox()
+    expect(b.width).toBeGreaterThanOrEqual(44)
+    expect(b.height).toBeGreaterThanOrEqual(44)
+  })
+
+  test('quick sale without saving to catalog does not create product', async ({ page }) => {
+    const posted = await setup(page)
+    await page.goto('/sales')
+    await page.getByRole('button', { name: /Nhanh/i }).click()
+    await page.locator('input[inputmode="numeric"]').first().fill('18')
+    await page.locator('#saveCatalog').uncheck()
+    await page.getByRole('button', { name: /Tiếp tục/i }).click()
+    await page.getByRole('button', { name: /Tiếp tục/i }).click()
+    await page.getByRole('button', { name: /Xác nhận bán/i }).click()
+    await expect(page.locator('[id^="cart-item-"]')).toHaveCount(1)
+    expect(posted.products).toHaveLength(0)
+  })
+
+  test('320-430px viewports have no page-level horizontal scrolling', async ({ page }) => {
+    await setup(page)
+    for (const width of [320, 360, 390, 430]) {
+      await page.setViewportSize({ width, height: 780 })
+      for (const route of ['/sales', '/products']) {
+        await page.goto(route)
+        await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(2)
+      }
+    }
+  })
+
 })
