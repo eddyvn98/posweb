@@ -258,7 +258,7 @@ export default function Sales() {
                         </button>
                     </div>
 
-                    <div ref={cartListRef} className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar min-h-0 scroll-smooth">
+                    <div ref={cartListRef} className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar min-h-0 scroll-smooth flex flex-col justify-end md:block">
                         {cart.length === 0 ? (
                             <div className="hidden md:flex flex-col items-center justify-center h-full text-slate-400 text-xs italic font-medium">
                                 Chưa có sản phẩm trong giỏ...
@@ -280,7 +280,7 @@ export default function Sales() {
                     </div>
 
                     {/* Sticky Checkout Area - Combined Total into Button */}
-                    <div className="p-3 border-t border-slate-200 bg-white shadow-sm">
+                    <div className="p-3 border-t border-slate-200 bg-white shadow-sm shrink-0">
                         <button
                             onClick={() => setShowCheckout(true)}
                             className="btn-success w-full h-13 rounded-xl shadow-sm active:scale-[0.98] transition-all disabled:opacity-30 disabled:shadow-none flex items-center justify-between px-4 py-3"
@@ -302,7 +302,7 @@ export default function Sales() {
             </div>
 
             {/* Search Bar + Action Buttons - Combined Single Row */}
-            <div className="p-2 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.1)] z-30 border-t pb-[100px] md:pb-3 transition-all relative md:border-t-0 md:border-b md:shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
+            <div data-testid="mobile-sales-actions" className="px-2 pt-2 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:p-2 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.1)] z-30 border-t transition-all relative md:border-t-0 md:border-b md:shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
 
                 {/* 🚀 INTEGRATED SEARCH RESULTS - Pops up from the bar */}
                 {isSearching && (
@@ -374,14 +374,14 @@ export default function Sales() {
                     </div>
                 )}
 
-                <div className="flex items-center gap-2 max-w-full">
+                <div className="flex flex-col gap-2 max-w-full sm:flex-row">
                     {/* Search Input - Main Expandable */}
-                    <div className="flex-1 relative">
+                    <div className="flex-1 relative w-full">
                         <input
                             ref={searchInputRef}
                             autoFocus={typeof window !== 'undefined' && window.innerWidth >= 768}
                             type="text"
-                            className="w-full h-10 pl-9 pr-8 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:ring-primary focus:border-primary focus:bg-white transition-all outline-none"
+                            className="w-full h-12 md:h-10 pl-9 pr-8 text-base md:text-sm bg-gray-50 border border-gray-100 rounded-xl focus:ring-primary focus:border-primary focus:bg-white transition-all outline-none"
                             placeholder="Mã/Tên SP... (Esc để thoát)"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
@@ -437,11 +437,13 @@ export default function Sales() {
                         )}
                     </div>
 
+                    <div className="grid grid-cols-3 gap-2 w-full sm:contents">
                     {/* Camera Scanner Button */}
                     <button
                         type="button"
                         onClick={() => setShowCameraScanner(prev => !prev)}
-                        className={`h-10 px-3 rounded-xl flex items-center justify-center font-bold text-xs gap-1.5 transition-all border shadow-xs shrink-0 active:scale-95 ${
+                        aria-label="Quét mã bằng camera"
+                        className={`h-12 md:h-10 px-3 rounded-xl flex items-center justify-center font-bold text-xs gap-1.5 transition-all border shadow-xs shrink-0 active:scale-95 ${
                             showCameraScanner
                                 ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100'
                                 : 'bg-sky-50 text-sky-600 hover:bg-sky-100 border-sky-200'
@@ -449,7 +451,7 @@ export default function Sales() {
                         title={showCameraScanner ? "Đóng camera" : "Quét mã vạch bằng camera điện thoại"}
                     >
                         {showCameraScanner ? <CameraOff className="w-4 h-4" /> : <Camera className="w-4 h-4 text-sky-600" />}
-                        <span className="hidden sm:inline">{showCameraScanner ? "Đóng" : "Quét mã"}</span>
+                        <span>{showCameraScanner ? "Đóng" : "Quét mã"}</span>
                     </button>
 
                     {/* Quick Sale Button - Compact */}
@@ -458,18 +460,19 @@ export default function Sales() {
                             setQuickSalePreset({ barcode: '', name: '' })
                             setShowQuickSale(true)
                         }}
-                        className="btn-primary btn-md"
+                        className="btn-primary min-h-12 md:min-h-0 btn-md"
                     >
-                        <Zap className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Bán Nhanh</span><span className="xs:hidden">Nhanh</span>
+                        <Zap className="w-3.5 h-3.5" /> <span>Bán nhanh</span>
                     </button>
 
                     {/* History Button - Compact */}
                     <button
                         onClick={() => navigate('/history')}
-                        className="btn-secondary btn-md"
+                        className="btn-secondary min-h-12 md:min-h-0 btn-md"
                     >
-                        <History className="w-3.5 h-3.5 text-slate-500" /> <span className="hidden xs:inline">Lịch Sử</span><span className="xs:hidden">T.Sử</span>
+                        <History className="w-3.5 h-3.5 text-slate-500" /> <span>Lịch sử</span>
                     </button>
+                    </div>
                 </div>
             </div>
 

@@ -125,8 +125,8 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
     }
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-sm rounded-[24px] bg-white shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-t-[24px] sm:rounded-[24px] bg-white shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b px-5 py-3.5 bg-white">
                     <h3 className="text-xl font-bold flex items-center gap-2 text-gray-900">

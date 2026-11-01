@@ -171,13 +171,13 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
     }, [loading, paymentMethod, totalAmount, cart, shop, parsedCashGiven])
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
             <form
                 onSubmit={(e) => {
                     e.preventDefault()
                     handleCheckout()
                 }}
-                className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-fade-in-up"
+                className="bg-white w-full max-w-sm rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl animate-fade-in-up"
             >
                 <div className="p-4 border-b">
                     <h2 className="text-xl font-bold text-gray-900 text-center">Xác nhận thanh toán</h2>

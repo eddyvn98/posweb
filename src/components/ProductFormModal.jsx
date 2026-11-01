@@ -285,7 +285,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
     return (
         <div className="fixed inset-0 bg-black/50 z-[120] flex items-stretch sm:items-center justify-center p-0 sm:p-4">
-            <div className="bg-white w-full max-w-md rounded-none sm:rounded-xl shadow-2xl flex flex-col h-[calc(100dvh-5.5rem)] mb-[5.5rem] sm:h-[90vh] max-h-[calc(100dvh-5.5rem)] sm:max-h-[90vh] overflow-hidden">
+            <div className="bg-white w-full max-w-md rounded-none sm:rounded-xl shadow-2xl flex flex-col h-[100dvh] sm:h-[90vh] max-h-[100dvh] sm:max-h-[90vh] overflow-hidden">
                 <form key={formKey} onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
                     <div className="p-4 border-b flex justify-between items-center bg-white sticky top-0 z-10">
                         <h2 className="text-xl font-bold text-gray-900">{product ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}</h2>
@@ -293,7 +293,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold uppercase tracking-wide disabled:opacity-50"
+                                className="hidden sm:block px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold uppercase tracking-wide disabled:opacity-50"
                             >
                                 {loading ? 'Đang lưu...' : 'Lưu'}
                             </button>
@@ -421,8 +421,8 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
                     <div className="p-4 border-t bg-slate-50 sticky bottom-0 z-[130] pb-[max(1rem,env(safe-area-inset-bottom))]">
                         <div className="flex gap-3">
-                            <button type="button" onClick={onClose} disabled={loading} className="flex-1 btn-secondary h-11 text-sm font-bold">Hủy</button>
-                            <button type="submit" disabled={loading} className="flex-1 btn-primary h-11 text-sm font-bold">{loading ? 'Đang lưu...' : 'Lưu sản phẩm'}</button>
+                            <button type="button" onClick={onClose} disabled={loading} className="flex-1 btn-secondary h-12 text-sm font-bold">Hủy</button>
+                            <button type="submit" disabled={loading} className="flex-1 btn-primary h-12 text-sm font-bold">{loading ? 'Đang lưu...' : 'Lưu sản phẩm'}</button>
                         </div>
                     </div>
                 </form>
