@@ -5,7 +5,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
 
 function generateToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, shop_id: user.shop_id, role: user.role },
+    { id: user.id, email: user.email, shop_id: user.shop_id, role: user.role, auth_version: Number(user.auth_version || 0) },
     JWT_SECRET,
     { expiresIn: '30d' }
   );

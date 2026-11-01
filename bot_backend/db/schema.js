@@ -26,6 +26,7 @@ function runMigrations() {
             console.log('Migrated: products.category');
         }
 
+        addColumnIfMissing('users', 'auth_version', 'INTEGER NOT NULL DEFAULT 0');
         addColumnIfMissing('products', 'online_price', 'REAL');
         addColumnIfMissing('products', 'promo_price', 'REAL');
 

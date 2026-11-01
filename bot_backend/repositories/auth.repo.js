@@ -72,7 +72,7 @@ const sqliteRepo = {
     return db.prepare('SELECT * FROM users WHERE id = ?').get(id) || null;
   },
   async updateUserPassword(userId, newHash) {
-    const result = db.prepare('UPDATE users SET password = ? WHERE id = ?').run(newHash, userId);
+    const result = db.prepare('UPDATE users SET password = ?, auth_version = auth_version + 1 WHERE id = ?').run(newHash, userId);
     return result.changes > 0;
   },
   async updateShop(shopId, shop = {}) {
@@ -209,7 +209,7 @@ const mongoRepo = {
     return normalizeUser(await User.findOne({ id }).lean());
   },
   async updateUserPassword(userId, newHash) {
-    const result = await User.updateOne({ id: userId }, { $set: { password: newHash } });
+    const result = await User.updateOne({ id: userId }, { $set: { password: newHash }, $inc: { auth_version: 1 } });
     return result.modifiedCount > 0;
   },
   async updateShop(shopId, shop = {}) {
