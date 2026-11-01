@@ -52,6 +52,71 @@ const CashFlow = require('../mongo/models/CashFlow');
     assert.equal(await Sale.countDocuments({ shop_id: shop }), 11);
     assert.equal(await SaleItem.countDocuments({ sale_id: { $in: independent.map(x => x.id) } }), 10);
     assert.equal(await CashFlow.countDocuments({ shop_id: shop }), 11);
+
+    // Dual mode: Mongo commits, SQLite fails. Retry must repair the missing mirror.
+    const Database = require('better-sqlite3');
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const db = new Database(':memory:');
+    db.pragma('foreign_keys = ON');
+    db.exec(fs.readFileSync(path.resolve(__dirname, '../db/init.sql'), 'utf8'));
+    db.prepare('INSERT INTO shops (id, name) VALUES (?, ?)').run(shop, 'QA Dual');
+    const repoSource = fs.readFileSync(path.resolve(__dirname, '../repositories/sales.repo.js'), 'utf8');
+    const container = { exports: {} };
+    const dependencies = {
+      uuid: { v4: randomUUID }, '../db/connection': db,
+      '../db/provider': { getDbProvider: () => 'dual' },
+      '../mongo/models/Sale': Sale, '../mongo/models/SaleItem': SaleItem,
+      '../mongo/models/Product': Product,
+      '../mongo/models/InventoryLog': InventoryLog,
+      '../mongo/models/CashFlow': CashFlow,
+      '../services/mongoSaleWriter': require('../services/mongoSaleWriter'),
+      '../services/saleValidation': require('../services/saleValidation'),
+    };
+    new Function('require', 'module', 'exports', repoSource)(
+      n => {
+        if (!(n in dependencies)) throw new Error('Unexpected dependency ' + n);
+        return dependencies[n];
+      }, container, container.exports
+    );
+    const dual = container.exports.getSalesRepo();
+    const dualId = randomUUID(), dualSale = payload(dualId, 1);
+    const prepare = db.prepare.bind(db);
+    let failCreate = true;
+    db.prepare = function(sql) {
+      if (failCreate && sql.includes('INSERT INTO sales (')) {
+        failCreate = false; throw new Error('QA SQLite create unavailable');
+      }
+      return prepare(sql);
+    };
+    await assert.rejects(dual.createSale(shop, null, dualSale), /QA SQLite create unavailable/);
+    db.prepare = prepare;
+    assert.equal(await Sale.countDocuments({ id: dualId }), 1);
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM sales').get().n, 0);
+    assert.equal(await dual.createSale(shop, null, dualSale), dualId);
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM sales').get().n, 1);
+    assert.equal(await dual.createSale(shop, null, dualSale), dualId);
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM cash_flows').get().n, 1);
+    const dualStock = (await Product.findOne({ id: productId })).stock_quantity;
+    assert.equal(dualStock, 87);
+    let failVoid = true;
+    db.prepare = function(sql) {
+      if (failVoid && sql.includes('UPDATE sales SET is_void')) {
+        failVoid = false; throw new Error('QA SQLite void unavailable');
+      }
+      return prepare(sql);
+    };
+    await assert.rejects(dual.voidSale(shop, dualId, 'QA fault'), /QA SQLite void unavailable/);
+    db.prepare = prepare;
+    assert.equal((await Sale.findOne({ id: dualId })).is_void, true);
+    assert.equal(db.prepare('SELECT is_void FROM sales WHERE id = ?').get(dualId).is_void, 0);
+    await dual.voidSale(shop, dualId, 'QA fault');
+    assert.equal(db.prepare('SELECT is_void FROM sales WHERE id = ?').get(dualId).is_void, 1);
+    assert.equal((await Product.findOne({ id: productId })).stock_quantity, 88);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM inventory_logs WHERE type = 'void'").get().n, 0);
+    db.close();
+    console.log('PASS Dual: recover create + void from injected SQLite write faults');
+
     console.log('PASS Mongo replica set: crash rollback, replay idempotency, 10 concurrent sales and stock integrity');
   } finally {
     await mongoose.connection.dropDatabase();
