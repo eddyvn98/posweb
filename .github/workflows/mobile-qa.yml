@@ -25,6 +25,24 @@ jobs:
       - run: node --check repositories/products.repo.js
       - run: node --test tests/mobilePosFixes.test.js
       - run: npm test
+      - name: Real HTTP SQLite smoke in isolated temp database
+        shell: bash
+        run: |
+          set -euo pipefail
+          QA_DIR="$(mktemp -d)"
+          tar --exclude='./node_modules' --exclude='*.db' --exclude='.env*' --exclude='./backups' -cf - . | tar -xf - -C "$QA_DIR"
+          ln -s "$PWD/node_modules" "$QA_DIR/node_modules"
+          cd "$QA_DIR"
+          PORT=31977 DB_PROVIDER=sqlite TELEGRAM_BOT_TOKEN= JWT_SECRET=qa-test-only node server.js > "$RUNNER_TEMP/pos-smoke-server.log" 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true; wait "$SERVER_PID" 2>/dev/null || true; rm -rf "$QA_DIR"' EXIT
+          for i in $(seq 1 50); do
+            if curl --silent --fail http://127.0.0.1:31977/health >/dev/null; then break; fi
+            sleep 0.2
+          done
+          curl --fail --silent http://127.0.0.1:31977/health
+          SMOKE_BASE_URL=http://127.0.0.1:31977 node scripts/mobilePosApi.smoke.js
+          echo "QA temp database passed; actual repository databases were untouched"
   frontend-mobile:
     runs-on: ubuntu-latest
     timeout-minutes: 20
