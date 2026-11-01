@@ -405,4 +405,32 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
     expect(box.y + box.height / 2).toBeGreaterThan(page.viewportSize().height / 2)
   })
 
+  test('shared camera sheet matches POS theme on Sales and Products', async ({ page }) => {
+    await setup(page)
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: {
+        getUserMedia: async () => {
+          const error = new Error('QA camera unavailable')
+          error.name = 'NotAllowedError'
+          throw error
+        }
+      } })
+    })
+    await page.goto('/sales')
+    await page.getByRole('button', { name: 'Quét mã bằng camera' }).click()
+    const sheet = page.getByTestId('camera-scan-sheet')
+    await expect(sheet).toBeVisible()
+    await expect(sheet.getByRole('heading', { name: 'Quét mã bán hàng' })).toBeVisible()
+    await expect(sheet.getByRole('button', { name: 'Đổi camera trước sau' })).toBeVisible()
+    await expect(sheet.getByRole('button', { name: 'Xem giỏ hàng' })).toBeVisible()
+    await expect(sheet.getByRole('alert')).toContainText('Chưa cấp quyền camera')
+    const bounds = await sheet.getByRole('button', { name: 'Xem giỏ hàng' }).boundingBox()
+    expect(bounds.height).toBeGreaterThanOrEqual(44)
+    await sheet.getByRole('button', { name: 'Đóng camera' }).click()
+    await page.goto('/products')
+    await page.getByRole('button', { name: 'Quét mã sản phẩm' }).click()
+    await expect(page.getByTestId('camera-scan-sheet').getByRole('heading', { name: 'Quét mã sản phẩm' })).toBeVisible()
+    await expect(page.getByTestId('camera-scan-sheet').getByRole('button', { name: 'Đổi camera trước sau' })).toBeVisible()
+  })
+
 })
