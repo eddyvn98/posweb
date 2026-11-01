@@ -379,6 +379,10 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
     await dialog.getByRole('button', { name: 'Lọc hàng sắp hết' }).click()
     await dialog.getByRole('button', { name: 'Xem kết quả' }).click()
     await expect(dialog).toHaveCount(0)
+    await expect(page.getByText('Notebook A')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Bộ lọc sản phẩm' }).click()
+    await page.getByRole('dialog', { name: 'Lọc và sắp xếp sản phẩm' }).getByRole('button', { name: /Chỉ xem hàng sắp hết/ }).click()
+    await page.getByRole('dialog', { name: 'Lọc và sắp xếp sản phẩm' }).getByRole('button', { name: 'Xem kết quả' }).click()
     await expect(page.getByText('Notebook A').first()).toBeVisible()
   })
 
