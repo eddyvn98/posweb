@@ -28,7 +28,8 @@ async function createSale(req, res) {
         res.json({ success: true, id: resultId });
     } catch (error) {
         console.error('Create Sale Error:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        const status = [400, 403, 409].includes(error.status) ? error.status : 500;
+        res.status(status).json({ error: status === 500 ? 'Internal Server Error' : error.message });
     }
 }
 

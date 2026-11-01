@@ -14,7 +14,11 @@ function loadSqliteRepo(name, db) {
     if (request === '../db/connection') return db
     if (request === '../db/provider') return { getDbProvider: () => 'sqlite' }
     if (request === 'uuid') return { v4: randomUUID }
-    if (request === '../services/mongoSaleWriter') return { createMongoSale: async () => { throw new Error('Unexpected Mongo call in SQLite test') } }
+    if (request === '../services/mongoSaleWriter') return {
+      createMongoSale: async () => { throw new Error('Unexpected Mongo call in SQLite test') },
+      voidMongoSale: async () => { throw new Error('Unexpected Mongo call in SQLite test') }
+    }
+    if (request === '../services/saleValidation') return require('../services/saleValidation')
     if (request.startsWith('../mongo/models/')) return {}
     throw new Error('Unexpected require: ' + request)
   }
@@ -113,5 +117,61 @@ test('repository returns created:false on idempotent replay (to avoid duplicate 
       { id: 'qa-sheet-1', created: true })
     assert.deepEqual(await f.sales.createSale('shop-a', 'user-a', sale, { withMeta: true }),
       { id: 'qa-sheet-1', created: false })
+  } finally { f.db.close() }
+})
+
+// P0: malformed amounts, line items and foreign shop data cannot reach bookkeeping.
+test('invalid sale payloads do not write sales, cashbook or inventory', async () => {
+  const f = fixture()
+  try {
+    f.addProduct('item-validated', 'shop-a', 'VALIDATED', 30)
+    const baseline = f.sale('valid-sample', 'item-validated')
+    const bad = [
+      { ...baseline, id: 'v1', items: [{ ...baseline.items[0], quantity: -2 }], total_amount: -30000 },
+      { ...baseline, id: 'v2', items: [{ ...baseline.items[0], price: -15000 }], total_amount: -30000 },
+      { ...baseline, id: 'v3', total_amount: 1 },
+      { ...baseline, id: 'v4', total_amount: Infinity },
+      { ...baseline, id: 'v5', total_amount: NaN },
+      { ...baseline, id: 'v6', items: [] },
+      { ...baseline, id: 'v7', shop_id: 'shop-b' },
+      { ...baseline, id: 'v8', items: [{ ...baseline.items[0], quantity: 1.5 }] },
+    ]
+    for (const payload of bad) {
+      await assert.rejects(f.sales.createSale('shop-a', 'user-a', payload),
+        e => [400, 403].includes(e.status), 'Expected sale payload to be rejected')
+    }
+    assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM sales').get().n, 0)
+    assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM cash_flows').get().n, 0)
+    assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM inventory_logs').get().n, 0)
+    assert.equal(f.db.prepare("SELECT stock_quantity FROM products WHERE id='item-validated'").get().stock_quantity, 30)
+  } finally { f.db.close() }
+})
+
+test('idempotency key cannot hide a different amount or payment method', async () => {
+  const f = fixture()
+  try {
+    f.addProduct('item-validated', 'shop-a', 'VALIDATED', 30)
+    const sale = f.sale('same-id', 'item-validated')
+    await f.sales.createSale('shop-a', 'user-a', sale)
+    await assert.rejects(f.sales.createSale('shop-a', 'user-a', {
+      ...sale, total_amount: 40000, items: [{ ...sale.items[0], price: 20000 }]
+    }), e => e.status === 409)
+    assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM sales').get().n, 1)
+    assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM cash_flows').get().n, 1)
+  } finally { f.db.close() }
+})
+
+test('SQLite voidSale allows recovery retry only when requested', async () => {
+  const f = fixture()
+  try {
+    f.addProduct('item-validated', 'shop-a', 'VALIDATED', 30)
+    const sale = f.sale('void-retry', 'item-validated')
+    await f.sales.createSale('shop-a', 'user-a', sale)
+    assert.deepEqual(await f.sales.voidSale('shop-a', sale.id, 'QA', { withMeta: true }), { voided: true })
+    assert.deepEqual(await f.sales.voidSale('shop-a', sale.id, 'QA', {
+      allowAlreadyVoided: true, withMeta: true
+    }), { voided: false })
+    assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM inventory_logs WHERE type = ?').get('void').n, 1)
+    assert.equal(f.db.prepare("SELECT stock_quantity FROM products WHERE id='item-validated'").get().stock_quantity, 30)
   } finally { f.db.close() }
 })

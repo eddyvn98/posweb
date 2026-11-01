@@ -11,11 +11,12 @@ async function voidSale(req, res) {
     }
 
     try {
-        await getSalesRepo().voidSale(shop_id, id, reason);
-
-        const shop = await getAuthRepo().getShopById(shop_id);
-        const { syncVoidSale } = require('../../services/googleSheetService');
-        syncVoidSale(id, reason, shop ? shop.name : 'Cua hang');
+        const result = await getSalesRepo().voidSale(shop_id, id, reason, { withMeta: true });
+        if (result.voided) {
+            const shop = await getAuthRepo().getShopById(shop_id);
+            const { syncVoidSale } = require('../../services/googleSheetService');
+            syncVoidSale(id, reason, shop ? shop.name : 'Cua hang');
+        }
 
         res.json({ success: true });
     } catch (error) {

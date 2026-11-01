@@ -6,17 +6,20 @@ const SaleItem = require('../mongo/models/SaleItem');
 const Product = require('../mongo/models/Product');
 const InventoryLog = require('../mongo/models/InventoryLog');
 const CashFlow = require('../mongo/models/CashFlow');
-const { createMongoSale } = require('../services/mongoSaleWriter');
+const { createMongoSale, voidMongoSale } = require('../services/mongoSaleWriter');
+const { validateSale, assertReplayCompatible } = require('../services/saleValidation');
 
 const sqliteRepo = {
   async createSale(shop_id, user_id, sale, options = {}) {
+    validateSale(sale, shop_id);
     const saleId = sale.id || uuidv4();
     // Client-generated sale.id is the idempotency key; code is display-only.
     // Preserve code matching only for legacy clients that do not send an id.
     const existing = sale.id
-      ? db.prepare('SELECT id FROM sales WHERE id = ? AND shop_id = ?').get(saleId, shop_id)
-      : db.prepare('SELECT id FROM sales WHERE code = ? AND shop_id = ?').get(sale.code, shop_id);
+      ? db.prepare('SELECT * FROM sales WHERE id = ? AND shop_id = ?').get(saleId, shop_id)
+      : db.prepare('SELECT * FROM sales WHERE code = ? AND shop_id = ?').get(sale.code, shop_id);
     if (existing) {
+      assertReplayCompatible(existing, sale);
       return options.withMeta ? { id: existing.id, created: false } : existing.id;
     }
     const transaction = db.transaction(() => {
@@ -82,11 +85,14 @@ const sqliteRepo = {
     return sales;
   },
 
-  async voidSale(shop_id, saleId, reason) {
+  async voidSale(shop_id, saleId, reason, options = {}) {
     const tx = db.transaction(() => {
       const sale = db.prepare('SELECT id, is_void FROM sales WHERE id = ? AND shop_id = ?').get(saleId, shop_id);
       if (!sale) throw new Error('Sale not found');
-      if (sale.is_void) throw new Error('Sale already voided');
+      if (sale.is_void) {
+        if (options.allowAlreadyVoided) return false;
+        throw new Error('Sale already voided');
+      }
 
       db.prepare('UPDATE sales SET is_void = 1, void_reason = ?, void_at = ? WHERE id = ?').run(reason, new Date().toISOString(), saleId);
 
@@ -107,7 +113,8 @@ const sqliteRepo = {
       return true;
     });
 
-    return tx();
+    const voided = tx();
+    return options.withMeta ? { voided } : voided;
   },
 };
 
@@ -138,38 +145,11 @@ const mongoRepo = {
     return sales;
   },
 
-  async voidSale(shop_id, saleId, reason) {
-    const sale = await Sale.findOne({ id: saleId, shop_id });
-    if (!sale) throw new Error('Sale not found');
-    if (sale.is_void) throw new Error('Sale already voided');
-
-    await Sale.updateOne({ id: saleId, shop_id }, { $set: { is_void: true, void_reason: reason, void_at: new Date() } });
-
-    const items = await SaleItem.find({ sale_id: saleId }).lean();
-    for (const item of items) {
-      if (!item.product_id) continue;
-      const product = await Product.findOne({ id: item.product_id, shop_id });
-      if (!product) continue;
-      const newStock = Number(product.stock_quantity || 0) + Number(item.quantity || 0);
-      await Product.updateOne({ id: item.product_id, shop_id }, { $set: { stock_quantity: newStock } });
-      await InventoryLog.create({
-        id: uuidv4(),
-        shop_id,
-        product_id: item.product_id,
-        change_amount: Number(item.quantity || 0),
-        current_stock: newStock,
-        type: 'void',
-        note: `Huy don hang ${saleId}`,
-        created_at: new Date(),
-      });
-    }
-
-    const flows = await CashFlow.find({ ref_id: saleId, shop_id }).lean();
-    for (const flow of flows) {
-      await CashFlow.updateOne({ id: flow.id }, { $set: { description: `[VOIDED] ${flow.description}` } });
-    }
-    return true;
+  async voidSale(shop_id, saleId, reason, options = {}) {
+    return voidMongoSale(shop_id, saleId, reason, options);
   },
+
+
 };
 
 const dualRepo = {
@@ -184,14 +164,15 @@ const dualRepo = {
     const outcome = { id: mongo.id, created: mongo.created || mirror.created };
     return options.withMeta ? outcome : outcome.id;
   },
-  async voidSale(shop_id, saleId, reason) {
-    const ok = await mongoRepo.voidSale(shop_id, saleId, reason);
-    try {
-      await sqliteRepo.voidSale(shop_id, saleId, reason);
-    } catch (e) {
-      console.error('[dual][sales] sqlite write failed:', e.message);
-    }
-    return ok;
+  async voidSale(shop_id, saleId, reason, options = {}) {
+    const mongo = await mongoRepo.voidSale(shop_id, saleId, reason,
+      { withMeta: true, allowAlreadyVoided: true });
+    // Do not acknowledge until the SQLite mirror is also voided.
+    // A retry can finish SQLite after Mongo has already committed.
+    const mirror = await sqliteRepo.voidSale(shop_id, saleId, reason,
+      { withMeta: true, allowAlreadyVoided: true });
+    const result = { voided: mongo.voided || mirror.voided };
+    return options.withMeta ? result : true;
   },
 };
 
