@@ -433,4 +433,38 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
     await expect(page.getByTestId('camera-scan-sheet').getByRole('button', { name: 'Đổi camera trước sau' })).toBeVisible()
   })
 
+  test('login shows forgot-password form and reports mail-not-configured honestly', async ({ page }) => {
+    await page.route('**/api/auth/forgot-password', route => route.fulfill({
+      status: 503, contentType: 'application/json',
+      body: JSON.stringify({ error: 'Chức năng gửi email chưa được cấu hình' })
+    }))
+    await page.goto('/login')
+    await page.getByRole('button', { name: 'Quên mật khẩu?' }).click()
+    await expect(page.getByRole('button', { name: 'Gửi liên kết đặt lại' })).toBeVisible()
+    await page.getByRole('textbox', { name: 'Email' }).fill('qa@example.test')
+    await page.getByRole('button', { name: 'Gửi liên kết đặt lại' }).click()
+    await expect(page.getByText('Chức năng gửi email chưa được cấu hình')).toBeVisible()
+    await page.getByRole('button', { name: 'Trở về đăng nhập' }).click()
+    await expect(page.getByRole('button', { name: 'Đăng Nhập' })).toBeVisible()
+  })
+
+  test('reset link validates password confirmation and reports successful reset', async ({ page }) => {
+    let submitted = null
+    await page.route('**/api/auth/reset-password', route => {
+      submitted = route.request().postDataJSON()
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' })
+    })
+    await page.goto('/reset-password?token=' + 'a'.repeat(64))
+    await page.getByRole('textbox', { name: 'Mật khẩu mới' }).fill('new-password-123')
+    await page.getByRole('textbox', { name: 'Nhập lại mật khẩu' }).fill('different-password')
+    await page.getByRole('button', { name: 'Đặt lại mật khẩu' }).click()
+    await expect(page.getByRole('alert')).toContainText('không khớp')
+    await page.getByRole('textbox', { name: 'Nhập lại mật khẩu' }).fill('new-password-123')
+    await page.getByRole('button', { name: 'Đặt lại mật khẩu' }).click()
+    await expect(page.getByRole('status')).toContainText('Mật khẩu đã được cập nhật')
+    expect(submitted.token).toBe('a'.repeat(64))
+    expect(submitted.password).toBe('new-password-123')
+    await expect(page).toHaveURL('/reset-password')
+  })
+
 })
