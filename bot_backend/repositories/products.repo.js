@@ -7,15 +7,17 @@ const sqliteRepo = {
     return db.prepare('SELECT * FROM products WHERE shop_id = ? AND is_active = 1 ORDER BY name ASC').all(shop_id);
   },
   async upsertProduct(shop_id, product) {
+    const barcode = String(product.barcode || '').trim();
+    if (!barcode) throw Object.assign(new Error('Thiếu mã vạch sản phẩm'), { status: 400 });
+    const barcodeOwner = db.prepare('SELECT id FROM products WHERE shop_id = ? AND barcode = ?').get(shop_id, barcode);
+    if (barcodeOwner && product.id && barcodeOwner.id !== product.id) {
+      throw Object.assign(new Error('Mã vạch đã được sử dụng bởi sản phẩm khác'), { status: 409, code: 'BARCODE_CONFLICT' });
+    }
     const existingById = product.id
       ? db.prepare('SELECT id, barcode FROM products WHERE id = ? AND shop_id = ?').get(product.id, shop_id)
       : null;
 
     if (existingById) {
-      if (product.barcode && product.barcode !== existingById.barcode) {
-        db.prepare('DELETE FROM products WHERE shop_id = ? AND barcode = ? AND id != ?')
-          .run(shop_id, String(product.barcode).trim(), product.id);
-      }
       db.prepare(`
         UPDATE products SET
           barcode = @barcode,
@@ -101,10 +103,16 @@ const mongoRepo = {
     return Product.find({ shop_id, is_active: true }).sort({ name: 1 }).lean();
   },
   async upsertProduct(shop_id, product) {
+    const barcode = String(product.barcode || '').trim();
+    if (!barcode) throw Object.assign(new Error('Thiếu mã vạch sản phẩm'), { status: 400 });
+    const owner = await Product.findOne({ shop_id, barcode }).lean();
+    if (owner && product.id && owner.id !== product.id) {
+      throw Object.assign(new Error('Mã vạch đã được sử dụng bởi sản phẩm khác'), { status: 409, code: 'BARCODE_CONFLICT' });
+    }
     const payload = {
       id: product.id,
       shop_id,
-      barcode: product.barcode,
+      barcode,
       name: product.name,
       unit: product.unit || 'Cai',
       category: product.category || '',

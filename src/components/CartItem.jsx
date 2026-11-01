@@ -24,7 +24,7 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove, isHigh
     return (
         <div 
             id={`cart-item-${item.product_id || item.id}`}
-            className={`flex items-center justify-between py-2.5 px-2 rounded-xl transition-all duration-300 border-b border-slate-100 last:border-0 group gap-2.5 ${
+            className={`flex flex-wrap items-center justify-between py-2.5 px-2 rounded-xl transition-all duration-300 border-b border-slate-100 last:border-0 group gap-2.5 ${
                 isHighlighted 
                     ? 'bg-sky-50 ring-2 ring-sky-400 shadow-sm' 
                     : 'hover:bg-slate-50/50'
@@ -38,7 +38,7 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove, isHigh
                 )}
             </div>
 
-            <div className="flex-1 min-w-0 pr-1">
+            <div className="flex-1 min-w-[130px] pr-1">
                 <div className="font-semibold text-sm text-slate-900 leading-snug truncate">
                     {item.name}
                 </div>
@@ -50,11 +50,11 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove, isHigh
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-                <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden h-9 sm:h-8 bg-white shadow-sm">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+                <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden h-11 sm:h-9 bg-white shadow-sm">
                     <button
                         onClick={() => handleUpdate(-1)}
-                        className="w-9 sm:w-8 h-full flex items-center justify-center text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                        className="w-11 sm:w-9 h-full flex items-center justify-center text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-colors"
                         title="Giảm số lượng"
                         aria-label="Giảm số lượng"
                     >
@@ -63,14 +63,11 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove, isHigh
                     <input
                         type="text"
                         inputMode="numeric"
-                        className="w-10 sm:w-8 h-full text-center text-xs font-bold text-sky-600 font-mono tabular-nums bg-transparent border-0 focus:ring-0 p-0 outline-none"
+                        className="w-11 sm:w-9 h-full text-center text-xs font-bold text-sky-600 font-mono tabular-nums bg-transparent border-0 focus:ring-0 p-0 outline-none"
                         value={localQty}
                         onChange={(e) => {
                             const val = e.target.value.replace(/\D/g, '')
                             setLocalQty(val)
-                            if (val && parseInt(val) > 0) {
-                                onSetQty(item.product_id || item.id, parseInt(val))
-                            }
                         }}
                         onBlur={() => {
                             const parsed = parseInt(localQty)
@@ -78,8 +75,7 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove, isHigh
                                 if (confirm(`Xóa "${item.name}" khỏi giỏ hàng?`)) {
                                     onRemove(item.product_id || item.id)
                                 } else {
-                                    setLocalQty('1')
-                                    onSetQty(item.product_id || item.id, 1)
+                                    setLocalQty(String(item.quantity))
                                 }
                             } else {
                                 onSetQty(item.product_id || item.id, parsed)
@@ -88,7 +84,7 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove, isHigh
                     />
                     <button
                         onClick={() => handleUpdate(1)}
-                        className="w-9 sm:w-8 h-full flex items-center justify-center text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                        className="w-11 sm:w-9 h-full flex items-center justify-center text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-colors"
                         title="Tăng số lượng"
                         aria-label="Tăng số lượng"
                     >
@@ -102,7 +98,7 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove, isHigh
 
                 <button
                     onClick={() => onRemove(item.product_id || item.id)}
-                    className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all opacity-80 group-hover:opacity-100"
+                    className="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all opacity-80 group-hover:opacity-100"
                     title="Xóa sản phẩm"
                     aria-label="Xóa sản phẩm"
                 >

@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS sales (
 CREATE TABLE IF NOT EXISTS sale_items (
   id TEXT PRIMARY KEY,
   sale_id TEXT NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
-  product_id TEXT NOT NULL REFERENCES products(id),
+  product_id TEXT REFERENCES products(id),
   quantity INTEGER NOT NULL,
   price REAL NOT NULL,
   product_name TEXT NOT NULL

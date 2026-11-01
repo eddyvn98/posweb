@@ -28,9 +28,9 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
     })
 
     const parsedCashGiven = useMemo(() => {
-        if (cashGiven === '' || cashGiven === null || cashGiven === undefined) return totalAmount
+        if (cashGiven === '' || cashGiven === null || cashGiven === undefined) return 0
         let num = Number(String(cashGiven).replace(',', '.'))
-        if (isNaN(num)) return totalAmount
+        if (!Number.isFinite(num)) return 0
         if (num > 0 && num < 1000) num = num * 1000
         return num
     }, [cashGiven, totalAmount])
@@ -58,6 +58,14 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
 
     const handleCheckout = async () => {
         if (submittingRef.current) return
+        if (!shop?.id || !cart.length || !Number.isFinite(totalAmount) || totalAmount <= 0) {
+            alert('Giỏ hàng trống hoặc tổng tiền không hợp lệ')
+            return
+        }
+        if (paymentMethod === 'cash' && parsedCashGiven < totalAmount) {
+            alert('Tiền khách đưa chưa đủ để thanh toán')
+            return
+        }
         submittingRef.current = true
         setLoading(true)
         try {
@@ -123,6 +131,7 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
             const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable
 
             if (e.key === 'Enter') {
+                if (isInput) return
                 e.preventDefault()
                 handleCheckout()
                 return

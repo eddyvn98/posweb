@@ -282,6 +282,7 @@ export default function Products() {
                             <div
                                 key={product.id}
                                 onPointerDown={(event) => {
+                                    if (event.target.closest('button, input, select, textarea, a')) return
                                     if (event.pointerType === 'mouse' && event.button !== 0) return
                                     startLongPress(product.id)
                                 }}
@@ -330,7 +331,8 @@ export default function Products() {
                                     </div>
                                     <div className="flex gap-1.5" onClick={(event) => event.stopPropagation()}>
                                         {!isSelectionMode && (
-                                            <button onClick={(event) => handleAddToCart(event, product)} className="w-7 h-7 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-600 font-bold flex items-center justify-center active:scale-90 transition-transform">
+                                            <button onClick={(event) => handleAddToCart(event, product)} aria-label={`Thêm ${product.name} vào giỏ hàng`}
+                                                className="w-10 h-10 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-600 font-bold flex items-center justify-center active:scale-90 transition-transform">
                                                 +
                                             </button>
                                         )}
@@ -355,7 +357,7 @@ export default function Products() {
             {showBulkModal && <BulkImportModal onClose={() => setShowBulkModal(false)} onFinish={fetchProducts} />}
             {/* CAMERA SCANNER MODAL */}
             {showCameraScanner && (
-                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex flex-col justify-end sm:justify-center items-center p-2 sm:p-4 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-xs flex flex-col justify-end sm:justify-center items-center p-2 sm:p-4 animate-in fade-in duration-200">
                     <div className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl flex flex-col animate-in slide-in-from-bottom-5 duration-300">
                         <div className="p-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
                             <span className="text-white font-bold text-sm flex items-center gap-2">

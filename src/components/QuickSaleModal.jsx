@@ -1,12 +1,18 @@
 import { useState, useRef, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { useAuth } from '../contexts/AuthContext'
-import { saveProductLocal } from '../lib/db'
+import { saveProductLocal, deleteProductLocal } from '../lib/db'
+import { useSync } from '../contexts/SyncContext'
+import { useNotification } from '../contexts/NotificationContext'
 import SmartPriceInput from './Common/SmartPriceInput'
 import { Zap } from 'lucide-react'
 
 export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '', presetName = '' }) {
     const { shop } = useAuth()
+    const { pushProducts } = useSync()
+    const { showNotification } = useNotification()
+    const submittingRef = useRef(false)
+    const [submitting, setSubmitting] = useState(false)
     const [step, setStep] = useState(1) // 1: Price, 2: Note, 3: Quantity
     const [price, setPrice] = useState('')
     const [name, setName] = useState(presetName)
@@ -70,8 +76,14 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
 
     const handleSubmit = async (e) => {
         if (e) e.preventDefault()
-        if (!price) return
-
+        if (submittingRef.current || !price) return
+        const safeQuantity = Number(quantity)
+        if (!Number.isSafeInteger(safeQuantity) || safeQuantity < 1 || safeQuantity > 1000) {
+            showNotification('Số lượng phải từ 1 đến 1000', 'error')
+            return
+        }
+        submittingRef.current = true
+        setSubmitting(true)
         const itemId = uuidv4()
         const rawPrice = Number(price)
         const actualPrice = rawPrice > 0 && rawPrice < 1000 ? rawPrice * 1000 : rawPrice
@@ -83,23 +95,33 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
             price: actualPrice,
             sku: 'QUICK',
             barcode: presetBarcode || `QUICK-${Date.now().toString().slice(-6)}`,
-            stock_quantity: 9999,
+            stock_quantity: 0,
+            is_quick_sale: true,
             is_active: true,
             created_at: new Date().toISOString()
         }
 
-        if (saveToCatalog) {
-            try {
-                await saveProductLocal({ ...customItem, stock_quantity: 0 })
-            } catch (err) {
-                console.error(err)
+        try {
+            if (saveToCatalog) {
+                const catalogItem = { ...customItem, stock_quantity: 0 }
+                await saveProductLocal(catalogItem)
+                try {
+                    const result = await pushProducts(catalogItem)
+                    if (result?.queued) showNotification('Sản phẩm đã lưu offline và đang chờ đồng bộ', 'info')
+                } catch (error) {
+                    await deleteProductLocal(catalogItem.id)
+                    throw error
+                }
             }
-        }
 
-        for (let i = 0; i < quantity; i++) {
-            onAddToCart(customItem)
+            for (let i = 0; i < safeQuantity; i++) onAddToCart(customItem)
+            onClose()
+        } catch (error) {
+            showNotification(error?.response?.data?.error || error?.message || 'Không thể lưu sản phẩm bán nhanh', 'error')
+        } finally {
+            submittingRef.current = false
+            setSubmitting(false)
         }
-        onClose()
     }
 
     return (
@@ -231,6 +253,7 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
                     <button
                         type="button"
                         onClick={nextStep}
+                        disabled={submitting}
                         className="btn-primary w-full h-14 text-[15px] font-black shadow-lg shadow-primary/10 hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-widest rounded-2xl"
                     >
                         {step === 3 ? 'Xác nhận bán' : 'Tiếp tục (Enter)'}

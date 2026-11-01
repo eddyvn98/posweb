@@ -15,6 +15,10 @@ async function upsertProduct(req, res) {
         res.json({ success: true });
     } catch (error) {
         console.error('Upsert Product Error:', error);
+        if (error.status === 409 || error.code === 'BARCODE_CONFLICT') {
+            return res.status(409).json({ error: 'Mã vạch đã thuộc về sản phẩm khác' });
+        }
+        if (error.status === 400) return res.status(400).json({ error: error.message });
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }

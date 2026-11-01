@@ -57,37 +57,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
 
     const draftId = useRef(uuidv4())
 
-    const handleAutoSave = async (currentData = formData) => {
-        if (!currentData.name?.trim() && !currentData.barcode?.trim() && !currentData.image_url) return
-
-        try {
-            const rawPrice = Number(currentData.price)
-            const finalPrice = rawPrice > 0 && rawPrice < 1000 ? rawPrice * 1000 : (rawPrice || 0)
-            const rawCost = Number(currentData.cost_price)
-            const finalCostPrice = rawCost > 0 && rawCost < 1000 ? rawCost * 1000 : (rawCost || 0)
-            const rawOnlinePrice = currentData.online_price ? Number(currentData.online_price) : null
-            const finalOnlinePrice = rawOnlinePrice > 0 && rawOnlinePrice < 1000 ? rawOnlinePrice * 1000 : rawOnlinePrice
-            const rawPromoPrice = currentData.promo_price ? Number(currentData.promo_price) : null
-            const finalPromoPrice = rawPromoPrice > 0 && rawPromoPrice < 1000 ? rawPromoPrice * 1000 : rawPromoPrice
-
-            const data = {
-                ...currentData,
-                id: product?.id || draftId.current,
-                shop_id: shop.id,
-                price: finalPrice,
-                online_price: finalOnlinePrice,
-                promo_price: finalPromoPrice,
-                cost_price: finalCostPrice,
-                stock_quantity: currentData.stock_quantity ? Number(currentData.stock_quantity) : 0,
-                is_active: true,
-                created_at: product?.created_at || new Date().toISOString()
-            }
-            await saveProductLocal(data)
-            console.log('[AutoSave] Local data saved')
-        } catch (err) {
-            console.error('Autosave error:', err)
-        }
-    }
+    // Local draft is held in form state. Cancel never writes over catalog entries.
 
     useEffect(() => {
         loadUnits()
@@ -204,12 +174,11 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
         try {
             const existing = await findProductByBarcode(cleanCode)
             if (existing && (!product || existing.id !== product.id)) {
-                showNotification(`Đã tìm thấy: ${existing.name}`, 'info')
-                setFormData({ ...existing, unit: existing.unit || DEFAULT_UNIT })
+                showNotification(`Mã vạch đã thuộc về "${existing.name}". Không thể ghi đè sản phẩm khác.`, 'warning')
             } else {
                 const newData = { ...formData, barcode: cleanCode }
                 setFormData(newData)
-                handleAutoSave(newData)
+                
                 showNotification(`Đã nhận mã: ${cleanCode}`, 'success')
             }
         } catch (err) {
@@ -223,8 +192,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
         try {
             const existing = await findProductByBarcode(code)
             if (existing) {
-                setFormData({ ...existing, unit: existing.unit || DEFAULT_UNIT })
-                showNotification(`Đã tìm thấy: ${existing.name}`, 'info')
+                showNotification(`Mã vạch đã thuộc về "${existing.name}". Hãy mở sản phẩm đó để chỉnh sửa.`, 'warning')
             } else {
                 setFormData(p => ({ ...p, barcode: code }))
             }
@@ -304,14 +272,14 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
         if (value === '' || value === null || value === undefined) {
             const updated = { ...formData, [field]: '' }
             setFormData(updated)
-            handleAutoSave(updated)
+            
             return
         }
         const num = Number(String(value || 0).replace(',', '.'))
         const finalVal = num > 0 && num < 1000 ? num * 1000 : (num || '')
         const updated = { ...formData, [field]: finalVal }
         setFormData(updated)
-        handleAutoSave(updated)
+        
     }
 
     return (
@@ -339,14 +307,14 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                                     onCapture={base64 => {
                                         const newData = { ...formData, image_url: base64 }
                                         setFormData(newData)
-                                        handleAutoSave(newData)
+                                        
                                     }}
                                 />
                                 <div className="flex-1">
                                     <ProductImage imageUrl={formData.image_url} onChange={url => {
                                         const newData = { ...formData, image_url: url }
                                         setFormData(newData)
-                                        handleAutoSave(newData)
+                                        
                                     }} />
                                 </div>
                             </div>
@@ -354,7 +322,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                             <ProductImage imageUrl={formData.image_url} onChange={url => {
                                 const newData = { ...formData, image_url: url }
                                 setFormData(newData)
-                                handleAutoSave(newData)
+                                
                             }} />
                         )}
 
@@ -365,10 +333,10 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                                 const newBarcode = `${Math.floor(Date.now() / 1000)}`
                                 const newData = { ...formData, barcode: newBarcode }
                                 setFormData(newData)
-                                handleAutoSave(newData)
+                                
                             }}
                             onScan={() => setShowCameraScanner(true)}
-                            onBlur={() => handleAutoSave()}
+                            
                         />
 
                         <div>
@@ -378,7 +346,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                                 placeholder="Ví dụ: Bia Heineken..."
                                 value={formData.name}
                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
-                            onBlur={() => handleAutoSave()}
+                            
                             />
                         </div>
 
@@ -402,7 +370,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                                         const newData = { ...formData, unit: val }
                                         setFormData(newData)
                                         saveRememberedSelections({ unit: val, category: newData.category })
-                                        handleAutoSave(newData)
+                                        
                                     }}
                                     onCreate={async (n) => {
                                         if (n) {
@@ -411,7 +379,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                                             const newData = { ...formData, unit: r.data.name }
                                             setFormData(newData)
                                             saveRememberedSelections({ unit: r.data.name, category: newData.category })
-                                            handleAutoSave(newData)
+                                            
                                         }
                                     }}
                                     onEdit={handleEditUnit}
@@ -427,7 +395,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                                         const newData = { ...formData, category: val }
                                         setFormData(newData)
                                         saveRememberedSelections({ unit: newData.unit, category: val })
-                                        handleAutoSave(newData)
+                                        
                                     }}
                                     onCreate={async (n) => {
                                         if (n) {
@@ -437,7 +405,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                                                 const newData = { ...formData, category: r.data.name }
                                                 setFormData(newData)
                                                 saveRememberedSelections({ unit: newData.unit, category: r.data.name })
-                                                handleAutoSave(newData)
+                                                
                                             } catch (err) {
                                                 showNotification('Lỗi khi tạo nhóm', 'error')
                                             }
