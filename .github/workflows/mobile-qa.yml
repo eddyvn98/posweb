@@ -20,7 +20,11 @@ jobs:
       # The existing bot_backend lockfile is not synchronized with package.json.
       # QA-only install: do not modify production lockfiles.
       - run: npm install --package-lock=false --no-audit --no-fund
+      - run: node --check repositories/sales.repo.js
+      - run: node --check controllers/sales/createSale.js
+      - run: node --check repositories/products.repo.js
       - run: node --test tests/mobilePosFixes.test.js
+      - run: npm test
   frontend-mobile:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -32,6 +36,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
+      - run: npm test
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test -c playwright.mobile.config.mjs
