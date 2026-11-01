@@ -9,7 +9,7 @@ import { useNotification } from '../contexts/NotificationContext'
 import { useScanBarcode } from '../hooks/useScanBarcode'
 import { useSync } from '../contexts/SyncContext'
 import { Check, Camera, CameraOff } from 'lucide-react'
-import BarcodeScanner from '../components/BarcodeScanner'
+import CameraScanSheet from '../components/CameraScanSheet'
 import { playBeep, unlockAudio } from '../lib/soundUtils'
 import MobileProductToolbar from '../components/MobileProductToolbar'
 
@@ -375,42 +375,11 @@ export default function Products() {
                 />
             )}
             {showBulkModal && <BulkImportModal onClose={() => setShowBulkModal(false)} onFinish={fetchProducts} />}
-            {/* CAMERA SCANNER MODAL */}
-            {showCameraScanner && (
-                <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-xs flex flex-col justify-end sm:justify-center items-center p-2 sm:p-4 animate-in fade-in duration-200">
-                    <div className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl flex flex-col animate-in slide-in-from-bottom-5 duration-300">
-                        <div className="p-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
-                            <span className="text-white font-bold text-sm flex items-center gap-2">
-                                <Camera className="w-4 h-4 text-sky-400" /> Quét mã vạch sản phẩm
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => setShowCameraScanner(false)}
-                                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        {/* Viewfinder */}
-                        <div className="relative bg-black min-h-[220px] max-h-[340px] flex items-center justify-center overflow-hidden">
-                            <BarcodeScanner
-                                active={showCameraScanner}
-                                onDetected={(code) => handleScan(code)}
-                            />
-                        </div>
-                        <div className="p-3 bg-slate-800 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
-                            <span>Căn chỉnh mã vạch vào giữa khung</span>
-                            <button
-                                type="button"
-                                onClick={() => setShowCameraScanner(false)}
-                                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-bold rounded-xl transition-all shadow-sm"
-                            >
-                                Đóng
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <CameraScanSheet title="Quét mã sản phẩm" active={showCameraScanner}
+                onDetected={handleScan} onClose={() => setShowCameraScanner(false)}
+                summary="Quét mã để tìm hoặc tạo sản phẩm"
+                actionLabel="Đóng"
+            />
         </div>
     )
 }

@@ -6,7 +6,7 @@ import { saveProductLocal, findProductByBarcode } from '../lib/db'
 import { useNotification } from '../contexts/NotificationContext'
 import api from '../lib/api'
 import ProductCamera from './ProductCamera'
-import BarcodeScanner from './BarcodeScanner'
+import CameraScanSheet from './CameraScanSheet'
 import { playBeep, unlockAudio } from '../lib/soundUtils'
 import { Camera } from 'lucide-react'
 import ProductImage from './ProductForm/ProductImage'
@@ -427,41 +427,11 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                     </div>
                 </form>
             </div>
-            {/* CAMERA SCANNER MODAL */}
-            {showCameraScanner && (
-                <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-xs flex flex-col justify-end sm:justify-center items-center p-2 sm:p-4 animate-in fade-in duration-200">
-                    <div className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl flex flex-col animate-in slide-in-from-bottom-5 duration-300">
-                        <div className="p-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
-                            <span className="text-white font-bold text-sm flex items-center gap-2">
-                                <Camera className="w-4 h-4 text-sky-400" /> Quét mã vạch vào sản phẩm
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => setShowCameraScanner(false)}
-                                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <div className="relative bg-black min-h-[220px] max-h-[340px] flex items-center justify-center overflow-hidden">
-                            <BarcodeScanner
-                                active={showCameraScanner}
-                                onDetected={handleCameraScan}
-                            />
-                        </div>
-                        <div className="p-3 bg-slate-800 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
-                            <span>Căn chỉnh mã vạch vào giữa khung</span>
-                            <button
-                                type="button"
-                                onClick={() => setShowCameraScanner(false)}
-                                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-bold rounded-xl transition-all shadow-sm"
-                            >
-                                Đóng
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <CameraScanSheet title="Nhập mã vạch sản phẩm" active={showCameraScanner}
+                onDetected={handleCameraScan} onClose={() => setShowCameraScanner(false)}
+                summary="Quét một mã để điền vào biểu mẫu"
+                actionLabel="Đóng"
+            />
         </div>
     )
 }

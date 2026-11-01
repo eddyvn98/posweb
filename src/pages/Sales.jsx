@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { playBeep, unlockAudio } from '../lib/soundUtils'
 import { searchLocalProducts, saveProductsToLocal, upsertProductsToLocal } from '../lib/db'
-import BarcodeScanner from '../components/BarcodeScanner'
+import CameraScanSheet from '../components/CameraScanSheet'
 import api from '../lib/api'
 import { useCart } from '../contexts/CartContext'
 import { useSync } from '../contexts/SyncContext'
@@ -45,6 +45,8 @@ export default function Sales() {
     const [scanError, setScanError] = useState(null)
     const [scannedItem, setScannedItem] = useState(null)
     const [showCameraScanner, setShowCameraScanner] = useState(false)
+    const scanInFlightRef = useRef(false)
+    const [cameraFeedback, setCameraFeedback] = useState('')
 
     const { cart, addToCart, removeFromCart, updateQuantity, setQuantity, clearCart, totalAmount, totalItems } = useCart()
     const { pullProducts, isOnline } = useSync()
@@ -182,8 +184,9 @@ export default function Sales() {
     // Shared Scan Logic
     const handleScanResult = async (code) => {
         const cleanCode = (code || '').trim()
-        if (!cleanCode) return
-
+        if (!cleanCode || scanInFlightRef.current) return
+        scanInFlightRef.current = true
+        try {
         setQuery('') // Clear UI search
         setScanError(null)
 
@@ -207,7 +210,13 @@ export default function Sales() {
         }
 
         if (match) {
+            if (!match.id || !shop?.id || match.shop_id !== shop.id) {
+                setScanError('Không thể thêm: sản phẩm không thuộc cửa hàng này')
+                setCameraFeedback('Không thể thêm sản phẩm này')
+                return
+            }
             handleAddToCart(match)
+            setCameraFeedback(`Đã thêm: ${match.name} · ${Number(match.price).toLocaleString('vi-VN')}đ`)
             setLastScanned(`Đã thêm: ${match.name}`)
             playBeep('success')
             setTimeout(() => setLastScanned(null), 2500)
@@ -216,9 +225,11 @@ export default function Sales() {
                 barcode: cleanCode,
                 name: `SP ${cleanCode}`
             })
+            setShowCameraScanner(false)
             setShowQuickSale(true)
             playBeep('error')
         }
+        } finally { scanInFlightRef.current = false }
     }
 
     const handleCheckoutSuccess = (saleData) => {
@@ -504,57 +515,12 @@ export default function Sales() {
                     onClose={() => setLastSale(null)}
                 />
             )}
-            {/* 📷 CAMERA SCANNER MODAL */}
-            {showCameraScanner && (
-                <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-xs flex flex-col justify-end sm:justify-center items-center p-2 sm:p-4 animate-in fade-in duration-200">
-                    <div className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl flex flex-col animate-in slide-in-from-bottom-5 duration-300">
-                        {/* Header */}
-                        <div className="p-3.5 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                                <span className="text-white font-bold text-sm flex items-center gap-1.5">
-                                    <Camera className="w-4 h-4 text-sky-400" /> Quét mã vạch sản phẩm
-                                </span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setShowCameraScanner(false)}
-                                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* Viewfinder */}
-                        <div className="relative bg-black min-h-[220px] max-h-[340px] flex items-center justify-center overflow-hidden">
-                            <BarcodeScanner
-                                active={showCameraScanner}
-                                onDetected={(code) => handleScanResult(code)}
-                            />
-                            {/* Crosshair Overlay */}
-                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                <div className="w-[75%] h-[120px] border-2 border-sky-400/80 rounded-2xl shadow-[0_0_20px_rgba(56,189,248,0.3)] relative">
-                                    <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-red-500/70 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="p-3 bg-slate-800/90 border-t border-slate-700/60 flex items-center justify-between text-xs">
-                            <div className="text-slate-300 font-medium">
-                                Giỏ hàng: <span className="font-bold text-white bg-sky-600 px-2 py-0.5 rounded-full font-mono">{totalItems} món</span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setShowCameraScanner(false)}
-                                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-bold rounded-xl transition-all shadow-sm"
-                            >
-                                Xong (Xem giỏ)
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <CameraScanSheet title="Quét mã bán hàng" active={showCameraScanner}
+                onDetected={handleScanResult} onClose={() => { setShowCameraScanner(false); setCameraFeedback('') }}
+                feedback={cameraFeedback}
+                summary={`Giỏ hàng: ${totalItems} món · ${Number(totalAmount).toLocaleString('vi-VN')}đ`}
+                actionLabel="Xem giỏ hàng"
+            />
         </div>
     )
 }
