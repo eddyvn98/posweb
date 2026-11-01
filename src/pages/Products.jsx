@@ -8,7 +8,9 @@ import { useCart } from '../contexts/CartContext'
 import { useNotification } from '../contexts/NotificationContext'
 import { useScanBarcode } from '../hooks/useScanBarcode'
 import { useSync } from '../contexts/SyncContext'
-import { Check } from 'lucide-react'
+import { Check, Camera, CameraOff } from 'lucide-react'
+import BarcodeScanner from '../components/BarcodeScanner'
+import { playBeep, unlockAudio } from '../lib/soundUtils'
 
 export default function Products() {
     const { addToCart } = useCart()
@@ -21,6 +23,7 @@ export default function Products() {
     const [editingProduct, setEditingProduct] = useState(null)
     const [showModal, setShowModal] = useState(false)
     const [showBulkModal, setShowBulkModal] = useState(false)
+    const [showCameraScanner, setShowCameraScanner] = useState(false)
 
     const [selectedProducts, setSelectedProducts] = useState([])
     const [isSelectionMode, setIsSelectionMode] = useState(false)
@@ -54,17 +57,22 @@ export default function Products() {
     }
 
     const handleScan = async (code) => {
+        if (!code) return
+        const cleanCode = code.trim()
+        setShowCameraScanner(false)
+        playBeep('success')
         if (showModal || showBulkModal) return
 
-        const existing = allProducts.find((product) => product.barcode === code)
+        setQuery(cleanCode)
+        const existing = allProducts.find((product) => product.barcode === cleanCode)
         if (existing) {
             setEditingProduct(existing)
             setShowModal(true)
             showNotification(`Đã tìm thấy: ${existing.name}`, 'info')
         } else {
-            setEditingProduct({ barcode: code, name: '', price: '', stock_quantity: 1 })
+            setEditingProduct({ barcode: cleanCode, name: '', price: '', stock_quantity: 1 })
             setShowModal(true)
-            showNotification(`Mã mới: ${code}. Đang tạo nháp...`, 'info')
+            showNotification(`Mã mới: ${cleanCode}. Đang tạo nháp...`, 'info')
         }
     }
 
@@ -194,6 +202,15 @@ export default function Products() {
                             </>
                         ) : (
                             <>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCameraScanner(true)}
+                                    className="btn bg-sky-50 text-sky-600 border border-sky-200 hover:bg-sky-100 btn-sm flex items-center gap-1.5 font-bold rounded-xl active:scale-95 transition-all"
+                                    title="Quét mã vạch bằng camera"
+                                >
+                                    <Camera className="w-4 h-4 text-sky-600" />
+                                    <span>Quét mã</span>
+                                </button>
                                 <button onClick={() => setShowBulkModal(true)} className="btn-warning btn-sm">
                                     Quét lô
                                 </button>
@@ -212,6 +229,19 @@ export default function Products() {
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                     />
+                    <button
+                        type="button"
+                        onClick={() => setShowCameraScanner(prev => !prev)}
+                        className={`h-10 px-3 rounded-xl flex items-center justify-center font-bold text-xs gap-1.5 transition-all border shadow-xs shrink-0 active:scale-95 ${
+                            showCameraScanner
+                                ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100'
+                                : 'bg-sky-50 text-sky-600 hover:bg-sky-100 border-sky-200'
+                        }`}
+                        title={showCameraScanner ? "Đóng camera" : "Quét mã vạch bằng camera"}
+                    >
+                        {showCameraScanner ? <CameraOff className="w-4 h-4" /> : <Camera className="w-4 h-4 text-sky-600" />}
+                        <span className="hidden sm:inline">{showCameraScanner ? "Đóng" : "Quét mã"}</span>
+                    </button>
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                     <select className="input py-1 px-2.5 text-xs w-auto border-slate-200 min-h-[36px] bg-white font-medium text-slate-700" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
@@ -311,6 +341,42 @@ export default function Products() {
                 />
             )}
             {showBulkModal && <BulkImportModal onClose={() => setShowBulkModal(false)} onFinish={fetchProducts} />}
+            {/* CAMERA SCANNER MODAL */}
+            {showCameraScanner && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex flex-col justify-end sm:justify-center items-center p-2 sm:p-4 animate-in fade-in duration-200">
+                    <div className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl flex flex-col animate-in slide-in-from-bottom-5 duration-300">
+                        <div className="p-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+                            <span className="text-white font-bold text-sm flex items-center gap-2">
+                                <Camera className="w-4 h-4 text-sky-400" /> Quét mã vạch sản phẩm
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setShowCameraScanner(false)}
+                                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        {/* Viewfinder */}
+                        <div className="relative bg-black min-h-[220px] max-h-[340px] flex items-center justify-center overflow-hidden">
+                            <BarcodeScanner
+                                active={showCameraScanner}
+                                onDetected={(code) => handleScan(code)}
+                            />
+                        </div>
+                        <div className="p-3 bg-slate-800 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
+                            <span>Căn chỉnh mã vạch vào giữa khung</span>
+                            <button
+                                type="button"
+                                onClick={() => setShowCameraScanner(false)}
+                                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-bold rounded-xl transition-all shadow-sm"
+                            >
+                                Đóng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

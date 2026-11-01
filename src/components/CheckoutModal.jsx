@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
+import api from '../lib/api'
 import { saveOfflineSale } from '../lib/db'
 import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
-import { Banknote, Landmark } from 'lucide-react'
+import { Banknote, Landmark, Printer } from 'lucide-react'
 import SmartPriceInput from './Common/SmartPriceInput'
 
 export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) {
@@ -11,6 +12,13 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
     const [loading, setLoading] = useState(false)
     const [paymentMethod, setPaymentMethod] = useState('cash')
     const [cashGiven, setCashGiven] = useState(totalAmount)
+    const [autoPrint, setAutoPrint] = useState(() => {
+        try {
+            return localStorage.getItem('pos_auto_print') === 'true'
+        } catch (e) {
+            return false
+        }
+    })
 
     const parsedCashGiven = useMemo(() => {
         if (cashGiven === '' || cashGiven === null || cashGiven === undefined) return totalAmount
@@ -68,11 +76,24 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
                 }))
             }
 
-            // 2. Save to Offline DB
+            // 2. Direct Sync to Server if online
+            if (navigator.onLine) {
+                try {
+                    const res = await api.post('/sales', saleData)
+                    if (res?.data?.id) {
+                        saleData.id = res.data.id
+                    }
+                    saleData.synced = 1
+                } catch (pushErr) {
+                    console.warn('[Checkout] Direct API push failed, queued for background sync:', pushErr)
+                }
+            }
+
+            // 3. Save to Offline DB
             await saveOfflineSale(saleData)
 
-            // 3. Try to sync immediately (Fire & Forget)
-            if (navigator.onLine) {
+            // 4. Try to sync remaining queue if needed
+            if (saleData.synced !== 1 && navigator.onLine) {
                 pushSales()
             }
 
@@ -230,6 +251,26 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
                             </div>
                         </div>
                     )}
+                
+                    {/* Auto-print option */}
+                    <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-700 font-semibold px-1 pt-2 border-t border-slate-100">
+                        <input
+                            type="checkbox"
+                            checked={autoPrint}
+                            onChange={(e) => {
+                                const val = e.target.checked
+                                setAutoPrint(val)
+                                try {
+                                    localStorage.setItem('pos_auto_print', val ? 'true' : 'false')
+                                } catch (err) {}
+                            }}
+                            className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                        />
+                        <span className="flex items-center gap-1.5">
+                            <Printer className="w-3.5 h-3.5 text-slate-500" />
+                            In hóa đơn ra máy POS-80C tại quán
+                        </span>
+                    </label>
                 </div>
 
                 <div className="p-4 bg-slate-50 border-t border-slate-200 flex gap-2.5">

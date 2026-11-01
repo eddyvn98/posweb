@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { searchLocalProducts } from '../lib/db'
+import { playBeep, unlockAudio } from '../lib/soundUtils'
+import { searchLocalProducts, saveProductsToLocal } from '../lib/db'
+import BarcodeScanner from '../components/BarcodeScanner'
+import api from '../lib/api'
 import { useCart } from '../contexts/CartContext'
 import { useSync } from '../contexts/SyncContext'
 import { useScanBarcode } from '../hooks/useScanBarcode'
@@ -13,8 +16,11 @@ import {
     Package, 
     CheckCircle2, 
     XCircle, 
-    Zap, 
-    History 
+    Zap,
+    History,
+    Camera,
+    CameraOff,
+    X
 } from 'lucide-react'
 
 import ProductCard from '../components/ProductCard'
@@ -26,6 +32,7 @@ import InvoiceModal from '../components/InvoiceModal'
 export default function Sales() {
     const navigate = useNavigate()
     const searchInputRef = useRef(null)
+    const cartListRef = useRef(null)
     const lastHydrationRef = useRef(0)
     const [query, setQuery] = useState('')
     const [isSearchInputFocused, setIsSearchInputFocused] = useState(false)
@@ -36,26 +43,13 @@ export default function Sales() {
     const [lastSale, setLastSale] = useState(null)
     const [lastScanned, setLastScanned] = useState(null)
     const [scanError, setScanError] = useState(null)
+    const [scannedItem, setScannedItem] = useState(null)
+    const [showCameraScanner, setShowCameraScanner] = useState(false)
 
     const { cart, addToCart, removeFromCart, updateQuantity, setQuantity, clearCart, totalAmount, totalItems } = useCart()
     const { pullProducts, isOnline } = useSync()
 
-    // 🔊 Beep sound utility
-    const playBeep = (type = 'success') => {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)()
-            const osc = ctx.createOscillator()
-            const gain = ctx.createGain()
-            osc.type = 'sine'
-            osc.frequency.setValueAtTime(type === 'success' ? 880 : 220, ctx.currentTime)
-            gain.gain.setValueAtTime(0.1, ctx.currentTime)
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1)
-            osc.connect(gain)
-            gain.connect(ctx.destination)
-            osc.start()
-            osc.stop(ctx.currentTime + 0.1)
-        } catch (e) { /* Audio fallback */ }
-    }
+
 
     // 🚀 Enable Bluetooth/External Scanner
     // Disabled when input is focused to avoid double-fire:
@@ -65,14 +59,38 @@ export default function Sales() {
         enabled: !isSearchInputFocused,
     })
 
-    // Auto-focus search input only on mount
+    // Auto-focus search input only on desktop (prevents mobile keyboard popup and viewport shifts)
     useEffect(() => {
-        searchInputRef.current?.focus()
+        const isMobile = window.innerWidth < 768 || ('ontouchstart' in window && navigator.maxTouchPoints > 0)
+        if (!isMobile) {
+            searchInputRef.current?.focus()
+        }
     }, [])
 
-    // Escape shortcut to exit search state
+    // Global keyboard shortcuts (F9 to checkout, Escape to exit search)
     useEffect(() => {
         const handleGlobalKeyDown = (e) => {
+            const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable
+
+            // Shortcut thanh toán:
+            // - Ctrl + Enter (hoạt động mọi lúc, kể cả đang gõ ô tìm kiếm)
+            // - Dấu + bàn phím số (khi không đứng trong ô nhập liệu)
+            // - F9 (giữ lại dự phòng nếu bấm Fn+F9 hoặc dùng phím rời)
+            const isCheckoutTrigger =
+                (e.ctrlKey && e.key === 'Enter') ||
+                e.key === 'F9' ||
+                (!isInput && e.code === 'NumpadAdd')
+
+            if (isCheckoutTrigger) {
+                e.preventDefault()
+                if (showCheckout || showQuickSale || lastSale) return
+                if (totalItems > 0) {
+                    searchInputRef.current?.blur()
+                    setShowCheckout(true)
+                }
+                return
+            }
+
             if (e.key === 'Escape') {
                 if (showCheckout || showQuickSale || lastSale) return
                 if (query || isSearchInputFocused) {
@@ -86,7 +104,7 @@ export default function Sales() {
         }
         window.addEventListener('keydown', handleGlobalKeyDown)
         return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-    }, [query, isSearchInputFocused, showCheckout, showQuickSale, lastSale])
+    }, [query, isSearchInputFocused, showCheckout, showQuickSale, lastSale, totalItems])
 
     const isSearching = query.trim().length > 0
 
@@ -117,24 +135,86 @@ export default function Sales() {
         return () => clearTimeout(timer)
     }, [isOnline, pullProducts, query])
 
+    // Helper to add item to cart with auto-scroll tracking
+    const handleAddToCart = (product) => {
+        const targetId = product.product_id || product.id
+        addToCart(product)
+        setScannedItem({ id: targetId, ts: Date.now() })
+    }
+
+    // Auto-scroll and highlight cart item on scan/add
+    useEffect(() => {
+        if (!scannedItem?.id) return
+
+        const targetId = scannedItem.id
+        const scrollTimer = setTimeout(() => {
+            const container = cartListRef.current
+            const itemElement = document.getElementById(`cart-item-${targetId}`)
+
+            if (container) {
+                const isLastItem = cart.length > 0 && 
+                    (cart[cart.length - 1].product_id || cart[cart.length - 1].id) === targetId
+
+                if (isLastItem) {
+                    container.scrollTo({
+                        top: container.scrollHeight,
+                        behavior: 'smooth'
+                    })
+                } else if (itemElement) {
+                    itemElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest'
+                    })
+                }
+            }
+        }, 50)
+
+        const highlightTimer = setTimeout(() => {
+            setScannedItem(null)
+        }, 1500)
+
+        return () => {
+            clearTimeout(scrollTimer)
+            clearTimeout(highlightTimer)
+        }
+    }, [scannedItem, cart])
+
     // Shared Scan Logic
     const handleScanResult = async (code) => {
+        const cleanCode = (code || '').trim()
+        if (!cleanCode) return
+
         setQuery('') // Clear UI search
         setScanError(null)
 
-        const results = await searchLocalProducts(code)
+        const results = await searchLocalProducts(cleanCode)
         // Find exact match by barcode OR id
-        const match = results.find(p => p.barcode === code || p.id === code)
+        let match = results.find(p => p.barcode === cleanCode || p.id === cleanCode)
+
+        // Fallback: If not found in local IndexedDB, query backend API
+        if (!match) {
+            try {
+                const resp = await api.get(`/products?search=${encodeURIComponent(cleanCode)}`)
+                if (resp.data && Array.isArray(resp.data)) {
+                    match = resp.data.find(p => p.barcode === cleanCode || p.id === cleanCode)
+                    if (match) {
+                        await saveProductsToLocal([match])
+                    }
+                }
+            } catch (err) {
+                console.warn('[Sales] Backend search fallback error:', err)
+            }
+        }
 
         if (match) {
-            addToCart(match)
-            setLastScanned(match.name)
+            handleAddToCart(match)
+            setLastScanned(`Đã thêm: ${match.name}`)
             playBeep('success')
-            setTimeout(() => setLastScanned(null), 2000)
+            setTimeout(() => setLastScanned(null), 2500)
         } else {
             setQuickSalePreset({
-                barcode: code,
-                name: `SP ${code}`
+                barcode: cleanCode,
+                name: `SP ${cleanCode}`
             })
             setShowQuickSale(true)
             playBeep('error')
@@ -158,6 +238,7 @@ export default function Sales() {
                         <div className="text-center my-auto w-full max-w-lg">
                             <h3 className="text-base font-bold text-slate-700 tracking-tight">Sẵn sàng bán hàng</h3>
                             <p className="text-xs text-slate-400 font-medium mt-1">Quét mã vạch hoặc nhập tên/mã sản phẩm bên dưới</p>
+                            <button type="button" onClick={() => setShowCameraScanner(true)} className="mt-4 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-semibold text-xs rounded-xl shadow-md transition-all inline-flex items-center gap-2"><Camera className="w-4 h-4" /> Bật Camera Quét Mã</button>
                         </div>
                     </div>
                 </div>
@@ -177,7 +258,7 @@ export default function Sales() {
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar min-h-0">
+                    <div ref={cartListRef} className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar min-h-0 scroll-smooth">
                         {cart.length === 0 ? (
                             <div className="hidden md:flex flex-col items-center justify-center h-full text-slate-400 text-xs italic font-medium">
                                 Chưa có sản phẩm trong giỏ...
@@ -188,6 +269,7 @@ export default function Sales() {
                                     <CartItem
                                         key={item.product_id || item.id}
                                         item={item}
+                                        isHighlighted={scannedItem?.id === (item.product_id || item.id)}
                                         onUpdateQty={updateQuantity}
                                         onSetQty={setQuantity}
                                         onRemove={removeFromCart}
@@ -206,7 +288,7 @@ export default function Sales() {
                         >
                             <div className="flex flex-col items-start">
                                 <span className="text-[10px] opacity-80 font-bold uppercase tracking-wider leading-none mb-0.5">Xác nhận</span>
-                                <span className="text-sm font-bold uppercase tracking-tight flex items-center gap-1">THANH TOÁN <ArrowRight className="w-4 h-4" /></span>
+                                <span className="text-sm font-bold uppercase tracking-tight flex items-center gap-1.5">THANH TOÁN <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white/20 rounded border border-white/25 text-white leading-none">Ctrl + Enter</kbd> <ArrowRight className="w-4 h-4" /></span>
                             </div>
                             <div className="text-right">
                                 <span className="text-lg font-bold font-mono tabular-nums leading-none">
@@ -245,7 +327,7 @@ export default function Sales() {
                                             <div
                                                 key={p.id}
                                                 onClick={() => {
-                                                    addToCart(p);
+                                                    handleAddToCart(p);
                                                     setQuery('');
                                                     setIsSearchInputFocused(false);
                                                     playBeep('success');
@@ -312,6 +394,14 @@ export default function Sales() {
                                     searchInputRef.current?.blur()
                                     return
                                 }
+                                if (e.ctrlKey && e.key === 'Enter') {
+                                    e.preventDefault()
+                                    if (!showCheckout && !showQuickSale && !lastSale && totalItems > 0) {
+                                        searchInputRef.current?.blur()
+                                        setShowCheckout(true)
+                                    }
+                                    return
+                                }
                                 const scanCode = e.currentTarget.value.trim()
                                 if (e.key === 'Enter') {
                                     if (scanCode) {
@@ -346,6 +436,21 @@ export default function Sales() {
                             </button>
                         )}
                     </div>
+
+                    {/* Camera Scanner Button */}
+                    <button
+                        type="button"
+                        onClick={() => setShowCameraScanner(prev => !prev)}
+                        className={`h-10 px-3 rounded-xl flex items-center justify-center font-bold text-xs gap-1.5 transition-all border shadow-xs shrink-0 active:scale-95 ${
+                            showCameraScanner
+                                ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100'
+                                : 'bg-sky-50 text-sky-600 hover:bg-sky-100 border-sky-200'
+                        }`}
+                        title={showCameraScanner ? "Đóng camera" : "Quét mã vạch bằng camera điện thoại"}
+                    >
+                        {showCameraScanner ? <CameraOff className="w-4 h-4" /> : <Camera className="w-4 h-4 text-sky-600" />}
+                        <span className="hidden sm:inline">{showCameraScanner ? "Đóng" : "Quét mã"}</span>
+                    </button>
 
                     {/* Quick Sale Button - Compact */}
                     <button
@@ -384,7 +489,7 @@ export default function Sales() {
                         setShowQuickSale(false)
                         setQuickSalePreset({ barcode: '', name: '' })
                     }}
-                    onAddToCart={addToCart}
+                    onAddToCart={handleAddToCart}
                     presetBarcode={quickSalePreset.barcode}
                     presetName={quickSalePreset.name}
                 />
@@ -395,6 +500,57 @@ export default function Sales() {
                     sale={lastSale}
                     onClose={() => setLastSale(null)}
                 />
+            )}
+            {/* 📷 CAMERA SCANNER MODAL */}
+            {showCameraScanner && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex flex-col justify-end sm:justify-center items-center p-2 sm:p-4 animate-in fade-in duration-200">
+                    <div className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl flex flex-col animate-in slide-in-from-bottom-5 duration-300">
+                        {/* Header */}
+                        <div className="p-3.5 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                                <span className="text-white font-bold text-sm flex items-center gap-1.5">
+                                    <Camera className="w-4 h-4 text-sky-400" /> Quét mã vạch sản phẩm
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowCameraScanner(false)}
+                                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Viewfinder */}
+                        <div className="relative bg-black min-h-[220px] max-h-[340px] flex items-center justify-center overflow-hidden">
+                            <BarcodeScanner
+                                active={showCameraScanner}
+                                onDetected={(code) => handleScanResult(code)}
+                            />
+                            {/* Crosshair Overlay */}
+                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                <div className="w-[75%] h-[120px] border-2 border-sky-400/80 rounded-2xl shadow-[0_0_20px_rgba(56,189,248,0.3)] relative">
+                                    <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-red-500/70 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-3 bg-slate-800/90 border-t border-slate-700/60 flex items-center justify-between text-xs">
+                            <div className="text-slate-300 font-medium">
+                                Giỏ hàng: <span className="font-bold text-white bg-sky-600 px-2 py-0.5 rounded-full font-mono">{totalItems} món</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowCameraScanner(false)}
+                                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-bold rounded-xl transition-all shadow-sm"
+                            >
+                                Xong (Xem giỏ)
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )

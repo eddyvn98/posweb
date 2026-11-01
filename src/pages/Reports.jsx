@@ -312,7 +312,7 @@ export default function Reports() {
                         )
                     )}
                     {activeTab === 'inventory' && (
-                        inventoryData && inventoryData.items && inventoryData.items.length > 0 ? (
+                        inventoryData && (inventoryData.inventory?.length > 0 || inventoryData.items?.length > 0) ? (
                             <InventoryReport data={inventoryData} />
                         ) : (
                             <div className="bg-white rounded-3xl p-12 text-center border border-gray-200 shadow-sm">

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>In Tag Gập Đầu Túi 20x4cm - Khổ A4</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #f1f3f5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    /* Thanh điều khiển trên màn hình (không in) */
+    .toolbar {
+      background: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: #e83e8c;
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+
+    .btn:hover {
+      background: #d63384;
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    /* Tờ giấy A4 chuẩn in ấn */
+    .sheet {
+      width: 210mm;
+      min-height: 297mm;
+      height: 297mm;
+      background: white;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      position: relative;
+      padding: 28.5mm 5mm; /* 200mm ngang ở giữa, 3 tag x 80mm = 240mm dọc */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Mỗi tag kích thước phẳng: 200mm x 80mm */
+    .tag-card {
+      width: 200mm;
+      height: 80mm;
+      border: 1px dashed #c0c0c0; /* Đường cắt quanh tag */
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    /* Mặt sau (Nửa trên 40mm) - Xoay 180 độ để khi gập đôi ra sau sẽ xuôi chiều */
+    .face-back {
+      width: 200mm;
+      height: 40mm;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: rotate(180deg);
+    }
+
+    /* Đường cấn gập ở giữa */
+    .fold-line {
+      position: absolute;
+      top: 40mm;
+      left: 0;
+      width: 100%;
+      height: 0;
+      border-top: 1px dashed #aaa;
+      z-index: 10;
+    }
+
+    .fold-line::after {
+      content: "✂ Đường gập đôi ✂";
+      position: absolute;
+      left: 50%;
+      top: -7px;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.85);
+      padding: 0 8px;
+      font-size: 8px;
+      color: #888;
+      pointer-events: none;
+    }
+
+    /* Mặt trước (Nửa dưới 40mm) - Chiều đứng bình thường */
+    .face-front {
+      width: 200mm;
+      height: 40mm;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tag-img {
+      width: 100%;
+      height: 100%;
+      object-fit: fill; /* Ép trọn vẹn 100% không mất chữ, không mất hình */
+      display: block;
+    }
+
+    .face-front, .face-back {
+      background-color: #85d8fc; /* Nền xanh da trời đồng màu với ảnh */
+    }
+
+    /* Chế độ in ấn */
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    @media print {
+      body {
+        background: none;
+        padding: 0;
+        margin: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .toolbar, .tip-box {
+        display: none !important;
+      }
+
+      .sheet {
+        box-shadow: none !important;
+        margin: 0 !important;
+        page-break-after: avoid;
+        page-break-inside: avoid;
+      }
+    }
+
+    .tip-box {
+      max-width: 210mm;
+      margin-top: 15px;
+      font-size: 13px;
+      color: #666;
+      background: #e9ecef;
+      padding: 10px 16px;
+      border-radius: 6px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Thanh công cụ -->
+  <div class="toolbar">
+    <button class="btn" onclick="window.print()">🖨️ In Ngay (Ctrl + P)</button>
+    <div class="controls-group">
+      <label><b>Mặt sau:</b></label>
+      <select id="backOption" onchange="changeBackMode(this.value)" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;">
+        <option value="same">Cùng hình (Lộn ngược 180° để khi gập đôi cả 2 mặt đều đúng chiều)</option>
+        <option value="white">Để trắng (tiết kiệm mực / dán mã vạch)</option>
+        <option value="info">Khung cảm ơn & thông tin</option>
+      </select>
+    </div>
+    <div class="controls-group">
+      <label><b>Vừa khung:</b></label>
+      <select id="fitOption" onchange="changeFitMode(this.value)" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; font-weight: 500;">
+        <option value="fill" selected>✅ Không mất chữ (Ép vừa khít 20x4cm - khuyên dùng)</option>
+        <option value="contain">Giữ nguyên tỉ lệ (Ảnh ở giữa, viền xanh 2 bên)</option>
+        <option value="cover">Phủ kín tràn viền (Cắt viền trên/dưới)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tờ A4 chứa 3 tag gập -->
+  <div class="sheet">
+    <!-- TAG 1 -->
+    <div class="tag-card">
+      <div class="face-back">
+        <img class="tag-img img-back" src="sanrio_tag.jpg" alt="Mặt sau">
+      </div>
+      <div class="fold-line"></div>
+      <div class="face-front">
+        <img class="tag-img img-front" src="sanrio_tag.jpg" alt="Mặt trước">
+      </div>
+    </div>
+
+    <!-- TAG 2 -->
+    <div class="tag-card">
+      <div class="face-back">
+        <img class="tag-img img-back" src="sanrio_tag.jpg" alt="Mặt sau">
+      </div>
+      <div class="fold-line"></div>
+      <div class="face-front">
+        <img class="tag-img img-front" src="sanrio_tag.jpg" alt="Mặt trước">
+      </div>
+    </div>
+
+    <!-- TAG 3 -->
+    <div class="tag-card">
+      <div class="face-back">
+        <img class="tag-img img-back" src="sanrio_tag.jpg" alt="Mặt sau">
+      </div>
+      <div class="fold-line"></div>
+      <div class="face-front">
+        <img class="tag-img img-front" src="sanrio_tag.jpg" alt="Mặt trước">
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    💡 <b>Lưu ý khi in:</b> Trong hộp thoại In của trình duyệt (Ctrl + P), chọn:
+    <br>• <b>Khổ giấy (Paper size):</b> A4
+    <br>• <b>Tỷ lệ (Scale):</b> 100% hoặc Mặc định (Default)
+    <br>• <b>Lề (Margins):</b> Không có (None)
+    <br>• <b>Đồ họa nền (Background graphics):</b> Tích chọn BẬT
+  </div>
+
+  <script>
+    function changeBackMode(mode) {
+      const backs = document.querySelectorAll('.face-back');
+      backs.forEach(b => {
+        if (mode === 'same') {
+          b.innerHTML = '<img class="tag-img img-back" src="sanrio_tag.jpg" alt="Mặt sau">';
+          b.style.background = 'none';
+        } else if (mode === 'white') {
+          b.innerHTML = '';
+          b.style.background = '#ffffff';
+        } else if (mode === 'info') {
+          b.innerHTML = `
+            <div style="font-size: 11px; text-align: center; color: #555; padding: 10px; width: 100%;">
+              <b style="font-size: 13px; color: #e83e8c;">❤️ CẢM ƠN QUÝ KHÁCH ❤️</b><br>
+              <span>Chúc bạn và các bé có những trải nghiệm thật vui vẻ!</span><br>
+              <div style="border: 1px dashed #ccc; padding: 4px; display: inline-block; margin-top: 4px; border-radius: 4px; font-size: 10px;">
+                Mã SP / Barcode: ___________________
+              </div>
+            </div>
+          `;
+          b.style.background = '#fff0f6';
+        }
+      });
+      changeFitMode(document.getElementById('fitOption').value);
+    }
+
+    function changeFitMode(mode) {
+      document.querySelectorAll('.tag-img').forEach(img => {
+        img.style.objectFit = mode;
+      });
+    }
+  </script>
+</body>
+</html>

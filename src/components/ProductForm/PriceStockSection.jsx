@@ -10,9 +10,9 @@ export default function PriceStockSection({ price, onlinePrice, promoPrice, cost
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Giá offline *</label>
                     <SmartPriceInput
                         required min="0" step="1"
-                        className="input w-full font-mono text-lg font-bold text-primary px-3 h-11"
-                        inputClassName="text-lg font-bold text-primary font-mono"
-                        suffixClassName="text-lg font-bold text-primary/45 font-mono"
+                        className="input w-full text-base font-bold text-primary px-3 h-11"
+                        inputClassName="text-base font-bold text-primary placeholder:text-xs placeholder:font-normal placeholder:text-gray-400"
+                        suffixClassName="text-base font-bold text-primary/45"
                         value={price}
                         onChange={(e) => onChange('price', e.target.value)}
                         onBlur={(e) => onPriceBlur('price', e.target.value)}
@@ -26,15 +26,15 @@ export default function PriceStockSection({ price, onlinePrice, promoPrice, cost
                     <label className="block text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">Giá online</label>
                     <SmartPriceInput
                         min="0" step="1"
-                        className="input w-full font-mono text-lg font-bold text-blue-600 px-3 h-11"
-                        inputClassName="text-lg font-bold text-blue-600 font-mono"
-                        suffixClassName="text-lg font-bold text-blue-400/50 font-mono"
+                        className="input w-full text-base font-bold text-blue-600 px-3 h-11"
+                        inputClassName="text-base font-bold text-blue-600 placeholder:text-xs placeholder:font-normal placeholder:text-gray-400"
+                        suffixClassName="text-base font-bold text-blue-400/50"
                         value={onlinePrice}
                         onChange={(e) => onChange('online_price', e.target.value)}
                         onBlur={(e) => onPriceBlur('online_price', e.target.value)}
                         placeholder="Dùng giá offline"
                     />
-                    <div className="text-[10px] font-bold text-blue-600 mt-1">
+                    <div className={`text-[10px] mt-1 ${Number(onlinePrice) > 0 ? 'font-bold text-blue-600' : 'font-normal text-gray-400'}`}>
                         {Number(onlinePrice) > 0
                             ? `${new Intl.NumberFormat('vi-VN').format(Number(onlinePrice) < 1000 ? Number(onlinePrice) * 1000 : onlinePrice)} đ`
                             : 'Để trống = dùng giá offline'}
@@ -44,15 +44,15 @@ export default function PriceStockSection({ price, onlinePrice, promoPrice, cost
                     <label className="block text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Giá KM online</label>
                     <SmartPriceInput
                         min="0" step="1"
-                        className="input w-full font-mono text-lg font-bold text-emerald-600 px-3 h-11"
-                        inputClassName="text-lg font-bold text-emerald-600 font-mono"
-                        suffixClassName="text-lg font-bold text-emerald-400/50 font-mono"
+                        className="input w-full text-base font-bold text-emerald-600 px-3 h-11"
+                        inputClassName="text-base font-bold text-emerald-600 placeholder:text-xs placeholder:font-normal placeholder:text-gray-400"
+                        suffixClassName="text-base font-bold text-emerald-400/50"
                         value={promoPrice}
                         onChange={(e) => onChange('promo_price', e.target.value)}
                         onBlur={(e) => onPriceBlur('promo_price', e.target.value)}
                         placeholder="Không giảm"
                     />
-                    <div className="text-[10px] font-bold text-emerald-600 mt-1">
+                    <div className={`text-[10px] mt-1 ${Number(promoPrice) > 0 ? 'font-bold text-emerald-600' : 'font-normal text-gray-400'}`}>
                         {Number(promoPrice) > 0
                             ? `${new Intl.NumberFormat('vi-VN').format(Number(promoPrice) < 1000 ? Number(promoPrice) * 1000 : promoPrice)} đ`
                             : 'Thấp hơn giá online để hiện gạch ngang'}
@@ -62,9 +62,9 @@ export default function PriceStockSection({ price, onlinePrice, promoPrice, cost
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Giá vốn</label>
                     <SmartPriceInput
                         min="0" step="1"
-                        className="input w-full font-mono text-base font-bold text-gray-800 px-3 h-11"
-                        inputClassName="text-base font-bold text-gray-800 font-mono"
-                        suffixClassName="text-base font-bold text-gray-400/60 font-mono"
+                        className="input w-full text-base font-bold text-gray-800 px-3 h-11"
+                        inputClassName="text-base font-bold text-gray-800 placeholder:text-xs placeholder:font-normal placeholder:text-gray-400"
+                        suffixClassName="text-base font-bold text-gray-400/60"
                         value={costPrice}
                         onChange={(e) => onChange('cost_price', e.target.value)}
                         onBlur={(e) => onPriceBlur('cost_price', e.target.value)}

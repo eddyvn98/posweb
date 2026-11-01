@@ -61,6 +61,21 @@ This project is indexed by GitNexus as **posweb** (1905 symbols, 3570 relationsh
 9. **CẤM TỰ Ý CHẠY `npm run build`:** Không tự ý chạy full build gây log dài và tốn turn trừ khi user yêu cầu hoặc chuẩn bị release.
 10. **CẤM THỬ-SAI LỆNH SHELL PHỨC TẠP INLINE:** Cấm gõ lệnh PowerShell/Node inline phức tạp dẫn đến lỗi crash chuỗi/quote lặp đi lặp lại. Viết script ra file tạm nếu lệnh dài > 1 dòng.
 11. **CẤM SEARCH WEB DÀN TRẢI CHO CÂU HỎI THÔNG THƯỜNG:** Trả lời trực tiếp từ tri thức mô hình, không spam công cụ tìm kiếm web khi không được yêu cầu.
+12. **CẤM BẪY POLLING BACKGROUND TASK & CHAT RÁC "ĐANG...":** Đặt `WaitMsBeforeAsync: 8000-10000` cho mọi lệnh CLI. Tuyệt đối không gọi `manage_task(status)` để poll và không gửi tin nhắn chat "Đang kiểm tra..." làm lãng phí turn; hãy kết thúc turn để hệ thống tự động wakeup.
+13. **CẤM LẠM DỤNG SCREENSHOT DEVTOOLS ĐỂ SOI CSS:** Bắt buộc dùng `evaluate_script` lấy tọa độ/computedStyle (<50 tokens). Cấm chụp ảnh liên tiếp và gọi `view_file` nạp ảnh vào context nhiều lần.
+14. **CẤM LAN MAN MỞ FILE CONSUMER KHÔNG LIÊN QUAN (SCOPE CREEP):** Khi người dùng yêu cầu sửa UI ở 1 component cụ thể, chỉ đọc và sửa đúng component đó; không mở đọc hàng loạt file consumer xung quanh.
+15. **CẤM CHẮP VÁ KHI RESOLVE CONFLICT HOẶC SỬA HÀM DÀI:** Đọc trọn 1 khối block (50-80 dòng) để nhìn rõ mở/đóng ngoặc và cấu trúc, sửa dứt điểm trong 1 lần, tránh chắp vá gây lỗi cú pháp (unclosed bracket).
+16. **CẤM NẠP NHIỀU ẢNH VÀO CONTEXT BẰNG `view_file`:** Không gọi `view_file` nạp nhiều ảnh (.png/.jpg) làm bùng nổ context hàng chục ngàn multimodal tokens. Dùng script trích xuất metadata (size/bounds) và chỉ xem 1 ảnh khi user yêu cầu kiểm tra trực quan.
+17. **CẤM SỬA CODE/SCRIPT BẰNG LỆNH POWERSHELL `-replace` INLINE:** Cấm dùng regex `-replace` qua PowerShell/CLI gây bẫy escaping và lỗi AST parser lặp đi lặp lại 10-15 turns. Luôn dùng `replace_file_content`.
+18. **CẤM TẠO SCRIPT TẠM RẢI RÁC & POLLING `Get-PrintJob` KHI IN ẤN:** Tái sử dụng script in chuẩn qua tham số (`-Copies`, `-ColorMode`), cấm tạo hàng chục file `.ps1` tạm và không polling `Get-PrintJob` liên tục khi lệnh đã vào Windows Spooler.
+19. **CẤM BẪY SANDBOX LỖI TRUY CẬP HỆ THỐNG TRÊN WINDOWS:** Chủ động đặt `BypassSandbox: true` cho mọi lệnh thao tác in ấn, Desktop, Downloads hoặc đường dẫn ngoài repo để tránh lỗi Access Denied `C:\`.
+20. **CẤM GIẢI THÍCH DÀI DÒNG CHO LỆNH HÀNH ĐỘNG ĐƠN GIẢN:** Khi user yêu cầu "in đi", "chạy lại", phản hồi siêu ngắn gọn (< 100 từ, 1-2 câu báo kết quả), cấm viết văn lý thuyết dông dài.
+21. **CẤM DUMP OUTPUT DÀI KHÔNG LỌC TRÊN SHELL:** Cấm chạy `Get-ChildItem -Recurse` trên thư mục lớn hoặc dùng `Format-List *` dump toàn bộ CIM/WMI properties. Bắt buộc dùng `Select-Object -First N` và chỉ chọn các thuộc tính cần thiết.
+22. **CẤM DÙNG `Start-Sleep` & POLLING PROCESS LIÊN TỤC:** Cấm dùng lệnh PowerShell `Get-Process`/`Get-PrintJob` kết hợp `Start-Sleep` lặp đi lặp lại để chờ process. Tận dụng cơ chế reactive wakeup của hệ thống hoặc đặt `WaitMsBeforeAsync: 8000-10000`.
+23. **CẤM THỬ-SAI MÒ MẪM CÔNG CỤ NGOÀI KHÔNG CÀI SẴN:** Cấm thử gọi các công cụ không tồn tại (`SumatraPDF`, `Ghostscript`, `pdfium`...). Dùng đúng script và công cụ chuẩn đã xác thực trên môi trường Windows.
+24. **CẤM TẠO SCRIPT TẠM VỤN VẶT TỪNG BƯỚC CHO TÁC VỤ FILE/OS:** Cấm tạo 5-10 file script riêng lẻ (`check_*.ps1`, `move_*.ps1`, `verify_*.ps1`). Phải gom trọn chu trình (kiểm tra -> copy/move -> xác thực -> shortcut -> dọn dẹp) vào 1 script duy nhất.
+25. **CẤM QUÉT ĐỆ QUY TỔNG THỂ KHÔNG GIỚI HẠN (`Get-ChildItem -Recurse`):** Cấm chạy quét đệ quy sâu toàn bộ `C:\` hoặc `C:\Users` gây nghẽn IO, timeout và tràn context. Bắt buộc quét tầng 1 (`-Depth 1` hoặc `Get-ChildItem -Directory`) và chỉ đào sâu vào thư mục cụ thể đã xác định.
+26. **CẤM NHẢY CÓC THỬ-SAI NGÔN NGỮ (PYTHON <-> POWERSHELL) TRÊN WINDOWS:** Nhất quán dùng PowerShell thuần với `BypassSandbox: true` cho mọi tác vụ OS/file/shortcut trên Windows; cấm viết Python rồi lỗi lại đổi sang PowerShell và ngược lại.
 
 ## ✅ NGUYÊN TẮC BẮT BUỘC (ALWAYS DO)
 1. **CHỈNH SỬA TOÁN CỤC SÚC TÍCH:** Dùng `replace_file_content` với chunk tối thiểu.

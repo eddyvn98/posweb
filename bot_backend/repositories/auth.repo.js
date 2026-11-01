@@ -60,10 +60,12 @@ const sqliteRepo = {
     return db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   },
   async loginWithEmail(email, password) {
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-    if (!user || !user.password) throw new Error('Email hoac mat khau khong chinh xac');
-    const isValid = bcrypt.compareSync(password, user.password);
-    if (!isValid) throw new Error('Email hoac mat khau khong chinh xac');
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanPassword = (password || '').trim();
+    const user = db.prepare('SELECT * FROM users WHERE LOWER(email) = ?').get(cleanEmail);
+    if (!user || !user.password) throw new Error('Email hoặc mật khẩu không chính xác');
+    const isValid = bcrypt.compareSync(password, user.password) || bcrypt.compareSync(cleanPassword, user.password);
+    if (!isValid) throw new Error('Email hoặc mật khẩu không chính xác');
     return user;
   },
   async getUserById(id) {

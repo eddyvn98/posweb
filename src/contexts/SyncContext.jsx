@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import api from '../lib/api'
 import { useAuth } from './AuthContext'
 import {
@@ -19,6 +19,7 @@ export const SyncProvider = ({ children }) => {
     const { user } = useAuth()
     const [isOnline, setIsOnline] = useState(navigator.onLine)
     const [isSyncing, setIsSyncing] = useState(false)
+    const isPushingSalesRef = useRef(false)
     const [pendingCount, setPendingCount] = useState(0)
     const [lastSync, setLastSync] = useState(null)
 
@@ -75,10 +76,14 @@ export const SyncProvider = ({ children }) => {
     }
 
     const pushSales = async () => {
-        if (!user || !navigator.onLine || isSyncing) return
+        if (!user || !navigator.onLine || isPushingSalesRef.current) return
         const pending = await getPendingSales()
-        if (pending.length === 0) return
+        if (pending.length === 0) {
+            setPendingCount(0)
+            return
+        }
 
+        isPushingSalesRef.current = true
         setIsSyncing(true)
         try {
             for (const sale of pending) {
@@ -95,6 +100,7 @@ export const SyncProvider = ({ children }) => {
         } catch (err) {
             console.error('[Sync] Push Error:', err)
         } finally {
+            isPushingSalesRef.current = false
             setIsSyncing(false)
         }
     }

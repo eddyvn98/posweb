@@ -3,11 +3,7 @@ import axios from 'axios';
 const host = typeof window !== 'undefined' ? window.location.hostname : '';
 const isLocalHost = host === 'localhost' || host === '127.0.0.1';
 const isVivutradeDomain = host === 'posweb.vivutrade.io.vn' || host.endsWith('.vivutrade.io.vn');
-const API_URL = (
-    import.meta.env.VITE_API_URL ||
-    (isVivutradeDomain ? 'https://api-posweb.vivutrade.io.vn/api' : '') ||
-    (isLocalHost ? 'http://localhost:3001/api' : 'https://api-posweb.vivutrade.io.vn/api')
-);
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -51,3 +47,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+

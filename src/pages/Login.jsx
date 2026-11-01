@@ -58,11 +58,12 @@ export default function Login() {
         setError(null)
 
         try {
-            const cleanEmail = email.trim()
+            const cleanEmail = email.trim().toLowerCase()
+            const cleanPassword = password.trim()
             const cleanShopName = shopName.trim()
             const result = isSignUp
                 ? await register(cleanEmail, password, cleanShopName)
-                : await login(cleanEmail, password)
+                : await login(cleanEmail, cleanPassword)
 
             if (result.success) {
                 navigate('/sales')
@@ -124,6 +125,9 @@ export default function Login() {
                             placeholder="ten@cuahang.com"
                             autoComplete="email"
                             inputMode="email"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck="false"
                         />
                     </div>
 

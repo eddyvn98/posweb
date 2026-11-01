@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import api from '../lib/api'
 import { useNavigate } from 'react-router-dom'
 import { getSalesHistory } from '../lib/db'
 import InvoiceModal from '../components/InvoiceModal'
@@ -13,7 +14,8 @@ import {
     Trash2,
     Search,
     CreditCard,
-    Banknote
+    Banknote,
+    RefreshCw
 } from 'lucide-react'
 
 export default function History() {
@@ -25,16 +27,53 @@ export default function History() {
     const [loading, setLoading] = useState(true)
     const [filterType, setFilterType] = useState('all') // 'all' | 'cash' | 'transfer' | 'unsynced' | 'void'
 
-    // Load History
-    useEffect(() => {
-        const fetchHistory = async () => {
-            setLoading(true)
-            const data = await getSalesHistory(50)
-            setSales(data)
+    // Load History: fetch both server API (shared across devices) and local IndexedDB
+    const fetchHistory = useCallback(async () => {
+        setLoading(true)
+        try {
+            const [localData, remoteRes] = await Promise.all([
+                getSalesHistory(100).catch(() => []),
+                api.get('/sales').catch(() => ({ data: [] }))
+            ])
+            const remoteSales = (remoteRes.data || []).map(s => ({ ...s, synced: 1 }))
+
+            const map = new Map()
+            remoteSales.forEach(s => {
+                const key = s.code || s.id
+                if (key) map.set(key, s)
+            })
+            localData.forEach(s => {
+                const key = s.code || s.id || s.local_id
+                if (!key) return
+                if (!map.has(key)) {
+                    map.set(key, s)
+                } else {
+                    const existing = map.get(key)
+                    if (s.synced !== 1 || s.is_void) {
+                        map.set(key, { ...existing, ...s })
+                    }
+                }
+            })
+
+            const merged = Array.from(map.values()).sort((a, b) => {
+                const dateA = new Date(a.sale_date || a.created_at || 0).getTime()
+                const dateB = new Date(b.sale_date || b.created_at || 0).getTime()
+                return dateB - dateA
+            })
+
+            setSales(merged)
+        } catch (err) {
+            console.error('Error fetching sales history:', err)
+            const fallback = await getSalesHistory(50)
+            setSales(fallback)
+        } finally {
             setLoading(false)
         }
-        fetchHistory()
     }, [])
+
+    useEffect(() => {
+        fetchHistory()
+    }, [fetchHistory])
 
     // Filter sales based on query and filter chips
     const filteredSales = useMemo(() => {
@@ -85,9 +124,19 @@ export default function History() {
                     <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
                         <HistoryIcon className="w-6 h-6 text-primary" /> Lịch sử bán hàng
                     </h1>
-                    <div className="text-right">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Doanh thu ({totalCount} đơn)</p>
-                        <p className="text-base font-black text-primary">{formatMoney(totalRevenue)} đ</p>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={fetchHistory}
+                            disabled={loading}
+                            className="p-2 text-gray-500 hover:text-primary hover:bg-gray-100 rounded-xl transition"
+                            title="Làm mới dữ liệu từ máy chủ"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        </button>
+                        <div className="text-right">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase">Doanh thu ({totalCount} đơn)</p>
+                            <p className="text-base font-black text-primary">{formatMoney(totalRevenue)} đ</p>
+                        </div>
                     </div>
                 </div>
 
@@ -242,10 +291,6 @@ export default function History() {
                     onClose={() => setVoidSale(null)}
                     onVoidSuccess={() => {
                         setSelectedSale(null)
-                        const fetchHistory = async () => {
-                            const data = await getSalesHistory(50)
-                            setSales(data)
-                        }
                         fetchHistory()
                     }}
                 />

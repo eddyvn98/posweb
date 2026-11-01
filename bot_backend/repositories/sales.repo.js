@@ -9,8 +9,12 @@ const CashFlow = require('../mongo/models/CashFlow');
 
 const sqliteRepo = {
   async createSale(shop_id, user_id, sale) {
+    const saleId = sale.id || uuidv4();
+    const existing = db.prepare('SELECT id FROM sales WHERE id = ? OR (code = ? AND shop_id = ?)').get(saleId, sale.code, shop_id);
+    if (existing) {
+      return existing.id;
+    }
     const transaction = db.transaction(() => {
-      const saleId = sale.id || uuidv4();
       db.prepare('INSERT INTO sales (id, shop_id, code, total_amount, payment_method, sale_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
         .run(saleId, shop_id, sale.code, sale.total_amount, sale.payment_method, sale.sale_date, user_id);
 
@@ -44,7 +48,27 @@ const sqliteRepo = {
   async getSales(shop_id, startDate, endDate) {
     const safeStartDate = startDate || '1970-01-01T00:00:00.000Z';
     const safeEndDate = endDate || '2999-12-31T23:59:59.999Z';
-    return db.prepare('SELECT * FROM sales WHERE shop_id = ? AND sale_date >= ? AND sale_date <= ? ORDER BY sale_date ASC').all(shop_id, safeStartDate, safeEndDate);
+    const sales = db.prepare('SELECT * FROM sales WHERE shop_id = ? AND sale_date >= ? AND sale_date <= ? ORDER BY sale_date DESC').all(shop_id, safeStartDate, safeEndDate);
+    if (!sales || sales.length === 0) return [];
+
+    const saleIds = sales.map(s => s.id);
+    const chunkSize = 500;
+    const itemsBySale = {};
+    for (let i = 0; i < saleIds.length; i += chunkSize) {
+      const chunk = saleIds.slice(i, i + chunkSize);
+      const placeholders = chunk.map(() => '?').join(',');
+      const items = db.prepare(`SELECT * FROM sale_items WHERE sale_id IN (${placeholders})`).all(...chunk);
+      for (const item of items) {
+        if (!itemsBySale[item.sale_id]) itemsBySale[item.sale_id] = [];
+        itemsBySale[item.sale_id].push(item);
+      }
+    }
+
+    for (const sale of sales) {
+      sale.items = itemsBySale[sale.id] || [];
+    }
+
+    return sales;
   },
 
   async voidSale(shop_id, saleId, reason) {
@@ -141,7 +165,19 @@ const mongoRepo = {
       if (startDate) filter.sale_date.$gte = new Date(startDate);
       if (endDate) filter.sale_date.$lte = new Date(endDate);
     }
-    return Sale.find(filter).sort({ sale_date: 1 }).lean();
+    const sales = await Sale.find(filter).sort({ sale_date: -1 }).lean();
+    if (!sales || sales.length === 0) return [];
+    const saleIds = sales.map(s => s.id);
+    const items = await SaleItem.find({ sale_id: { $in: saleIds } }).lean();
+    const itemsBySale = {};
+    for (const item of items) {
+      if (!itemsBySale[item.sale_id]) itemsBySale[item.sale_id] = [];
+      itemsBySale[item.sale_id].push(item);
+    }
+    for (const sale of sales) {
+      sale.items = itemsBySale[sale.id] || [];
+    }
+    return sales;
   },
 
   async voidSale(shop_id, saleId, reason) {

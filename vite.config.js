@@ -5,6 +5,26 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   server: {
     allowedHosts: true,
+    host: '0.0.0.0',
+    port: 5173,
+    headers: { 'Permissions-Policy': 'camera=*, geolocation=*, microphone=*' },
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3001',
+        changeOrigin: true,
+      },
+    },
+  },
+  preview: {
+    allowedHosts: true,
+    host: '0.0.0.0',
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3001',
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [
     react(),
@@ -51,3 +71,6 @@ export default defineConfig({
     })
   ]
 })
+
+
+

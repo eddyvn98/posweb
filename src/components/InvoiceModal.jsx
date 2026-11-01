@@ -1,9 +1,23 @@
-import { useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { formatReceiptCode, getShortCode } from '../lib/codeFormatter'
-import { Printer, Share2 } from 'lucide-react'
+import { Printer, Share2, CheckCircle2, AlertCircle, Loader2, Monitor } from 'lucide-react'
+import api from '../lib/api'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function InvoiceModal({ sale, onClose }) {
+    const { shop } = useAuth()
     const printRef = useRef(null)
+
+    const [isPrinting, setIsPrinting] = useState(false)
+    const [printStatus, setPrintStatus] = useState(null) // 'success' | 'error' | null
+    const [printError, setPrintError] = useState('')
+    const [autoPrintEnabled, setAutoPrintEnabled] = useState(() => {
+        try {
+            return localStorage.getItem('pos_auto_print') === 'true'
+        } catch (e) {
+            return false
+        }
+    })
 
     const formatPrice = (price) => new Intl.NumberFormat('vi-VN').format(price)
     const formatDate = (dateStr) => {
@@ -14,20 +28,78 @@ export default function InvoiceModal({ sale, onClose }) {
         }
     }
 
-    const shopName = "VĂN PHÒNG PHẨM 302"
-    const shopAddress = "302 Vườn Lài, Phường An Phú Đông, TP.HCM"
-    const shopPhone = "0932843329 (Nga)"
+    const shopName = shop?.name || "VĂN PHÒNG PHẨM 302"
+    const shopAddress = shop?.address || "302 Vườn Lài, Phường An Phú Đông, TP.HCM"
+    const shopPhone = shop?.phone || "0932843329 (Nga)"
 
     const totalQuantity = sale?.items?.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0) || 0
 
-    const handlePrint = () => {
+    // Print to server-connected physical printer POS-80C
+    const handleServerPrint = useCallback(async () => {
+        if (!sale || isPrinting) return
+
+        setIsPrinting(true)
+        setPrintStatus(null)
+        setPrintError('')
+
+        try {
+            const payload = {
+                sale,
+                shop: {
+                    name: shopName,
+                    address: shopAddress,
+                    phone: shopPhone
+                },
+                printerName: 'POS-80C'
+            }
+
+            const res = await api.post('/print/receipt', payload)
+            if (res.data?.success) {
+                setPrintStatus('success')
+                setTimeout(() => {
+                    setPrintStatus(null)
+                }, 4000)
+            } else {
+                setPrintStatus('error')
+                setPrintError(res.data?.message || 'Không thể in bill.')
+            }
+        } catch (err) {
+            console.error('Server print error:', err)
+            setPrintStatus('error')
+            const errMsg = err.response?.data?.error || err.message || 'Lỗi gửi lệnh in tới server.'
+            setPrintError(errMsg)
+        } finally {
+            setIsPrinting(false)
+        }
+    }, [sale, isPrinting, shopName, shopAddress, shopPhone])
+
+    // Auto-print on mount if enabled
+    useEffect(() => {
+        if (!sale) return
+        const shouldAuto = localStorage.getItem('pos_auto_print') === 'true'
+        if (shouldAuto) {
+            handleServerPrint()
+        }
+    }, [])
+
+    const toggleAutoPrint = (e) => {
+        const val = e.target.checked
+        setAutoPrintEnabled(val)
+        try {
+            localStorage.setItem('pos_auto_print', val ? 'true' : 'false')
+        } catch (err) {
+            console.error('Failed to save auto print setting', err)
+        }
+    }
+
+    // Local Browser / AirPrint fallback
+    const handleLocalPrint = () => {
         if (!printRef.current) return
 
         const receiptHTML = printRef.current.innerHTML
 
         const printWindow = window.open('', '_blank', 'width=400,height=600')
         if (!printWindow) {
-            // Fallback if popup blocked
             window.print()
             return
         }
@@ -96,7 +168,6 @@ export default function InvoiceModal({ sale, onClose }) {
     .break-words { word-wrap: break-word; }
     .font-mono { font-family: 'Courier New', Courier, monospace; }
     .align-top { vertical-align: top; }
-    .text-center { text-align: center; }
     .w-7 { width: 22px; }
     .w-8 { width: 26px; }
     .w-9 { width: 28px; }
@@ -118,7 +189,7 @@ export default function InvoiceModal({ sale, onClose }) {
 
     const handleShare = async () => {
         const itemsText = sale.items?.map((item, idx) =>
-            `${idx + 1}. ${item.product_name} (${item.unit || 'Cái'}) x${item.quantity} @${formatPrice(item.price)} = ${formatPrice(item.price * item.quantity)}đ`
+            `${idx + 1}. ${item.product_name || item.name} (${item.unit || item.dvt || 'Cái'}) x${item.quantity} @${formatPrice(item.price)} = ${formatPrice(item.price * item.quantity)}đ`
         ).join('\n')
 
         const text = `
@@ -161,7 +232,7 @@ Cảm ơn quý khách!
         const handleKeyDown = (e) => {
             if (e.key === 'Enter' || e.key === '1' || e.code === 'Numpad1') {
                 e.preventDefault()
-                handlePrint()
+                handleServerPrint()
             } else if (e.key === '2' || e.code === 'Numpad2') {
                 e.preventDefault()
                 handleShare()
@@ -172,32 +243,46 @@ Cảm ơn quý khách!
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [sale, onClose])
+    }, [sale, onClose, handleServerPrint])
 
     if (!sale) return null
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
-            {/* Overlay - Hide on print */}
+            {/* Overlay */}
             <div
                 className="absolute inset-0 bg-black/50 no-print"
                 onClick={onClose}
             ></div>
 
-            {/* Modal Content - Shows on Screen & Print */}
-            <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl overflow-hidden animate-fade-in-up relative z-10 flex flex-col max-h-[90vh]">
+            {/* Modal Content */}
+            <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up relative z-10 flex flex-col max-h-[92vh]">
 
-                {/* Close Button - Hide on print */}
+                {/* Close Button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-2 right-2 p-2 text-gray-400 hover:text-red-500 no-print font-bold text-lg z-20"
+                    className="absolute top-2.5 right-2.5 p-2 text-gray-400 hover:text-red-500 no-print font-bold text-lg z-20 rounded-full hover:bg-slate-100 transition-colors"
                     title="Đóng (Esc)"
                 >
                     ✕
                 </button>
 
-                {/* Receipt Content (Thermal 80mm style) */}
-                <div ref={printRef} className="printable-receipt p-4 text-xs text-black font-mono leading-relaxed font-bold overflow-y-auto flex-1">
+                {/* Status Notice / Feedback Banner */}
+                {printStatus === 'success' && (
+                    <div className="no-print bg-emerald-500 text-white px-3 py-2 text-xs font-bold flex items-center gap-2 justify-center shadow-inner animate-fade-in">
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        <span>Đã in ra máy POS-80C tại quán thành công!</span>
+                    </div>
+                )}
+                {printStatus === 'error' && (
+                    <div className="no-print bg-rose-500 text-white px-3 py-2 text-xs font-semibold flex items-center gap-2 justify-center shadow-inner animate-fade-in">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span className="truncate">Lỗi in: {printError}</span>
+                    </div>
+                )}
+
+                {/* Receipt Content (Thermal 80mm preview) */}
+                <div ref={printRef} className="printable-receipt p-4 text-xs text-black font-mono leading-relaxed font-bold overflow-y-auto flex-1 select-text">
                     <div className="text-center mb-3">
                         <h2 className="text-base font-black uppercase leading-tight text-black">{shopName}</h2>
                         <p className="text-[11px] text-black font-semibold mt-0.5">{shopAddress}</p>
@@ -244,24 +329,24 @@ Cảm ơn quý khách!
                         </div>
                         <div className="flex justify-between items-center text-base font-black text-black">
                             <span>TỔNG CỘNG</span>
-                            <span>{formatPrice(sale.total_amount)}</span>
+                            <span>{formatPrice(sale.total_amount)} đ</span>
                         </div>
                     </div>
                     {sale.payment_method && (
                         <div className="flex justify-between items-center text-xs mt-1 text-black font-semibold">
                             <span>Hình thức:</span>
-                            <span className="uppercase font-bold">{sale.payment_method === 'cash' ? 'Tiền mặt' : sale.payment_method}</span>
+                            <span className="uppercase font-bold">{sale.payment_method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản'}</span>
                         </div>
                     )}
                     {sale.cash_given > 0 && sale.payment_method === 'cash' && (
                         <>
                             <div className="flex justify-between items-center text-xs mt-0.5 text-black font-semibold">
                                 <span>Tiền khách đưa:</span>
-                                <span>{formatPrice(sale.cash_given)}</span>
+                                <span>{formatPrice(sale.cash_given)} đ</span>
                             </div>
                             <div className="flex justify-between items-center text-xs mt-0.5 text-black font-bold">
                                 <span>Tiền thừa trả khách:</span>
-                                <span>{formatPrice(sale.change_amount || 0)}</span>
+                                <span>{formatPrice(sale.change_amount || 0)} đ</span>
                             </div>
                         </>
                     )}
@@ -273,27 +358,77 @@ Cảm ơn quý khách!
                     </div>
                 </div>
 
-                {/* Action Buttons - Hide on print */}
-                <div className="p-3 sm:p-4 bg-slate-50 border-t flex gap-2 no-print shrink-0">
+                {/* Auto-print toggle & Action Buttons */}
+                <div className="p-3 bg-slate-50 border-t space-y-2.5 no-print shrink-0">
+                    {/* Auto-print checkbox */}
+                    <label className="flex items-center gap-2 cursor-pointer select-none text-[11px] text-slate-600 font-semibold px-1">
+                        <input
+                            type="checkbox"
+                            checked={autoPrintEnabled}
+                            onChange={toggleAutoPrint}
+                            className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                        />
+                        <span>Tự động in bill máy quán khi thanh toán xong</span>
+                    </label>
+
+                    {/* Primary Server Print Button */}
                     <button
-                        onClick={handlePrint}
-                        className="flex-1 btn-primary btn-md px-2 sm:px-3 text-xs sm:text-sm"
+                        type="button"
+                        onClick={handleServerPrint}
+                        disabled={isPrinting}
+                        className={`w-full py-2.5 px-3 rounded-xl font-bold text-white shadow-md flex items-center justify-center gap-2 transition-all ${
+                            isPrinting
+                                ? 'bg-emerald-400 cursor-not-allowed'
+                                : 'bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98]'
+                        }`}
                     >
-                        <Printer className="w-4 h-4" /> In hóa đơn
+                        {isPrinting ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Đang gửi lệnh in tới máy quán...</span>
+                            </>
+                        ) : printStatus === 'success' ? (
+                            <>
+                                <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                                <span>Đã in xong! Bấm để in lại</span>
+                            </>
+                        ) : (
+                            <>
+                                <Printer className="w-4 h-4" />
+                                <span>In máy in quán (POS-80C)</span>
+                            </>
+                        )}
                     </button>
-                    <button
-                        onClick={handleShare}
-                        className="flex-1 btn-primary btn-md px-2 sm:px-3 text-xs sm:text-sm"
-                    >
-                        <Share2 className="w-4 h-4" /> Chia sẻ
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="flex-1 btn-secondary btn-md px-2 sm:px-3 text-xs sm:text-sm"
-                    >
-                        Đóng
-                    </button>
+
+                    {/* Secondary Actions: Local Browser Print, Share, Close */}
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={handleLocalPrint}
+                            className="flex-1 py-2 px-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                            title="Mở hộp thoại in trình duyệt / AirPrint nếu cần"
+                        >
+                            <Monitor className="w-3.5 h-3.5 text-slate-500" />
+                            <span>In tại chỗ</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleShare}
+                            className="flex-1 py-2 px-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                            <Share2 className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Chia sẻ</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 py-2 px-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                        >
+                            Đóng
+                        </button>
+                    </div>
                 </div>
+
             </div>
         </div>
     )

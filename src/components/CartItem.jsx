@@ -1,6 +1,6 @@
 import { Package, Minus, Plus, Trash2 } from 'lucide-react'
 
-export default function CartItem({ item, onUpdateQty, onSetQty, onRemove }) {
+export default function CartItem({ item, onUpdateQty, onSetQty, onRemove, isHighlighted = false }) {
     const stockQuantity = Number(item.stock_quantity ?? 0)
     const remainingAfterSale = stockQuantity - Number(item.quantity || 0)
 
@@ -16,7 +16,14 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove }) {
     }
 
     return (
-        <div className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0 group gap-2.5">
+        <div 
+            id={`cart-item-${item.product_id || item.id}`}
+            className={`flex items-center justify-between py-2.5 px-2 rounded-xl transition-all duration-300 border-b border-slate-100 last:border-0 group gap-2.5 ${
+                isHighlighted 
+                    ? 'bg-sky-50 ring-2 ring-sky-400 shadow-sm' 
+                    : 'hover:bg-slate-50/50'
+            }`}
+        >
             <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-50 border border-slate-200 shrink-0 flex items-center justify-center">
                 {item.image_url ? (
                     <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />

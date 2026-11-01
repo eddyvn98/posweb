@@ -77,7 +77,7 @@ export default function SmartPriceInput({
                 className={`bg-transparent outline-none border-none p-0 focus:ring-0 appearance-none ${inputClassName}`}
             />
             {showThousandsSuffix && (
-                <span className={`select-none pointer-events-none opacity-45 font-mono font-bold shrink-0 ${suffixClassName}`}>
+                <span className={`select-none pointer-events-none opacity-45 font-bold shrink-0 ${suffixClassName}`}>
                     .000
                 </span>
             )}
