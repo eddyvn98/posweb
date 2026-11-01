@@ -250,4 +250,54 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
     expect(attempt).toBe(10)
   })
 
+  test('legacy IndexedDB v2 survives upgrade to v3 without losing offline product or sale', async ({ page }) => {
+    await setup(page)
+    await page.route('**/__qa_seed_v2', route => route.fulfill({
+      status: 200, contentType: 'text/html', body: '<!doctype html><title>QA seed</title>'
+    }))
+    await page.goto('/__qa_seed_v2')
+    await page.evaluate(() => new Promise((resolve, reject) => {
+      const req = indexedDB.open('pos_db', 2)
+      req.onupgradeneeded = () => {
+        const db = req.result
+        const products = db.createObjectStore('products', { keyPath: 'id' })
+        products.createIndex('barcode', 'barcode', { unique: true })
+        products.createIndex('name_search', 'search_normalize', { unique: false })
+        const sales = db.createObjectStore('sales_queue', { keyPath: 'local_id', autoIncrement: true })
+        sales.createIndex('synced', 'synced', { unique: false })
+        sales.createIndex('created_at', 'created_at', { unique: false })
+        const pending = db.createObjectStore('pending_products', { keyPath: 'id' })
+        pending.createIndex('created_at', 'created_at', { unique: false })
+      }
+      req.onerror = () => reject(req.error)
+      req.onsuccess = () => {
+        const db = req.result
+        const tx = db.transaction(['products', 'sales_queue', 'pending_products'], 'readwrite')
+        tx.objectStore('products').put({
+          id: 'legacy-product', shop_id: 'qa-shop-a', barcode: 'LEGACY1',
+          name: 'Legacy product', price: 10000, stock_quantity: 2
+        })
+        tx.objectStore('sales_queue').add({
+          id: 'legacy-sale', shop_id: 'qa-shop-a', code: 'LEGACY-SALE',
+          total_amount: 10000, synced: 0, created_at: new Date().toISOString()
+        })
+        tx.objectStore('pending_products').put({
+          id: 'legacy-pending', shop_id: 'qa-shop-a', name: 'Unsynced',
+          barcode: 'PENDING1', op: 'upsert', created_at: new Date().toISOString()
+        })
+        tx.oncomplete = () => { db.close(); resolve() }
+        tx.onerror = () => { db.close(); reject(tx.error) }
+      }
+    }))
+    await page.unroute('**/__qa_seed_v2')
+    await page.goto('/products')
+    await expect.poll(async () => page.evaluate(() => new Promise((resolve, reject) => {
+      const req = indexedDB.open('pos_db')
+      req.onsuccess = () => { const db = req.result; resolve(db.version); db.close() }
+      req.onerror = () => reject(req.error)
+    }))).toBe(3)
+    expect((await dbRows(page, 'sales_queue')).some(s => s.id === 'legacy-sale')).toBe(true)
+    expect((await dbRows(page, 'pending_products')).some(p => p.id === 'legacy-pending')).toBe(true)
+  })
+
 })
