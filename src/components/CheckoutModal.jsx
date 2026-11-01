@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { v4 as uuidv4 } from 'uuid'
 import api from '../lib/api'
 import { saveOfflineSale } from '../lib/db'
 import { useAuth } from '../contexts/AuthContext'
@@ -10,6 +11,12 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
     const { shop } = useAuth()
     const { pushSales } = useSync() // To trigger immediate sync if online
     const [loading, setLoading] = useState(false)
+    const submittingRef = useRef(false)
+    const saleIdentityRef = useRef(null)
+    if (!saleIdentityRef.current) {
+        const id = uuidv4()
+        saleIdentityRef.current = { id, code: `HD-${Date.now().toString().slice(-9)}-${id.slice(0, 4).toUpperCase()}` }
+    }
     const [paymentMethod, setPaymentMethod] = useState('cash')
     const [cashGiven, setCashGiven] = useState(totalAmount)
     const [autoPrint, setAutoPrint] = useState(() => {
@@ -50,7 +57,8 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
     }, [totalAmount])
 
     const handleCheckout = async () => {
-        if (loading) return
+        if (submittingRef.current) return
+        submittingRef.current = true
         setLoading(true)
         try {
             // 1. Prepare Sale Data
@@ -61,7 +69,8 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
             
             const saleData = {
                 shop_id: shop?.id,
-                code: `HD-${Math.floor(Date.now() / 1000).toString().slice(-6)}`, // Temporary Code
+                id: saleIdentityRef.current.id,
+                code: saleIdentityRef.current.code,
                 total_amount: totalAmount,
                 payment_method: paymentMethod,
                 cash_given: paymentMethod === 'cash' ? parsedCashGiven : totalAmount,
@@ -72,7 +81,8 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
                     product_id: item.product_id,
                     product_name: item.name,
                     quantity: item.quantity,
-                    price: item.price
+                    price: item.price,
+                    is_quick_sale: Boolean(item.is_quick_sale)
                 }))
             }
 
@@ -80,8 +90,8 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
             if (navigator.onLine) {
                 try {
                     const res = await api.post('/sales', saleData)
-                    if (res?.data?.id) {
-                        saleData.id = res.data.id
+                    if (res?.data?.success !== true || !res?.data?.id) {
+                        throw new Error('Server did not acknowledge the sale')
                     }
                     saleData.synced = 1
                 } catch (pushErr) {
@@ -103,6 +113,7 @@ export default function CheckoutModal({ cart, totalAmount, onClose, onFinish }) 
             console.error(error)
             alert('Lỗi thanh toán: ' + error.message)
         } finally {
+            submittingRef.current = false
             setLoading(false)
         }
     }

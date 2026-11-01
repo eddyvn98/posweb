@@ -10,7 +10,11 @@ const CashFlow = require('../mongo/models/CashFlow');
 const sqliteRepo = {
   async createSale(shop_id, user_id, sale) {
     const saleId = sale.id || uuidv4();
-    const existing = db.prepare('SELECT id FROM sales WHERE id = ? OR (code = ? AND shop_id = ?)').get(saleId, sale.code, shop_id);
+    // Client-generated sale.id is the idempotency key; code is display-only.
+    // Preserve code matching only for legacy clients that do not send an id.
+    const existing = sale.id
+      ? db.prepare('SELECT id FROM sales WHERE id = ? AND shop_id = ?').get(saleId, shop_id)
+      : db.prepare('SELECT id FROM sales WHERE code = ? AND shop_id = ?').get(sale.code, shop_id);
     if (existing) {
       return existing.id;
     }
@@ -22,32 +26,21 @@ const sqliteRepo = {
         for (const item of sale.items) {
           const itemId = uuidv4();
 
-          if (item.product_id) {
-            let product = db.prepare('SELECT id, stock_quantity FROM products WHERE id = ? AND shop_id = ?').get(item.product_id, shop_id);
-            if (!product) {
-              const anyProduct = db.prepare('SELECT id FROM products WHERE id = ?').get(item.product_id);
-              if (!anyProduct) {
-                // Auto-create product record for quick sale / offline item to satisfy FOREIGN KEY constraint
-                db.prepare('INSERT INTO products (id, shop_id, name, price, stock_quantity, unit, is_active) VALUES (?, ?, ?, ?, 0, ?, 1)')
-                  .run(item.product_id, shop_id, item.product_name || 'Khách lẻ', item.price || 0, 'Cái');
-                product = { id: item.product_id, stock_quantity: 0 };
-              }
-            }
+          // An ad-hoc/removed/foreign-shop product is not an inventory item.
+          // Keep its sale line but never fabricate a catalog record or negative stock.
+          const product = item.product_id && !item.is_quick_sale
+            ? db.prepare('SELECT id, stock_quantity FROM products WHERE id = ? AND shop_id = ?').get(item.product_id, shop_id)
+            : null;
+          const linkedId = product ? item.product_id : null;
+          db.prepare('INSERT INTO sale_items (id, sale_id, product_id, quantity, price, product_name) VALUES (?, ?, ?, ?, ?, ?)')
+            .run(itemId, saleId, linkedId, item.quantity, item.price, item.product_name);
 
-            db.prepare('INSERT INTO sale_items (id, sale_id, product_id, quantity, price, product_name) VALUES (?, ?, ?, ?, ?, ?)')
-              .run(itemId, saleId, item.product_id, item.quantity, item.price, item.product_name);
-
-            if (product) {
-              const currentStock = Number(product.stock_quantity || 0);
-              const newStock = currentStock - Number(item.quantity || 0);
-              db.prepare('UPDATE products SET stock_quantity = ? WHERE id = ? AND shop_id = ?').run(newStock, item.product_id, shop_id);
-
-              db.prepare('INSERT INTO inventory_logs (id, shop_id, product_id, change_amount, current_stock, type, note) VALUES (?, ?, ?, ?, ?, ?, ?)')
-                .run(uuidv4(), shop_id, item.product_id, -Number(item.quantity || 0), newStock, 'sale', 'Ban hang');
-            }
-          } else {
-            db.prepare('INSERT INTO sale_items (id, sale_id, product_id, quantity, price, product_name) VALUES (?, ?, ?, ?, ?, ?)')
-              .run(itemId, saleId, null, item.quantity, item.price, item.product_name);
+          if (product) {
+            const newStock = Number(product.stock_quantity || 0) - Number(item.quantity || 0);
+            db.prepare('UPDATE products SET stock_quantity = ? WHERE id = ? AND shop_id = ?')
+              .run(newStock, item.product_id, shop_id);
+            db.prepare('INSERT INTO inventory_logs (id, shop_id, product_id, change_amount, current_stock, type, note) VALUES (?, ?, ?, ?, ?, ?, ?)')
+              .run(uuidv4(), shop_id, item.product_id, -Number(item.quantity || 0), newStock, 'sale', 'Ban hang');
           }
         }
       }
@@ -99,11 +92,11 @@ const sqliteRepo = {
       for (const item of items) {
         if (!item.product_id) continue;
 
-        const product = db.prepare('SELECT stock_quantity FROM products WHERE id = ?').get(item.product_id);
+        const product = db.prepare('SELECT stock_quantity FROM products WHERE id = ? AND shop_id = ?').get(item.product_id, shop_id);
         if (!product) continue;
 
         const newStock = product.stock_quantity + item.quantity;
-        db.prepare('UPDATE products SET stock_quantity = ? WHERE id = ?').run(newStock, item.product_id);
+        db.prepare('UPDATE products SET stock_quantity = ? WHERE id = ? AND shop_id = ?').run(newStock, item.product_id, shop_id);
         db.prepare('INSERT INTO inventory_logs (id, shop_id, product_id, change_amount, current_stock, type, note) VALUES (?, ?, ?, ?, ?, ?, ?)')
           .run(uuidv4(), shop_id, item.product_id, item.quantity, newStock, 'void', `Huy don hang ${saleId}`);
       }
@@ -119,7 +112,11 @@ const sqliteRepo = {
 const mongoRepo = {
   async createSale(shop_id, user_id, sale) {
     const saleId = sale.id || uuidv4();
-    await Sale.create({
+    // Avoid replaying an already committed sale when an ACK is lost.
+    const existingSale = await Sale.findOne({ id: saleId, shop_id }).lean();
+    if (existingSale) return saleId;
+    try {
+      await Sale.create({
       id: saleId,
       shop_id,
       code: sale.code,
@@ -127,33 +124,33 @@ const mongoRepo = {
       payment_method: sale.payment_method,
       sale_date: sale.sale_date ? new Date(sale.sale_date) : new Date(),
       created_by: user_id,
-    });
+      });
+    } catch (error) {
+      if (error.code === 11000 && await Sale.findOne({ id: saleId, shop_id }).lean()) return saleId;
+      throw error;
+    }
 
     if (sale.items && sale.items.length > 0) {
       for (const item of sale.items) {
+        const product = item.product_id && !item.is_quick_sale
+          ? await Product.findOne({ id: item.product_id, shop_id })
+          : null;
         await SaleItem.create({
           id: uuidv4(),
           sale_id: saleId,
-          product_id: item.product_id || null,
+          product_id: product ? item.product_id : null,
           quantity: item.quantity,
           price: item.price,
           product_name: item.product_name,
         });
 
-        if (item.product_id) {
-          const product = await Product.findOne({ id: item.product_id, shop_id });
-          const currentStock = product ? Number(product.stock_quantity || 0) : 0;
-          const newStock = currentStock - Number(item.quantity || 0);
+        if (product) {
+          const newStock = Number(product.stock_quantity || 0) - Number(item.quantity || 0);
           await Product.updateOne({ id: item.product_id, shop_id }, { $set: { stock_quantity: newStock } });
-
           await InventoryLog.create({
-            id: uuidv4(),
-            shop_id,
-            product_id: item.product_id,
-            change_amount: -Number(item.quantity || 0),
-            current_stock: newStock,
-            type: 'sale',
-            note: 'Ban hang',
+            id: uuidv4(), shop_id, product_id: item.product_id,
+            change_amount: -Number(item.quantity || 0), current_stock: newStock,
+            type: 'sale', note: 'Ban hang',
             created_at: sale.sale_date ? new Date(sale.sale_date) : new Date(),
           });
         }
