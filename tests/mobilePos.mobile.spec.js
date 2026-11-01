@@ -160,7 +160,7 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
     await expect(page.getByText('Notebook A').first()).toBeVisible()
     await page.getByText('Notebook A').first().click()
     await page.locator('#barcode-input').fill('QA-B')
-    await page.getByRole('button', { name: 'Lưu', exact: true }).click()
+    await page.getByRole('button', { name: 'Lưu sản phẩm', exact: true }).click()
     await expect.poll(async () => (await dbRows(page, 'products')).filter(p => p.id === 'qa-b').length).toBe(1)
     expect((await dbRows(page, 'products')).find(p => p.id === 'qa-a').barcode).toBe('QA-A')
   })
