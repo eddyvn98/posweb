@@ -14,6 +14,7 @@ function loadSqliteRepo(name, db) {
     if (request === '../db/connection') return db
     if (request === '../db/provider') return { getDbProvider: () => 'sqlite' }
     if (request === 'uuid') return { v4: randomUUID }
+    if (request === '../services/mongoSaleWriter') return { createMongoSale: async () => { throw new Error('Unexpected Mongo call in SQLite test') } }
     if (request.startsWith('../mongo/models/')) return {}
     throw new Error('Unexpected require: ' + request)
   }
