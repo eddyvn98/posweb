@@ -43,6 +43,35 @@ jobs:
           curl --fail --silent http://127.0.0.1:31977/health
           SMOKE_BASE_URL=http://127.0.0.1:31977 node scripts/mobilePosApi.smoke.js
           echo "QA temp database passed; actual repository databases were untouched"
+  backend-mongo-p0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: bot_backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --package-lock=false --no-audit --no-fund
+      - name: Start isolated MongoDB replica set
+        run: |
+          docker run -d --rm --name pos-qa-mongo -p 27017:27017 mongo:7 --replSet rs0 --bind_ip_all
+          for i in $(seq 1 45); do
+            if docker exec pos-qa-mongo mongosh --quiet --eval 'db.adminCommand({ping:1}).ok' 2>/dev/null | grep -q 1; then break; fi
+            sleep 1
+          done
+          docker exec pos-qa-mongo mongosh --quiet --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]})"
+          for i in $(seq 1 30); do
+            if docker exec pos-qa-mongo mongosh --quiet --eval 'db.hello().isWritablePrimary' | grep -q true; then break; fi
+            sleep 1
+          done
+      - run: node scripts/mobileMongoP0.qa.js
+        env:
+          QA_MONGO_URI: mongodb://127.0.0.1:27017/?replicaSet=rs0
+      - if: always()
+        run: docker rm -f pos-qa-mongo || true
   frontend-mobile:
     runs-on: ubuntu-latest
     timeout-minutes: 20
