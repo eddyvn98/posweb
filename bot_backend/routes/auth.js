@@ -39,7 +39,7 @@ router.post('/telegram-auth', async (req, res) => {
     if (!userStr) return res.status(400).json({ error: 'User data not found' });
 
     const telegramUser = JSON.parse(userStr);
-    const shopName = `C?a hàng c?a ${telegramUser.first_name || telegramUser.id}`;
+    const shopName = `C?a hÃ ng c?a ${telegramUser.first_name || telegramUser.id}`;
 
     const user = await authService.getOrCreateUserFromTelegram(telegramUser, shopName);
     const token = authService.generateToken(user);
@@ -73,7 +73,7 @@ router.post('/register', async (req, res) => {
   try {
     const { email, password, shopName } = req.body;
     if (!email || !password || !shopName) {
-      return res.status(400).json({ error: 'Thi?u thông tin dang ký' });
+      return res.status(400).json({ error: 'Thi?u thÃ´ng tin dang kÃ½' });
     }
 
     const user = await authService.registerWithEmail(email, password, shopName);
@@ -84,6 +84,16 @@ router.post('/register', async (req, res) => {
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
+});
+
+const { requestReset, resetPassword } = require('../services/passwordReset');
+router.post('/forgot-password', async (req, res) => {
+  try { res.json({ success: true, message: await requestReset(req.body?.email) }); }
+  catch (error) { res.status(error.status || 500).json({ error: error.status ? error.message : 'Internal Server Error' }); }
+});
+router.post('/reset-password', async (req, res) => {
+  try { res.json(await resetPassword(req.body?.token, req.body?.password)); }
+  catch (error) { res.status(error.status || 500).json({ error: error.status ? error.message : 'Internal Server Error' }); }
 });
 
 router.patch('/shop', authenticateToken, updateShop);
