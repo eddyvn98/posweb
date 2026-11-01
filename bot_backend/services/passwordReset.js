@@ -4,7 +4,6 @@ const { getDbProvider } = require('../db/provider');
 const db = require('../db/connection');
 const User = require('../mongo/models/User');
 const Reset = require('../mongo/models/PasswordReset');
-const { getAuthRepo } = require('../repositories/auth.repo');
 const { sendResetMail } = require('./resetMailer');
 
 const hash = token => crypto.createHash('sha256').update(token).digest('hex');
@@ -86,10 +85,7 @@ async function resetPassword(token, password) {
       });
     } finally { await session.endSession(); }
     if (!updated) throw Object.assign(new Error('Liên kết hết hạn hoặc đã được sử dụng'), { status: 400 });
-    if (provider === 'dual') {
-      // Mirror to SQLite; Mongo is authoritative for auth in dual mode.
-      try { await getAuthRepo().updateUserPassword('__noop__', newHash); } catch {}
-    }
+
   }
   return { success: true };
 }
