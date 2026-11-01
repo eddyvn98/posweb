@@ -129,10 +129,17 @@ const mongoRepo = {
       is_active: !!product.is_active,
     };
 
+    // Editing a barcode must update the existing ID, not create a second record.
+    const existingById = product.id
+      ? await Product.findOne({ shop_id, id: product.id }).lean()
+      : null;
+    const filter = existingById
+      ? { shop_id, id: product.id }
+      : { shop_id, barcode: payload.barcode };
     await Product.updateOne(
-      { shop_id, barcode: payload.barcode },
+      filter,
       { $set: payload, $setOnInsert: { created_at: new Date() } },
-      { upsert: true }
+      { upsert: !existingById }
     );
 
     return { success: true };

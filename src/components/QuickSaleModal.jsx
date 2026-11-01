@@ -94,7 +94,7 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
             unit: 'Cái',
             price: actualPrice,
             sku: 'QUICK',
-            barcode: presetBarcode || `QUICK-${Date.now().toString().slice(-6)}`,
+            barcode: presetBarcode || `QUICK-${itemId.slice(0,12)}`,
             stock_quantity: 0,
             is_quick_sale: true,
             is_active: true,
