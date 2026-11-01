@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import api from '../lib/api'
 
 export default function Login() {
     const [email, setEmail] = useState('')
@@ -9,6 +10,9 @@ export default function Login() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [isSignUp, setIsSignUp] = useState(false)
+    const [showForgotPassword, setShowForgotPassword] = useState(false)
+    const [forgotEmail, setForgotEmail] = useState('')
+    const [forgotSuccess, setForgotSuccess] = useState('')
     const navigate = useNavigate()
     const { loginWithTelegram, login, register } = useAuth()
 
@@ -77,6 +81,19 @@ export default function Login() {
         }
     }
 
+    const submitForgotPassword = async e => {
+        e.preventDefault()
+        setLoading(true)
+        setError(null)
+        setForgotSuccess('')
+        try {
+            const response = await api.post('/auth/forgot-password', { email: forgotEmail.trim().toLowerCase() })
+            setForgotSuccess(response.data.message)
+        } catch (err) {
+            setError(err.response?.data?.error || 'Không thể gửi email. Vui lòng thử lại sau.')
+        } finally { setLoading(false) }
+    }
+
     const toggleAuthMode = () => {
         setIsSignUp((prev) => !prev)
         setError(null)
@@ -98,7 +115,20 @@ export default function Login() {
                     </div>
                 )}
 
-                <form onSubmit={handleAuth} className="space-y-4" noValidate>
+                {showForgotPassword ? (
+                    <form onSubmit={submitForgotPassword} className="space-y-4">
+                        <p className="text-sm text-text-muted">Nhập email đã đăng ký để nhận liên kết đặt lại mật khẩu.</p>
+                        <label className="block text-sm font-semibold text-text-main">Email
+                            <input type="email" autoComplete="email" inputMode="email" required
+                                className="input mt-1 h-12 w-full" value={forgotEmail}
+                                onChange={e => setForgotEmail(e.target.value)} placeholder="ten@cuahang.com" />
+                        </label>
+                        {forgotSuccess && <p role="status" className="rounded-xl bg-green-50 p-3 text-sm text-green-700">{forgotSuccess}</p>}
+                        <button type="submit" disabled={loading} className="btn-primary h-12 w-full">{loading ? 'Đang gửi...' : 'Gửi liên kết đặt lại'}</button>
+                        <button type="button" onClick={() => { setShowForgotPassword(false); setError(null); setForgotSuccess('') }}
+                            className="h-11 w-full text-sm font-semibold text-primary">Trở về đăng nhập</button>
+                    </form>
+                ) : <form onSubmit={handleAuth} className="space-y-4" noValidate>
                     {isSignUp && (
                         <div>
                             <label className="block text-sm font-medium text-text-main mb-1">Tên cửa hàng</label>
@@ -153,6 +183,12 @@ export default function Login() {
                         {loading ? 'Đang xử lý...' : (isSignUp ? 'Đăng Ký' : 'Đăng Nhập')}
                     </button>
 
+                    {!isSignUp && (
+                        <div className="text-right">
+                            <button type="button" onClick={() => { setForgotEmail(email); setShowForgotPassword(true); setError(null) }}
+                                className="min-h-11 text-sm font-semibold text-primary hover:underline">Quên mật khẩu?</button>
+                        </div>
+                    )}
                     <div className="text-center mt-4">
                         <button
                             type="button"
@@ -162,7 +198,7 @@ export default function Login() {
                             {isSignUp ? 'Đã có tài khoản? Đăng nhập' : 'Chưa có tài khoản? Đăng ký ngay'}
                         </button>
                     </div>
-                </form>
+                </form>}
 
                 <div className="mt-8 pt-6 border-t border-gray-100">
                     <div className="text-center text-xs text-text-muted">

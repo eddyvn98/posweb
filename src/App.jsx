@@ -7,6 +7,7 @@ import { DriveProvider } from './contexts/DriveContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import TestConsole from './components/TestConsole'
 import Login from './pages/Login'
+import ResetPassword from './pages/ResetPassword'
 import Home from './pages/Home'
 import Sales from './pages/Sales'
 import Products from './pages/Products'
@@ -37,6 +38,7 @@ function App() {
                                 {showTestConsole && <TestConsole />}
                                 <Routes>
                                     <Route path="/login" element={<Login />} />
+                                    <Route path="/reset-password" element={<ResetPassword />} />
 
                                     <Route path="/shop/*" element={<Shop />} />
 
