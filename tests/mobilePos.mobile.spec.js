@@ -300,4 +300,52 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
     expect((await dbRows(page, 'pending_products')).some(p => p.id === 'legacy-pending')).toBe(true)
   })
 
+  test('two browser tabs reconciling same pending sale preserve one logical server receipt', async ({ page }) => {
+    await setup(page)
+    const second = await page.context().newPage()
+    await setup(second)
+    const receipts = new Map()
+    let delivered = 0
+    for (const tab of [page, second]) {
+      await tab.route('**/api/sales', async route => {
+        if (route.request().method() !== 'POST') return route.continue()
+        const payload = route.request().postDataJSON()
+        delivered++
+        if (!receipts.has(payload.id)) receipts.set(payload.id, payload)
+        await new Promise(resolve => setTimeout(resolve, 80))
+        return route.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify({ success: true, id: payload.id }) })
+      })
+    }
+    await page.goto('/sales')
+    await second.goto('/sales')
+    await page.evaluate(async () => {
+      const req = indexedDB.open('pos_db')
+      const db = await new Promise((resolve, reject) => {
+        req.onsuccess = () => resolve(req.result)
+        req.onerror = () => reject(req.error)
+      })
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('sales_queue', 'readwrite')
+        tx.objectStore('sales_queue').add({
+          id: 'multi-tab-qa', shop_id: 'qa-shop-a', code: 'MULTITAB-1',
+          total_amount: 15000, payment_method: 'cash', synced: 0,
+          sale_date: new Date().toISOString(), created_at: new Date().toISOString(),
+          items: [{ product_id: 'qa-a', product_name: 'Notebook A', quantity: 1, price: 15000 }]
+        })
+        tx.oncomplete = resolve
+        tx.onerror = () => reject(tx.error)
+      })
+      db.close()
+    })
+    await Promise.all([page, second].map(tab =>
+      tab.evaluate(() => window.dispatchEvent(new Event('online')))))
+    await expect.poll(async () => (await dbRows(page, 'sales_queue'))
+      .filter(s => s.id === 'multi-tab-qa' && s.synced === 1).length,
+      { timeout: 15000 }).toBe(1)
+    expect(receipts.size).toBe(1)
+    expect(delivered).toBeGreaterThanOrEqual(1)
+    await second.close()
+  })
+
 })
