@@ -16,7 +16,7 @@ const SyncContext = createContext({})
 export const useSync = () => useContext(SyncContext)
 
 export const SyncProvider = ({ children }) => {
-    const { user } = useAuth()
+    const { user, shop } = useAuth()
     const [isOnline, setIsOnline] = useState(navigator.onLine)
     const [isSyncing, setIsSyncing] = useState(false)
     const isPushingSalesRef = useRef(false)
@@ -41,13 +41,13 @@ export const SyncProvider = ({ children }) => {
 
     useEffect(() => {
         const checkPending = async () => {
-            const pending = await getPendingSales()
+            const pending = shop?.id ? await getPendingSales() : []
             setPendingCount(pending.length)
         }
         checkPending()
         const interval = setInterval(checkPending, 5000)
         return () => clearInterval(interval)
-    }, [])
+    }, [shop?.id])
 
     useEffect(() => {
         if (!user) return
@@ -62,7 +62,7 @@ export const SyncProvider = ({ children }) => {
     }, [user])
 
     const pullProducts = async () => {
-        if (!user || !navigator.onLine) return
+        if (!user || !shop?.id || !navigator.onLine) return
         setIsSyncing(true)
         try {
             const response = await api.get('/products')
@@ -76,22 +76,19 @@ export const SyncProvider = ({ children }) => {
     }
 
     const pushSales = async () => {
-        if (!user || !navigator.onLine || isPushingSalesRef.current) return
-        const pending = await getPendingSales()
-        if (pending.length === 0) {
-            setPendingCount(0)
-            return
-        }
-
+        if (!user || !shop?.id || !navigator.onLine || isPushingSalesRef.current) return
         isPushingSalesRef.current = true
         setIsSyncing(true)
         try {
+            const pending = await getPendingSales()
+            if (pending.length === 0) { setPendingCount(0); return }
             for (const sale of pending) {
                 if (sale.is_void) {
                     await markSaleSynced(sale.local_id)
                     continue
                 }
-                await api.post('/sales', sale)
+                const response = await api.post('/sales', sale)
+                if (response?.data?.success !== true || !response?.data?.id) throw new Error('Sale not acknowledged by server')
                 await markSaleSynced(sale.local_id)
             }
             const remaining = await getPendingSales()
@@ -106,7 +103,7 @@ export const SyncProvider = ({ children }) => {
     }
 
     const pushProducts = async (product) => {
-        if (!user) return
+        if (!user || !shop?.id || product.shop_id !== shop.id) throw new Error('Sai cửa hàng khi đồng bộ sản phẩm')
         if (!navigator.onLine) {
             await queuePendingProduct({ ...product, op: 'upsert' })
             return { queued: true }
@@ -133,10 +130,10 @@ export const SyncProvider = ({ children }) => {
     }, [user])
 
     const deleteProduct = async (productId) => {
-        if (!user) return
+        if (!user || !shop?.id) return
         await deleteProductLocal(productId)
         if (!navigator.onLine) {
-            await queuePendingProduct({ id: productId, op: 'delete' })
+            await queuePendingProduct({ id: productId, shop_id: shop.id, op: 'delete' })
             return { queued: true }
         }
         try {
@@ -145,13 +142,13 @@ export const SyncProvider = ({ children }) => {
             return { queued: false }
         } catch (err) {
             console.error('[Sync] Product Delete Error:', err)
-            await queuePendingProduct({ id: productId, op: 'delete' })
+            await queuePendingProduct({ id: productId, shop_id: shop.id, op: 'delete' })
             return { queued: true, error: err }
         }
     }
 
     const pushPendingProducts = async () => {
-        if (!user || !navigator.onLine) return
+        if (!user || !shop?.id || !navigator.onLine) return
         const pendingProducts = await getPendingProducts()
         if (pendingProducts.length === 0) return
         for (const product of pendingProducts) {

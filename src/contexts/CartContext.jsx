@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useAuth } from './AuthContext'
 
 const CartContext = createContext()
 
@@ -7,30 +8,43 @@ export function useCart() {
 }
 
 export function CartProvider({ children }) {
+    const { shop } = useAuth()
+    const shopId = shop?.id || null
     const [cart, setCart] = useState([])
-    const [cartLoaded, setCartLoaded] = useState(false)
+    const [activeShopId, setActiveShopId] = useState(null)
 
-    // Load from LocalStorage on mount
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem('pos_cart')
-            if (saved) {
-                setCart(JSON.parse(saved))
-            }
-        } catch (e) {
-            console.error('Failed to load cart', e)
-        } finally {
-            setCartLoaded(true)
+        if (!shopId) {
+            setCart([])
+            setActiveShopId(null)
+            return
         }
-    }, [])
+        try {
+            let saved = localStorage.getItem(`pos_cart:${shopId}`)
+            if (!saved) {
+                const legacy = JSON.parse(localStorage.getItem('pos_cart') || 'null')
+                if (Array.isArray(legacy) && legacy.every(item => item.shop_id === shopId)) {
+                    saved = JSON.stringify(legacy)
+                    localStorage.removeItem('pos_cart')
+                }
+            }
+            setCart(saved ? JSON.parse(saved) : [])
+        } catch (error) {
+            console.error('Failed to load shop cart', error)
+            setCart([])
+        }
+        setActiveShopId(shopId)
+    }, [shopId])
 
-    // Save to LocalStorage whenever cart changes
     useEffect(() => {
-        if (!cartLoaded) return
-        localStorage.setItem('pos_cart', JSON.stringify(cart))
-    }, [cart, cartLoaded])
+        if (!shopId || activeShopId !== shopId) return
+        localStorage.setItem(`pos_cart:${shopId}`, JSON.stringify(cart))
+    }, [cart, shopId, activeShopId])
+
+    const visibleCart = activeShopId === shopId ? cart : []
 
     const addToCart = useCallback((product) => {
+        if (!shopId || activeShopId !== shopId || product.shop_id !== shopId) return
         setCart(currentCart => {
             // Use .id as the primary key in cart. For normal products, it's product.id.
             // For Quick Sale items, it's a unique uuid.
@@ -46,7 +60,7 @@ export function CartProvider({ children }) {
             }
             return [...currentCart, { ...product, product_id: targetId, id: targetId, quantity: 1 }]
         })
-    }, [])
+    }, [shopId, activeShopId])
 
     const removeFromCart = useCallback((productId) => {
         setCart(currentCart => currentCart.filter(item => (item.product_id || item.id) !== productId))
@@ -77,11 +91,11 @@ export function CartProvider({ children }) {
         setCart([])
     }, [])
 
-    const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0)
+    const totalAmount = visibleCart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    const totalItems = visibleCart.reduce((sum, item) => sum + item.quantity, 0)
 
     const value = {
-        cart,
+        cart: visibleCart,
         addToCart,
         removeFromCart,
         updateQuantity,
