@@ -27,7 +27,7 @@ export default function CartBar() {
     }
 
     return (
-        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[110] w-[95%] max-w-lg transition-all duration-300">
+        <div className={`${location.pathname === '/products' ? 'hidden md:block' : ''} fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[110] w-[95%] max-w-lg transition-all duration-300`}>
             {/* Expanded Content Overlay */}
             {expanded && (
                 <div

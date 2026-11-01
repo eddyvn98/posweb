@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
+import { useCart } from '../contexts/CartContext'
 
 import { 
     ShoppingCart, 
@@ -23,6 +24,7 @@ export default function Layout({ children }) {
     const location = useLocation()
     const { signOut } = useAuth()
     const { isOnline, pendingCount } = useSync()
+    const { totalItems } = useCart()
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
     const mainItems = [
@@ -127,7 +129,14 @@ export default function Layout({ children }) {
                             ${isActive(item.path) ? 'text-sky-600 font-bold' : 'text-slate-400'}
                         `}
                     >
-                        <item.icon className={`w-5 h-5 transition-transform ${isActive(item.path) ? 'scale-110' : 'scale-100'}`} />
+                        <span className="relative">
+                            <item.icon className={`w-5 h-5 transition-transform ${isActive(item.path) ? 'scale-110' : 'scale-100'}`} />
+                            {item.path === '/sales' && totalItems > 0 && (
+                                <span aria-label={`${totalItems} món trong giỏ`} className="absolute -right-3 -top-2 min-w-4 rounded-full bg-sky-600 px-1 text-[9px] font-bold leading-4 text-white">
+                                    {totalItems > 99 ? '99+' : totalItems}
+                                </span>
+                            )}
+                        </span>
                         <span className="text-[10px] font-semibold tracking-tight">
                             {item.label}
                         </span>

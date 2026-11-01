@@ -11,6 +11,7 @@ import { useSync } from '../contexts/SyncContext'
 import { Check, Camera, CameraOff } from 'lucide-react'
 import BarcodeScanner from '../components/BarcodeScanner'
 import { playBeep, unlockAudio } from '../lib/soundUtils'
+import MobileProductToolbar from '../components/MobileProductToolbar'
 
 export default function Products() {
     const { addToCart } = useCart()
@@ -190,8 +191,12 @@ export default function Products() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            <div className="bg-white shadow-sm p-4 sticky top-0 z-10 flex flex-col gap-3 border-b">
+        <div className="min-h-screen bg-gray-50 pb-56 md:pb-20">
+            <div className="md:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+                <h1 className="text-lg font-bold text-slate-900">Sản phẩm</h1>
+                <span className="text-xs font-semibold text-slate-500">{products.length} mặt hàng</span>
+            </div>
+            <div className="hidden md:flex bg-white shadow-sm p-4 sticky top-0 z-10 flex-col gap-3 border-b">
                 <div className="flex gap-3 items-center">
                     <h1 className="text-2xl font-bold flex-1 text-gray-900 tracking-tight">
                         {isSelectionMode ? `${selectedProducts.length} đang chọn` : 'Sản phẩm'}
@@ -344,6 +349,21 @@ export default function Products() {
                 )}
             </div>
 
+            <MobileProductToolbar
+                query={query}
+                onQueryChange={setQuery}
+                filter={filter}
+                onFilterChange={setFilter}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                onScan={() => setShowCameraScanner(true)}
+                onBulk={() => setShowBulkModal(true)}
+                onCreate={handleCreate}
+                isSelectionMode={isSelectionMode}
+                selectedCount={selectedProducts.length}
+                onCancelSelection={() => { setIsSelectionMode(false); setSelectedProducts([]) }}
+                onDeleteSelected={handleDeleteSelected}
+            />
             {showModal && (
                 <ProductFormModal
                     product={editingProduct}
