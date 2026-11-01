@@ -51,7 +51,7 @@ export default function CartItem({ item, onUpdateQty, onSetQty, onRemove, isHigh
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
-                <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden h-11 sm:h-9 bg-white shadow-sm">
+                <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden h-12 sm:h-10 bg-white shadow-sm">
                     <button
                         onClick={() => handleUpdate(-1)}
                         className="w-11 sm:w-9 h-full flex items-center justify-center text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-colors"
