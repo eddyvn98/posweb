@@ -61,6 +61,16 @@ async function main() {
   products = (await request('/api/products', 'GET', null, token)).data
   assert.equal(products.find(p => p.id === knownId).stock_quantity, 8, 'Replay changed stock twice')
 
+  // P0: same sale posted in parallel by two clients must only decrement inventory once.
+  const raceId = randomUUID()
+  const attempts = await Promise.all(Array.from({ length: 12 }, () =>
+    postSale(raceId, 'QA-RACE-' + suffix, knownId, false)))
+  assert.ok(attempts.every(x => x.status === 200 && x.data.id === raceId),
+    'Concurrent same-id HTTP retries failed')
+  products = (await request('/api/products', 'GET', null, token)).data
+  assert.equal(products.find(p => p.id === knownId).stock_quantity, 6,
+    'Twelve simultaneous retries must decrement stock only once')
+
   const collision = await request('/api/products/upsert', 'POST', {
     id: knownId, shop_id: shopId, barcode: 'QA-B-' + suffix, name: 'collision attempt',
     unit: 'Cái', price: 1000, stock_quantity: 0, is_active: true,
