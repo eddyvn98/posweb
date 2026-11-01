@@ -5,6 +5,7 @@ import { searchLocalProducts, saveProductsToLocal, upsertProductsToLocal } from 
 import CameraScanSheet from '../components/CameraScanSheet'
 import api from '../lib/api'
 import { useCart } from '../contexts/CartContext'
+import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
 import { useScanBarcode } from '../hooks/useScanBarcode'
 
@@ -31,6 +32,7 @@ import InvoiceModal from '../components/InvoiceModal'
 
 export default function Sales() {
     const navigate = useNavigate()
+    const { shop } = useAuth()
     const searchInputRef = useRef(null)
     const cartListRef = useRef(null)
     const lastHydrationRef = useRef(0)
