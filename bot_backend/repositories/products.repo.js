@@ -157,7 +157,7 @@ const mongoRepo = {
       { $set: payload, $setOnInsert: { created_at: new Date() } },
       { upsert: !existingById }
     );
-    if (existingById && !updated.matchedCount) {
+    if (existingById && updated && updated.matchedCount === 0) {
       throw Object.assign(new Error('Tồn kho đã thay đổi trong lúc lưu. Hãy tải lại sản phẩm'), { status: 409, code: 'STOCK_CONFLICT' });
     }
 
