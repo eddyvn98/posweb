@@ -13,7 +13,8 @@ async function authenticateToken(req, res, next) {
         if (!user || Number(user.auth_version || 0) !== Number(claims.auth_version || 0)) {
             return res.sendStatus(403);
         }
-        req.user = claims;
+        // Never trust role/shop permissions copied from a potentially stale JWT.
+        req.user = { ...claims, shop_id: user.shop_id, role: user.role, email: user.email };
         next();
     } catch (error) {
         console.error('Authentication lookup failed', error);

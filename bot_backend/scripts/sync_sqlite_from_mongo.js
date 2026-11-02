@@ -54,8 +54,8 @@ function ts(v) {
       const insertShop = db.prepare('INSERT INTO shops (id, name, address, updated_at, created_at) VALUES (?, ?, ?, ?, ?)');
       for (const s of shops) insertShop.run(s.id, s.name, s.address || null, ts(s.updated_at), ts(s.created_at));
 
-      const insertUser = db.prepare('INSERT INTO users (id, shop_id, email, password, role, telegram_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
-      for (const u of users) insertUser.run(u.id, u.shop_id, u.email, u.password || null, u.role || 'owner', u.telegram_id || null, ts(u.created_at));
+      const insertUser = db.prepare('INSERT INTO users (id, shop_id, email, password, auth_version, role, telegram_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+      for (const u of users) insertUser.run(u.id, u.shop_id, u.email, u.password || null, Number(u.auth_version || 0), u.role || 'owner', u.telegram_id || null, ts(u.created_at));
 
       const insertUnit = db.prepare('INSERT INTO units (id, shop_id, name, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
       for (const x of units) insertUnit.run(x.id, x.shop_id, x.name, x.is_active ? 1 : 0, ts(x.created_at), ts(x.updated_at));

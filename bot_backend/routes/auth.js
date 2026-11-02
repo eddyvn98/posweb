@@ -8,9 +8,14 @@ const updateShop = require('../controllers/auth/updateShop');
 const changePassword = require('../controllers/auth/changePassword');
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const publicUser = user => {
+  const { password, ...safe } = user.toObject ? user.toObject() : user;
+  return safe;
+};
 
 router.post('/telegram-auth', async (req, res) => {
   try {
+    if (!BOT_TOKEN) return res.status(503).json({ error: 'Telegram authentication is not configured' });
     const { initData } = req.body;
     if (!initData) return res.status(400).json({ error: 'Missing initData' });
 
@@ -31,7 +36,13 @@ router.post('/telegram-auth', async (req, res) => {
     const secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN || '').digest();
     const generatedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
-    if (generatedHash !== hash) {
+    const authDate = Number(urlParams.get('auth_date'));
+    if (!Number.isSafeInteger(authDate) || authDate <= 0 ||
+        Date.now() / 1000 - authDate > 300 || authDate > Date.now() / 1000 + 30) {
+      return res.status(403).json({ error: 'Expired Telegram authentication data' });
+    }
+    if (!/^[a-f0-9]{64}$/i.test(hash) ||
+        !crypto.timingSafeEqual(Buffer.from(generatedHash, 'hex'), Buffer.from(hash, 'hex'))) {
       return res.status(403).json({ error: 'Invalid hash' });
     }
 
@@ -45,7 +56,7 @@ router.post('/telegram-auth', async (req, res) => {
     const token = authService.generateToken(user);
     const shop = await getAuthRepo().getShopById(user.shop_id);
 
-    res.json({ success: true, token, user, shop });
+    res.json({ success: true, token, user: publicUser(user), shop });
   } catch (error) {
     console.error('Auth Error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -63,7 +74,7 @@ router.post('/login', async (req, res) => {
     const token = authService.generateToken(user);
     const shop = await getAuthRepo().getShopById(user.shop_id);
 
-    res.json({ success: true, token, user, shop });
+    res.json({ success: true, token, user: publicUser(user), shop });
   } catch (error) {
     res.status(401).json({ error: error.message });
   }
@@ -80,7 +91,7 @@ router.post('/register', async (req, res) => {
     const token = authService.generateToken(user);
     const shop = await getAuthRepo().getShopById(user.shop_id);
 
-    res.json({ success: true, token, user, shop });
+    res.json({ success: true, token, user: publicUser(user), shop });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

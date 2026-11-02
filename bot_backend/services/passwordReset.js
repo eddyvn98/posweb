@@ -52,6 +52,7 @@ async function requestReset(email) {
   } catch (error) {
     if (provider === 'sqlite') db.prepare('DELETE FROM password_reset_tokens WHERE token_hash = ?').run(tokenHash);
     else await Reset.deleteOne({ token_hash: tokenHash });
+    recentRequests.delete(normalized);
     throw Object.assign(new Error('Dịch vụ gửi email tạm thời không hoạt động'), { status: 503 });
   }
   return responseMessage;
@@ -76,15 +77,22 @@ async function resetPassword(token, password) {
     const mongoose = require('mongoose');
     const session = await mongoose.startSession();
     let updated = false;
+    let resetUserId = null;
     try {
       await session.withTransaction(async () => {
         const reset = await Reset.findOneAndDelete({ token_hash: tokenHash, expires_at: { $gt: new Date() } }, { session });
         if (!reset) return;
+        resetUserId = reset.user_id;
         const result = await User.updateOne({ id: reset.user_id }, { $set: { password: newHash }, $inc: { auth_version: 1 } }, { session });
         updated = result.modifiedCount === 1;
       });
     } finally { await session.endSession(); }
     if (!updated) throw Object.assign(new Error('Liên kết hết hạn hoặc đã được sử dụng'), { status: 400 });
+    if (provider === 'dual') {
+      const mirror = db.prepare('UPDATE users SET password = ?, auth_version = auth_version + 1 WHERE id = ?')
+        .run(newHash, resetUserId);
+      if (!mirror.changes) throw Object.assign(new Error('Password recovery mirror could not be updated'), { status: 503 });
+    }
 
   }
   return { success: true };
