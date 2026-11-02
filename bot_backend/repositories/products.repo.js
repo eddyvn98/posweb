@@ -18,6 +18,8 @@ const sqliteRepo = {
       : null;
 
     if (existingById) {
+      // Callers without an observed stock version may update metadata, not inventory.
+      if (product.original_stock_quantity == null) product = { ...product, stock_quantity: existingById.stock_quantity };
       if (product.original_stock_quantity != null &&
           Number(product.original_stock_quantity) !== Number(existingById.stock_quantity)) {
         throw Object.assign(new Error('Tồn kho đã thay đổi. Hãy tải lại sản phẩm trước khi lưu'), { status: 409, code: 'STOCK_CONFLICT' });
@@ -143,6 +145,10 @@ const mongoRepo = {
     if (existingById && product.original_stock_quantity != null &&
         Number(product.original_stock_quantity) !== Number(existingById.stock_quantity)) {
       throw Object.assign(new Error('Tồn kho đã thay đổi. Hãy tải lại sản phẩm trước khi lưu'), { status: 409, code: 'STOCK_CONFLICT' });
+    }
+    if (existingById && product.original_stock_quantity == null) {
+      // Preserve stock with an atomic field-level update rather than a stale value.
+      delete payload.stock_quantity;
     }
     const guardedFilter = existingById && product.original_stock_quantity != null
       ? { ...filter, stock_quantity: Number(product.original_stock_quantity) } : filter;
