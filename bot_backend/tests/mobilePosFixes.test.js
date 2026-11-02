@@ -18,6 +18,9 @@ function loadSqliteRepo(name, db) {
       createMongoSale: async () => { throw new Error('Unexpected Mongo call in SQLite test') },
       voidMongoSale: async () => { throw new Error('Unexpected Mongo call in SQLite test') }
     }
+    if (request === '../services/deliveryOutbox') return {
+      ...require('../services/deliveryOutbox')
+    }
     if (request === '../services/saleValidation') return require('../services/saleValidation')
     if (request.startsWith('../mongo/models/')) return {}
     throw new Error('Unexpected require: ' + request)

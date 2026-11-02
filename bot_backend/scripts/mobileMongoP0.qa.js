@@ -73,6 +73,7 @@ const CashFlow = require('../mongo/models/CashFlow');
       '../mongo/models/CashFlow': CashFlow,
       '../services/mongoSaleWriter': require('../services/mongoSaleWriter'),
       '../services/saleValidation': require('../services/saleValidation'),
+      '../services/deliveryOutbox': require('../services/deliveryOutbox'),
     };
     new Function('require', 'module', 'exports', repoSource)(
       n => {
