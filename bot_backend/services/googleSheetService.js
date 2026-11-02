@@ -112,7 +112,7 @@ async function appendToSheet(tabName, rowData, headers) {
     }
 }
 
-async function upsertSheetRow(tabName, headers, keyHeader, keyValue, rowData) {
+async function upsertSheetRow(tabName, headers, keyHeader, keyValue, rowData, strict = false) {
     const config = getSheetConfig();
     if (!config) return;
 
@@ -132,6 +132,7 @@ async function upsertSheetRow(tabName, headers, keyHeader, keyValue, rowData) {
     } catch (error) {
         log(`Upsert error ${tabName}: ${error.message}`);
         console.error(`[Sync Detail] ${tabName} Upsert Error:`, error);
+        if (strict) throw error;
     }
 }
 
@@ -196,7 +197,7 @@ async function syncSale(sale, shopName) {
             [headers[4]]: sale.payment_method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản',
             [headers[5]]: itemsStr
         };
-        const result = await appendToSheet(VI.banHang, rowData, headers);
+        const result = await upsertSheetRow(VI.banHang, headers, headers[1], sale.code, rowData, true);
         log(`[Sync] Successfully synced sale ${sale.code}`);
         return result;
     } catch (err) {
@@ -284,7 +285,7 @@ async function syncCashFlow(cashFlow) {
         [headers[4]]: cashFlow.type === 'out' ? Number(cashFlow.amount) : 0,
         [headers[5]]: cashFlow.ref_id || ''
     };
-    return appendToSheet(VI.soQuy, rowData, headers);
+    return upsertSheetRow(VI.soQuy, headers, headers[5], cashFlow.ref_id, rowData, true);
 }
 
 async function syncVoidSale(saleId, reason, shopName) {
@@ -295,7 +296,7 @@ async function syncVoidSale(saleId, reason, shopName) {
         [headers[2]]: reason,
         [headers[3]]: shopName
     };
-    return appendToSheet(VI.donDaHuy, rowData, headers);
+    return upsertSheetRow(VI.donDaHuy, headers, headers[1], saleId, rowData, true);
 }
 
 module.exports = { syncSale, syncProduct, syncImport, syncCashFlow, syncVoidSale };

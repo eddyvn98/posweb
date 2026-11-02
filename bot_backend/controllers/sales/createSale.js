@@ -9,13 +9,13 @@ async function createSale(req, res) {
         const outcome = await getSalesRepo().createSale(shop_id, user_id, sale, { withMeta: true });
         const resultId = outcome.id;
 
-        if (outcome.created) {
+        // Idempotent Sheets upsert is safe on both new sales and retries.
         const shop = await getAuthRepo().getShopById(shop_id);
         const { syncSale, syncCashFlow } = require('../../services/googleSheetService');
         const shopName = shop ? shop.name : 'Cua hang';
 
-        syncSale(sale, shopName);
-        syncCashFlow({
+        await syncSale(sale, shopName);
+        await syncCashFlow({
             amount: sale.total_amount,
             type: 'in',
             category: 'sale',
@@ -23,7 +23,6 @@ async function createSale(req, res) {
             ref_id: resultId,
             created_at: sale.sale_date
         }, shopName);
-        }
 
         res.json({ success: true, id: resultId });
     } catch (error) {

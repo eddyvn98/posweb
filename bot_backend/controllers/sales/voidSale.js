@@ -11,11 +11,12 @@ async function voidSale(req, res) {
     }
 
     try {
-        const result = await getSalesRepo().voidSale(shop_id, id, reason, { withMeta: true });
-        if (result.voided) {
+        const result = await getSalesRepo().voidSale(shop_id, id, reason, { withMeta: true, allowAlreadyVoided: true });
+        {
+            // Replaying an acknowledged void also repairs prior sheet-sync failure.
             const shop = await getAuthRepo().getShopById(shop_id);
             const { syncVoidSale } = require('../../services/googleSheetService');
-            syncVoidSale(id, reason, shop ? shop.name : 'Cua hang');
+            await syncVoidSale(id, reason, shop ? shop.name : 'Cua hang');
         }
 
         res.json({ success: true });
