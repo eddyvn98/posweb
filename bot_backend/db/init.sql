@@ -202,3 +202,8 @@ CREATE TABLE IF NOT EXISTS delivery_outbox (
 );
 CREATE INDEX IF NOT EXISTS idx_delivery_outbox_due
   ON delivery_outbox(status, next_attempt_at, lease_until);
+
+CREATE TABLE IF NOT EXISTS auth_mirror_guard (
+  user_id TEXT PRIMARY KEY,
+  changed_at INTEGER NOT NULL
+);

@@ -3,6 +3,7 @@ const db = require('../db/connection');
 const { getDbProvider } = require('../db/provider');
 const Outbox = require('../mongo/models/DeliveryOutbox');
 const { getAuthRepo } = require('../repositories/auth.repo');
+const User = require('../mongo/models/User');
 const { syncSale, syncCashFlow, syncVoidSale } = require('./googleSheetService');
 
 const workerId = crypto.randomUUID();
@@ -70,7 +71,23 @@ async function processMongoOne() {
   }
   return true;
 }
+async function reconcileAuthMirrors(max = 20) {
+  if (getDbProvider() !== 'dual') return 0;
+  const pending = db.prepare('SELECT user_id FROM auth_mirror_guard ORDER BY changed_at LIMIT ?').all(max);
+  for (const row of pending) {
+    const source = await User.findOne({ id: row.user_id }).lean();
+    if (!source) continue;
+    db.transaction(() => {
+      const result = db.prepare('UPDATE users SET password=?, auth_version=? WHERE id=?')
+        .run(source.password, Number(source.auth_version || 0), row.user_id);
+      if (!result.changes) throw new Error('Missing SQLite user for auth reconciliation');
+      db.prepare('DELETE FROM auth_mirror_guard WHERE user_id=?').run(row.user_id);
+    })();
+  }
+  return pending.length;
+}
 async function drainOnce(max = 50) {
+  await reconcileAuthMirrors();
   // Dual uses Mongo as the authoritative journal; SQLite is a sales mirror.
   const processOne = getDbProvider() === 'sqlite' ? processSqliteOne : processMongoOne;
   let count = 0;
@@ -90,4 +107,4 @@ function startDeliveryOutboxWorker() {
   timer.unref?.();
   return () => clearInterval(timer);
 }
-module.exports = { drainOnce, startDeliveryOutboxWorker, nextDelay };
+module.exports = { drainOnce, startDeliveryOutboxWorker, nextDelay, reconcileAuthMirrors };

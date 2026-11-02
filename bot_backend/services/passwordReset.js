@@ -83,6 +83,9 @@ async function resetPassword(token, password) {
         const reset = await Reset.findOneAndDelete({ token_hash: tokenHash, expires_at: { $gt: new Date() } }, { session });
         if (!reset) return;
         resetUserId = reset.user_id;
+        if (provider === 'dual') {
+          db.prepare('INSERT OR REPLACE INTO auth_mirror_guard(user_id, changed_at) VALUES (?, ?)').run(resetUserId, Date.now());
+        }
         const result = await User.updateOne({ id: reset.user_id }, { $set: { password: newHash }, $inc: { auth_version: 1 } }, { session });
         updated = result.modifiedCount === 1;
       });
@@ -91,9 +94,12 @@ async function resetPassword(token, password) {
     if (provider === 'dual') {
       // Set the exact authoritative version: a mirrored password update must not drift.
       const authoritative = await User.findOne({ id: resetUserId }).lean();
-      const mirror = db.prepare('UPDATE users SET password = ?, auth_version = ? WHERE id = ?')
-        .run(newHash, Number(authoritative.auth_version || 0), resetUserId);
-      if (!mirror.changes) throw Object.assign(new Error('Password recovery mirror could not be updated'), { status: 503 });
+      db.transaction(() => {
+        const mirror = db.prepare('UPDATE users SET password = ?, auth_version = ? WHERE id = ?')
+          .run(newHash, Number(authoritative.auth_version || 0), resetUserId);
+        if (!mirror.changes) throw Object.assign(new Error('Password recovery mirror could not be updated'), { status: 503 });
+        db.prepare('DELETE FROM auth_mirror_guard WHERE user_id = ?').run(resetUserId);
+      })();
     }
 
   }

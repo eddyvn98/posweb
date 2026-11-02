@@ -27,6 +27,11 @@ function runMigrations() {
         }
 
         addColumnIfMissing('users', 'auth_version', 'INTEGER NOT NULL DEFAULT 0');
+        db.exec(`CREATE TABLE IF NOT EXISTS auth_mirror_guard (
+  user_id TEXT PRIMARY KEY,
+  changed_at INTEGER NOT NULL
+);
+`);
         db.exec(`
 -- Transactional outbox; each job must be written in the same transaction as the sale.
 CREATE TABLE IF NOT EXISTS delivery_outbox (

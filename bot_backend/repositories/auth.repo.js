@@ -63,6 +63,9 @@ const sqliteRepo = {
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPassword = (password || '').trim();
     const user = db.prepare('SELECT * FROM users WHERE LOWER(email) = ?').get(cleanEmail);
+    if (user && db.prepare('SELECT 1 FROM auth_mirror_guard WHERE user_id = ?').get(user.id)) {
+      throw Object.assign(new Error('Thông tin xác thực cần được đối soát trước khi đăng nhập'), { status: 503 });
+    }
     if (!user || !user.password) throw new Error('Email hoặc mật khẩu không chính xác');
     const isValid = bcrypt.compareSync(password, user.password) || bcrypt.compareSync(cleanPassword, user.password);
     if (!isValid) throw new Error('Email hoặc mật khẩu không chính xác');
@@ -252,8 +255,15 @@ const dualRepo = {
     return mongoRepo.loginWithEmail(email, password);
   },
   async updateUserPassword(userId, newHash) {
+    db.prepare('INSERT OR REPLACE INTO auth_mirror_guard(user_id, changed_at) VALUES (?, ?)').run(userId, Date.now());
     const ok = await mongoRepo.updateUserPassword(userId, newHash);
-    try { await sqliteRepo.updateUserPassword(userId, newHash); } catch (e) { console.error('[dual][auth] sqlite write failed:', e.message); }
+    const source = await mongoRepo.getUserById(userId);
+    db.transaction(() => {
+      const result = db.prepare('UPDATE users SET password = ?, auth_version = ? WHERE id = ?')
+        .run(source.password, Number(source.auth_version || 0), userId);
+      if (!result.changes) throw new Error('Missing auth mirror user');
+      db.prepare('DELETE FROM auth_mirror_guard WHERE user_id = ?').run(userId);
+    })();
     return ok;
   },
   async updateShop(shopId, shop) {
