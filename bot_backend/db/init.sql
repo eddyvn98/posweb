@@ -184,3 +184,21 @@ CREATE TABLE IF NOT EXISTS cash_flows (
   ref_id TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Transactional outbox; each job must be written in the same transaction as the sale.
+CREATE TABLE IF NOT EXISTS delivery_outbox (
+  event_key TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  shop_id TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  attempts INTEGER NOT NULL DEFAULT 0,
+  next_attempt_at INTEGER NOT NULL,
+  lease_until INTEGER,
+  worker_id TEXT,
+  last_error TEXT,
+  created_at INTEGER NOT NULL,
+  processed_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_delivery_outbox_due
+  ON delivery_outbox(status, next_attempt_at, lease_until);
