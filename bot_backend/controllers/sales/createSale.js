@@ -14,7 +14,7 @@ async function createSale(req, res) {
         const { syncSale, syncCashFlow } = require('../../services/googleSheetService');
         const shopName = shop ? shop.name : 'Cua hang';
 
-        await syncSale(sale, shopName);
+        await syncSale({ ...sale, id: resultId }, shopName);
         await syncCashFlow({
             amount: sale.total_amount,
             type: 'in',

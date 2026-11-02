@@ -11,7 +11,7 @@ const VI = {
     soQuy: 'Sổ quỹ',
     donDaHuy: 'Đơn đã hủy',
     headers: {
-        sales: ['Ngày ghi sổ', 'Số hiệu chứng từ', 'Diễn giải', 'Doanh thu (+)', 'Hình thức thanh toán', 'Chi tiết'],
+        sales: ['Ngày ghi sổ', 'Số hiệu chứng từ', 'Diễn giải', 'Doanh thu (+)', 'Hình thức thanh toán', 'Chi tiết', 'Mã giao dịch'],
         products: ['Ngày Cập Nhật', 'Barcode', 'Mã Sản Phẩm', 'Tên Sản Phẩm', 'Đơn vị', 'Danh mục', 'Giá Bán', 'Giá Vốn', 'Tồn Kho', 'Trạng Thái'],
         imports: [
             'Mã phiếu nhập',
@@ -195,9 +195,12 @@ async function syncSale(sale, shopName) {
             [headers[2]]: `Doanh thu - ${shopName}${sale.note ? ' - ' + sale.note : ''}`,
             [headers[3]]: Number(sale.total_amount),
             [headers[4]]: sale.payment_method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản',
-            [headers[5]]: itemsStr
+            [headers[5]]: itemsStr,
+            [headers[6]]: sale.id || ''
         };
-        const result = await upsertSheetRow(VI.banHang, headers, headers[1], sale.code, rowData, true);
+        const result = sale.id
+            ? await upsertSheetRow(VI.banHang, headers, headers[6], sale.id, rowData, true)
+            : await appendToSheet(VI.banHang, rowData, headers);
         log(`[Sync] Successfully synced sale ${sale.code}`);
         return result;
     } catch (err) {
@@ -285,7 +288,9 @@ async function syncCashFlow(cashFlow) {
         [headers[4]]: cashFlow.type === 'out' ? Number(cashFlow.amount) : 0,
         [headers[5]]: cashFlow.ref_id || ''
     };
-    return upsertSheetRow(VI.soQuy, headers, headers[5], cashFlow.ref_id, rowData, true);
+    return cashFlow.ref_id
+        ? upsertSheetRow(VI.soQuy, headers, headers[5], cashFlow.ref_id, rowData, true)
+        : appendToSheet(VI.soQuy, rowData, headers);
 }
 
 async function syncVoidSale(saleId, reason, shopName) {
