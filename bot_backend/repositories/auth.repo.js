@@ -72,6 +72,7 @@ const sqliteRepo = {
     return user;
   },
   async getUserById(id) {
+    if (db.prepare('SELECT 1 FROM auth_mirror_guard WHERE user_id = ?').get(id)) return null;
     return db.prepare('SELECT * FROM users WHERE id = ?').get(id) || null;
   },
   async updateUserPassword(userId, newHash) {
