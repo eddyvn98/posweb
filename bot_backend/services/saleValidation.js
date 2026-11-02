@@ -52,7 +52,7 @@ function assertReplayCompatible(existing, incoming, existingItems = null) {
   }
   if (existingItems) {
     const signature = lines => lines.map(i => JSON.stringify([
-      String(i.product_name), Number(i.price), Number(i.quantity)
+      String(i.product_name), Number(i.price), Number(i.quantity), i.is_quick_sale ? null : (i.product_id || null)
     ])).sort();
     if (JSON.stringify(signature(existingItems)) !== JSON.stringify(signature(incoming.items || []))) {
       throw invalid('Sale id reused with different line items', 409);
