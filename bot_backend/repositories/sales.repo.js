@@ -19,7 +19,8 @@ const sqliteRepo = {
       ? db.prepare('SELECT * FROM sales WHERE id = ? AND shop_id = ?').get(saleId, shop_id)
       : db.prepare('SELECT * FROM sales WHERE code = ? AND shop_id = ?').get(sale.code, shop_id);
     if (existing) {
-      assertReplayCompatible(existing, sale);
+      const lines = db.prepare('SELECT product_name, price, quantity FROM sale_items WHERE sale_id = ?').all(existing.id);
+      assertReplayCompatible(existing, sale, lines);
       return options.withMeta ? { id: existing.id, created: false } : existing.id;
     }
     const transaction = db.transaction(() => {
@@ -35,6 +36,13 @@ const sqliteRepo = {
           const product = item.product_id && !item.is_quick_sale
             ? db.prepare('SELECT id, stock_quantity FROM products WHERE id = ? AND shop_id = ?').get(item.product_id, shop_id)
             : null;
+          if (item.product_id && !product && !item.is_quick_sale) {
+            throw Object.assign(new Error('Catalog product not found in this shop'), { status: 400 });
+          }
+          if (item.is_quick_sale && item.product_id &&
+              db.prepare('SELECT id FROM products WHERE id = ? AND shop_id = ?').get(item.product_id, shop_id)) {
+            throw Object.assign(new Error('Catalog items cannot bypass stock as quick sales'), { status: 400 });
+          }
           const linkedId = product ? item.product_id : null;
           db.prepare('INSERT INTO sale_items (id, sale_id, product_id, quantity, price, product_name) VALUES (?, ?, ?, ?, ?, ?)')
             .run(itemId, saleId, linkedId, item.quantity, item.price, item.product_name);

@@ -45,10 +45,18 @@ function validateSale(sale, authenticatedShopId) {
   }
   return sale;
 }
-function assertReplayCompatible(existing, incoming) {
+function assertReplayCompatible(existing, incoming, existingItems = null) {
   if (Number(existing.total_amount) !== Number(incoming.total_amount)
     || existing.code !== incoming.code || existing.payment_method !== incoming.payment_method) {
     throw invalid('Sale id reused with different details', 409);
+  }
+  if (existingItems) {
+    const signature = lines => lines.map(i => JSON.stringify([
+      String(i.product_name), Number(i.price), Number(i.quantity)
+    ])).sort();
+    if (JSON.stringify(signature(existingItems)) !== JSON.stringify(signature(incoming.items || []))) {
+      throw invalid('Sale id reused with different line items', 409);
+    }
   }
 }
 module.exports = { validateSale, assertReplayCompatible };

@@ -14,7 +14,8 @@ async function createMongoSale(shop_id, user_id, sale, options = {}) {
   const saleId = sale.id || uuidv4();
   const previous = await Sale.findOne({ id: saleId, shop_id }).lean();
   if (previous) {
-    assertReplayCompatible(previous, sale);
+    const lines = await SaleItem.find({ sale_id: saleId }).lean();
+    assertReplayCompatible(previous, sale, lines);
     return options.withMeta ? { id: saleId, created: false } : saleId;
   }
 
@@ -25,7 +26,8 @@ async function createMongoSale(shop_id, user_id, sale, options = {}) {
       created = false;
       const existing = await Sale.findOne({ id: saleId, shop_id }).session(session).lean();
       if (existing) {
-        assertReplayCompatible(existing, sale);
+        const lines = await SaleItem.find({ sale_id: saleId }).session(session).lean();
+        assertReplayCompatible(existing, sale, lines);
         return;
       }
 
@@ -46,6 +48,13 @@ async function createMongoSale(shop_id, user_id, sale, options = {}) {
         const product = item.product_id && !item.is_quick_sale
           ? await Product.findOne({ id: item.product_id, shop_id }).session(session).lean()
           : null;
+        if (item.product_id && !product && !item.is_quick_sale) {
+          throw Object.assign(new Error('Catalog product not found in this shop'), { status: 400 });
+        }
+        if (item.is_quick_sale && item.product_id &&
+            await Product.findOne({ id: item.product_id, shop_id }).session(session).lean()) {
+          throw Object.assign(new Error('Catalog items cannot bypass stock as quick sales'), { status: 400 });
+        }
         await SaleItem.create([{
           id: uuidv4(), sale_id: saleId, product_id: product ? item.product_id : null,
           quantity: qty, price, product_name: item.product_name,
@@ -86,7 +95,8 @@ async function createMongoSale(shop_id, user_id, sale, options = {}) {
     if (error.code === 11000) {
       const committed = await Sale.findOne({ id: saleId, shop_id }).lean();
       if (committed) {
-        assertReplayCompatible(committed, sale);
+        const lines = await SaleItem.find({ sale_id: saleId }).lean();
+        assertReplayCompatible(committed, sale, lines);
         return options.withMeta ? { id: saleId, created: false } : saleId;
       }
     }
