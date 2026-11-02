@@ -11,6 +11,10 @@ const LEASE_MS = 120000;
 let running = false;
 
 async function deliver(event) {
+  // Missing optional Google credentials must NOT acknowledge and discard an export.
+  if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+    throw new Error('Google Sheets export is not configured');
+  }
   const payload = typeof event.payload === 'string' ? JSON.parse(event.payload) : event.payload;
   const shop = await getAuthRepo().getShopById(event.shop_id);
   const name = shop?.name || 'Cua hang';
