@@ -224,3 +224,19 @@ test('review1: known catalog item cannot skip stock via quick-sale flag', async 
     assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM sales').get().n, 0)
   } finally { f.db.close() }
 })
+
+test('review2: receipt and sheet outbox are committed together and cannot duplicate on replay', async () => {
+  const f = fixture()
+  try {
+    f.addProduct('outbox-sku', 'shop-a', 'OUT-1', 12)
+    const sale = f.sale('outbox-sale', 'outbox-sku')
+    await f.sales.createSale('shop-a', 'user-a', sale)
+    const rows = f.db.prepare('SELECT event_key, kind FROM delivery_outbox ORDER BY event_key').all()
+    assert.deepEqual(rows.map(x => x.kind).sort(), ['sheet_cash', 'sheet_sale'])
+    await f.sales.createSale('shop-a', 'user-a', sale)
+    assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM delivery_outbox').get().n, 2)
+    await f.sales.voidSale('shop-a', sale.id, 'QA')
+    assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM delivery_outbox').get().n, 3)
+    assert.equal(f.db.prepare('SELECT status FROM delivery_outbox WHERE event_key = ?').get('sheet:void:outbox-sale').status, 'pending')
+  } finally { f.db.close() }
+})
