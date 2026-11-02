@@ -19,7 +19,7 @@ const sqliteRepo = {
       ? db.prepare('SELECT * FROM sales WHERE id = ? AND shop_id = ?').get(saleId, shop_id)
       : db.prepare('SELECT * FROM sales WHERE code = ? AND shop_id = ?').get(sale.code, shop_id);
     if (existing) {
-      const lines = db.prepare('SELECT product_name, price, quantity FROM sale_items WHERE sale_id = ?').all(existing.id);
+      const lines = db.prepare('SELECT product_id, product_name, price, quantity FROM sale_items WHERE sale_id = ?').all(existing.id);
       assertReplayCompatible(existing, sale, lines);
       return options.withMeta ? { id: existing.id, created: false } : existing.id;
     }
