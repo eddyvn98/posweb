@@ -1,7 +1,7 @@
 name: POS mobile QA
 on:
   push:
-    branches: [fix/mobile-qa-round2-20261101]
+    branches: [fix/mobile-qa-round2-20261101, fix/pos-p0-review1-20261102]
   workflow_dispatch:
 jobs:
   backend-sqlite:

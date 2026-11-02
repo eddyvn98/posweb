@@ -114,7 +114,7 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
                 }
             }
 
-            for (let i = 0; i < safeQuantity; i++) onAddToCart(customItem)
+            for (let i = 0; i < safeQuantity; i++) onAddToCart({ ...customItem, is_quick_sale: !saveToCatalog })
             onClose()
         } catch (error) {
             showNotification(error?.response?.data?.error || error?.message || 'Không thể lưu sản phẩm bán nhanh', 'error')
