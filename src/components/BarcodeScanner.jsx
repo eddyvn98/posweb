@@ -39,9 +39,15 @@ export default function BarcodeScanner({ onDetected, active }) {
                         <span>{camera.processingResult ? 'Đang xử lý mã...' : waiting ? 'Đã nhận mã vạch' : 'Sẵn sàng quét'}</span>
                     </div>
                     <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
-                        {waiting ? 'Đưa mã ra khỏi khung rồi quét tiếp' : 'Đưa mã vạch vào giữa khung hình'}
+                        {waiting ? 'Quét mã khác hoặc nhấn Quét lại để thêm cùng mã' : 'Đưa mã vạch vào giữa khung hình'}
                     </p>
                 </div>
+                {waiting && (
+                    <button type="button" aria-label="Quét lại mã này" onClick={camera.rearm}
+                        className="min-h-12 shrink-0 rounded-xl bg-emerald-50 px-3 text-xs font-bold text-emerald-800">
+                        Quét lại
+                    </button>
+                )}
                 <button
                     type="button"
                     aria-label={camera.torchOn ? 'Tắt đèn flash' : 'Bật đèn flash'}

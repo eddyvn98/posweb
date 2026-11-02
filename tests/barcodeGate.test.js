@@ -18,12 +18,14 @@ test('brief recognition losses do not re-add a barcode', () => {
     assert.equal(gate.observe('A', 1200).accepted, null)
 })
 
-test('same barcode can be scanned again after leaving frame', () => {
+test('same barcode cannot replay after long decoder dropout until manual rearm', () => {
     const gate = createBarcodeGate()
     assert.equal(gate.observe('A', 0).accepted, 'A')
     assert.equal(gate.observe(null, 1000).accepted, null)
-    assert.equal(gate.observe(null, 1601).held, null)
-    assert.equal(gate.observe('A', 1800).accepted, 'A')
+    assert.equal(gate.observe(null, 3600).held, 'A')
+    assert.equal(gate.observe('A', 3800).accepted, null)
+    gate.reset()
+    assert.equal(gate.observe('A', 3900).accepted, 'A')
 })
 
 test('another barcode is accepted immediately', () => {

@@ -1,24 +1,15 @@
-// Prevent a camera from selling the same stationary barcode repeatedly.
-// A different visible barcode is accepted immediately. The same barcode is
-// accepted again only after it has been genuinely absent for a continuous span.
-export function createBarcodeGate(releaseAfterMs = 1600) {
+// A decoder can lose focus for seconds while the physical barcode stays in place.
+// Never infer physical removal from missing frames. A different code is accepted
+// immediately; deliberately scanning the same code again requires explicit rearm.
+export function createBarcodeGate() {
     let held = null
-    let lastVisibleAt = 0
     return {
-        observe(raw, now) {
+        observe(raw) {
             const code = String(raw || '').trim()
-            if (code) {
-                lastVisibleAt = now
-                if (held === code) return { accepted: null, held }
-                held = code
-                return { accepted: code, held }
-            }
-            if (held && now - lastVisibleAt >= releaseAfterMs) held = null
-            return { accepted: null, held }
+            if (!code || held === code) return { accepted: null, held }
+            held = code
+            return { accepted: code, held }
         },
-        reset() {
-            held = null
-            lastVisibleAt = 0
-        }
+        reset() { held = null }
     }
 }

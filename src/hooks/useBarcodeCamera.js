@@ -21,6 +21,7 @@ export function useBarcodeCamera({ active, onDetected }) {
     const videoRef = useRef(null)
     const canvasRef = useRef(null)
     const streamRef = useRef(null)
+    const gateRef = useRef(null)
     const callbackRef = useRef(onDetected)
     callbackRef.current = onDetected
 
@@ -40,6 +41,7 @@ export function useBarcodeCamera({ active, onDetected }) {
         let lastFrameAt = 0
         let held = null
         const gate = createBarcodeGate()
+        gateRef.current = gate
         const stop = () => {
             stopped = true
             if (frameId !== null) cancelAnimationFrame(frameId)
@@ -164,6 +166,7 @@ export function useBarcodeCamera({ active, onDetected }) {
     return {
         videoRef, canvasRef, error, heldCode, processingResult,
         hasTorch, torchOn, toggleTorch,
+        rearm: () => { gateRef.current?.reset(); setHeldCode(null) },
         toggleFacing: () => setCameraFacing(v => v === 'environment' ? 'user' : 'environment'),
         retry: () => setRestart(v => v + 1)
     }
