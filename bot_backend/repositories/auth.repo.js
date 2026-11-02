@@ -140,12 +140,13 @@ const sqliteRepo = {
     }
 
     db.prepare(`
-      INSERT INTO users (id, shop_id, email, password, role, telegram_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
+      INSERT INTO users (id, shop_id, email, password, auth_version, role, telegram_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
       ON CONFLICT(id) DO UPDATE SET
         shop_id = excluded.shop_id,
         email = excluded.email,
         password = excluded.password,
+        auth_version = excluded.auth_version,
         role = excluded.role,
         telegram_id = excluded.telegram_id
     `).run(
@@ -153,6 +154,7 @@ const sqliteRepo = {
       user.shop_id,
       user.email,
       user.password || null,
+      Number(user.auth_version || 0),
       user.role || 'owner',
       user.telegram_id || null,
       toSqlTimestamp(user.created_at)

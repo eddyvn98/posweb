@@ -14,10 +14,14 @@ const sqliteRepo = {
       throw Object.assign(new Error('Mã vạch đã được sử dụng bởi sản phẩm khác'), { status: 409, code: 'BARCODE_CONFLICT' });
     }
     const existingById = product.id
-      ? db.prepare('SELECT id, barcode FROM products WHERE id = ? AND shop_id = ?').get(product.id, shop_id)
+      ? db.prepare('SELECT id, barcode, stock_quantity FROM products WHERE id = ? AND shop_id = ?').get(product.id, shop_id)
       : null;
 
     if (existingById) {
+      if (product.original_stock_quantity != null &&
+          Number(product.original_stock_quantity) !== Number(existingById.stock_quantity)) {
+        throw Object.assign(new Error('Tồn kho đã thay đổi. Hãy tải lại sản phẩm trước khi lưu'), { status: 409, code: 'STOCK_CONFLICT' });
+      }
       db.prepare(`
         UPDATE products SET
           barcode = @barcode,
@@ -136,11 +140,20 @@ const mongoRepo = {
     const filter = existingById
       ? { shop_id, id: product.id }
       : { shop_id, barcode: payload.barcode };
-    await Product.updateOne(
-      filter,
+    if (existingById && product.original_stock_quantity != null &&
+        Number(product.original_stock_quantity) !== Number(existingById.stock_quantity)) {
+      throw Object.assign(new Error('Tồn kho đã thay đổi. Hãy tải lại sản phẩm trước khi lưu'), { status: 409, code: 'STOCK_CONFLICT' });
+    }
+    const guardedFilter = existingById && product.original_stock_quantity != null
+      ? { ...filter, stock_quantity: Number(product.original_stock_quantity) } : filter;
+    const updated = await Product.updateOne(
+      guardedFilter,
       { $set: payload, $setOnInsert: { created_at: new Date() } },
       { upsert: !existingById }
     );
+    if (existingById && !updated.matchedCount) {
+      throw Object.assign(new Error('Tồn kho đã thay đổi trong lúc lưu. Hãy tải lại sản phẩm'), { status: 409, code: 'STOCK_CONFLICT' });
+    }
 
     return { success: true };
   },

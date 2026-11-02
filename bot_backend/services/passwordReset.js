@@ -89,8 +89,10 @@ async function resetPassword(token, password) {
     } finally { await session.endSession(); }
     if (!updated) throw Object.assign(new Error('Liên kết hết hạn hoặc đã được sử dụng'), { status: 400 });
     if (provider === 'dual') {
-      const mirror = db.prepare('UPDATE users SET password = ?, auth_version = auth_version + 1 WHERE id = ?')
-        .run(newHash, resetUserId);
+      // Set the exact authoritative version: a mirrored password update must not drift.
+      const authoritative = await User.findOne({ id: resetUserId }).lean();
+      const mirror = db.prepare('UPDATE users SET password = ?, auth_version = ? WHERE id = ?')
+        .run(newHash, Number(authoritative.auth_version || 0), resetUserId);
       if (!mirror.changes) throw Object.assign(new Error('Password recovery mirror could not be updated'), { status: 503 });
     }
 

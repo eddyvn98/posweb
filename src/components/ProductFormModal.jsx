@@ -247,6 +247,7 @@ export default function ProductFormModal({ product, onClose, onFinish }) {
                 promo_price: finalPromoPrice,
                 cost_price: finalCostPrice,
                 stock_quantity: Number(formData.stock_quantity),
+                ...(product ? { original_stock_quantity: Number(product.stock_quantity) } : {}),
                 is_active: true,
                 created_at: product?.created_at || new Date().toISOString()
             }
