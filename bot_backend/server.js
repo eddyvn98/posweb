@@ -127,6 +127,8 @@ async function startServer() {
         // Khởi động lịch trình sao lưu tự động định kỳ mỗi ngày (giữ tối đa 30 bản)
         const { startDailyBackupScheduler } = require('./services/backupService');
         startDailyBackupScheduler({ maxBackups: 30 });
+        const { startDeliveryOutboxWorker } = require('./services/deliveryOutboxWorker');
+        startDeliveryOutboxWorker();
     });
 }
 
