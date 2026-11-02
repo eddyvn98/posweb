@@ -175,3 +175,49 @@ test('SQLite voidSale allows recovery retry only when requested', async () => {
     assert.equal(f.db.prepare("SELECT stock_quantity FROM products WHERE id='item-validated'").get().stock_quantity, 30)
   } finally { f.db.close() }
 })
+
+test('review1: stale product editor cannot revert inventory after a sale', async () => {
+  const f = fixture()
+  try {
+    f.addProduct('sku-review', 'shop-a', 'REV-1', 10)
+    const sale = f.sale('sale-review', 'sku-review')
+    await f.sales.createSale('shop-a', 'user-a', sale)
+    const stale = {
+      id: 'sku-review', shop_id: 'shop-a', barcode: 'REV-1',
+      name: 'Edited name', price: 15000, stock_quantity: 10,
+      original_stock_quantity: 10, is_active: true
+    }
+    await assert.rejects(f.products.upsertProduct('shop-a', stale), e => e.status === 409)
+    assert.equal(f.db.prepare('SELECT stock_quantity FROM products WHERE id = ?').get('sku-review').stock_quantity, 8)
+    await f.products.upsertProduct('shop-a', { ...stale, original_stock_quantity: 8, stock_quantity: 8 })
+    assert.equal(f.db.prepare('SELECT stock_quantity FROM products WHERE id = ?').get('sku-review').stock_quantity, 8)
+    await f.products.upsertProduct('shop-a', { ...stale, name: 'Metadata update', original_stock_quantity: undefined })
+    assert.equal(f.db.prepare('SELECT stock_quantity FROM products WHERE id = ?').get('sku-review').stock_quantity, 8)
+  } finally { f.db.close() }
+})
+
+test('review1: forged sale lines cannot replay an existing sale id', async () => {
+  const f = fixture()
+  try {
+    f.addProduct('sku-review', 'shop-a', 'REV-1', 10)
+    const sale = f.sale('replay-review', 'sku-review')
+    await f.sales.createSale('shop-a', 'user-a', sale)
+    await assert.rejects(f.sales.createSale('shop-a', 'user-a', {
+      ...sale, items: [{ ...sale.items[0], product_name: 'Different item' }]
+    }), e => e.status === 409)
+    await assert.rejects(f.sales.createSale('shop-a', 'user-a', {
+      ...sale, items: [{ ...sale.items[0], is_quick_sale: true }]
+    }), e => e.status === 409 || e.status === 400)
+  } finally { f.db.close() }
+})
+
+test('review1: known catalog item cannot skip stock via quick-sale flag', async () => {
+  const f = fixture()
+  try {
+    f.addProduct('sku-review', 'shop-a', 'REV-1', 10)
+    await assert.rejects(f.sales.createSale('shop-a', 'user-a',
+      f.sale('bypass-review', 'sku-review', { quick: true })), e => e.status === 400)
+    assert.equal(f.db.prepare('SELECT stock_quantity FROM products WHERE id = ?').get('sku-review').stock_quantity, 10)
+    assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM sales').get().n, 0)
+  } finally { f.db.close() }
+})
