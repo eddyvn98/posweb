@@ -6,6 +6,7 @@ const Product = require('../mongo/models/Product');
 const InventoryLog = require('../mongo/models/InventoryLog');
 const CashFlow = require('../mongo/models/CashFlow');
 const { validateSale, assertReplayCompatible } = require('./saleValidation');
+const { mongoEnqueue, saleEvents, voidEvent } = require('./deliveryOutbox');
 
 // The Sale, its lines, stock movements and cashbook MUST commit as one unit.
 // MongoDB must run as a replica set (including single-node replica sets).
@@ -83,6 +84,7 @@ async function createMongoSale(shop_id, user_id, sale, options = {}) {
         description: `Thu tien ban hang don ${sale.code}`, ref_id: saleId,
         created_at: sale.sale_date ? new Date(sale.sale_date) : new Date(),
       }], { session });
+      for (const event of saleEvents(shop_id, { ...sale, id: saleId })) await mongoEnqueue(event, session);
       created = true;
     }, {
       readConcern: { level: 'snapshot' },
@@ -142,6 +144,7 @@ async function voidMongoSale(shop_id, saleId, reason, options = {}) {
         await CashFlow.updateOne({ id: flow.id, shop_id },
           { $set: { description: `[VOIDED] ${flow.description}` } }, { session });
       }
+      await mongoEnqueue(voidEvent(shop_id, saleId, reason), session);
       voided = true;
     }, { readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } });
   } finally {

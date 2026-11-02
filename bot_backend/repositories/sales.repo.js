@@ -8,6 +8,7 @@ const InventoryLog = require('../mongo/models/InventoryLog');
 const CashFlow = require('../mongo/models/CashFlow');
 const { createMongoSale, voidMongoSale } = require('../services/mongoSaleWriter');
 const { validateSale, assertReplayCompatible } = require('../services/saleValidation');
+const { sqliteEnqueue, saleEvents, voidEvent } = require('../services/deliveryOutbox');
 
 const sqliteRepo = {
   async createSale(shop_id, user_id, sale, options = {}) {
@@ -60,6 +61,7 @@ const sqliteRepo = {
       db.prepare('INSERT INTO cash_flows (id, shop_id, amount, type, category, description, ref_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
         .run(uuidv4(), shop_id, sale.total_amount, 'in', 'sale', `Thu tien ban hang don ${sale.code}`, saleId, sale.sale_date);
 
+      for (const event of saleEvents(shop_id, { ...sale, id: saleId })) sqliteEnqueue(db, event);
       return saleId;
     });
 
@@ -118,6 +120,7 @@ const sqliteRepo = {
       }
 
       db.prepare("UPDATE cash_flows SET description = '[VOIDED] ' || description WHERE ref_id = ?").run(saleId);
+      sqliteEnqueue(db, voidEvent(shop_id, saleId, reason));
       return true;
     });
 
