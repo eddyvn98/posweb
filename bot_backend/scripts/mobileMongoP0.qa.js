@@ -61,6 +61,7 @@ const CashFlow = require('../mongo/models/CashFlow');
     db.pragma('foreign_keys = ON');
     db.exec(fs.readFileSync(path.resolve(__dirname, '../db/init.sql'), 'utf8'));
     db.prepare('INSERT INTO shops (id, name) VALUES (?, ?)').run(shop, 'QA Dual');
+    db.prepare('INSERT INTO products (id, shop_id, barcode, name, price, stock_quantity) VALUES (?,?,?,?,?,?)').run(productId, shop, 'MONGODUAL', 'QA Product', 100, 100);
     const repoSource = fs.readFileSync(path.resolve(__dirname, '../repositories/sales.repo.js'), 'utf8');
     const container = { exports: {} };
     const dependencies = {
@@ -113,7 +114,7 @@ const CashFlow = require('../mongo/models/CashFlow');
     await dual.voidSale(shop, dualId, 'QA fault');
     assert.equal(db.prepare('SELECT is_void FROM sales WHERE id = ?').get(dualId).is_void, 1);
     assert.equal((await Product.findOne({ id: productId })).stock_quantity, 88);
-    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM inventory_logs WHERE type = 'void'").get().n, 0);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM inventory_logs WHERE type = 'void'").get().n, 1);
     db.close();
     console.log('PASS Dual: recover create + void from injected SQLite write faults');
 
