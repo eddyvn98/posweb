@@ -41,7 +41,9 @@ bot_backend/backup_err.json
 .claude/
 
 # Backups
+backups/
 bot_backend/backups/
+*.sqlite
 test-results/
 cf_*.txt
 
