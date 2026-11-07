@@ -6,15 +6,16 @@ echo ========================================================
 echo.
 
 :: 1. Khoi dong Backend + Database (SQLite)
-echo [1/3] Khoi dong Backend (Port 3001) & Database (SQLite)...
-start "POS Backend (Port 3001)" cmd /k "cd /d "%~dp0bot_backend" && node server.js"
+echo [1/3] Khoi dong Backend (Port 3001) ^& Database (SQLite)...
+start "POS Backend (Port 3001)" /min cmd /k "cd /d "%~dp0bot_backend" && node server.js"
 
 :: 2. Khoi dong Frontend Dev Server (Vite)
 echo [2/3] Khoi dong Frontend Vite Server (Port 5173)...
-start "POS Frontend (Port 5173)" cmd /k "cd /d "%~dp0" && npm run dev"
+start "POS Frontend (Port 5173)" /min cmd /k "cd /d "%~dp0" && npm run preview"
 
 :: 3. Cho 3 giay de server khoi tao
 echo [3/3] Dang cho dich vu san sang...
+start "POS Tunnel (Cloudflare)" /min cmd /k ""%~dp0run_tunnel.bat""
 ping 127.0.0.1 -n 4 > nul
 
 :: 4. Mo Web tren trinh duyet

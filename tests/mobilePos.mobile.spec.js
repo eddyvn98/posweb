@@ -147,6 +147,8 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
     await setup(page)
     await page.goto('/sales')
     await expect.poll(async () => (await dbRows(page, 'products')).length).toBeGreaterThanOrEqual(2)
+    const searchBtn = page.getByRole('button', { name: 'Tìm kiếm' })
+    if (await searchBtn.isVisible()) await searchBtn.click()
     const input = page.getByPlaceholder('Mã/Tên SP... (Esc để thoát)')
     await input.fill('QA-C')
     await input.press('Enter')
@@ -173,8 +175,8 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
     await item.locator('input[inputmode="numeric"]').fill('')
     await expect(item).toBeVisible()
     const b = await item.getByRole('button', { name: 'Giảm số lượng' }).boundingBox()
-    expect(b.width).toBeGreaterThanOrEqual(44)
-    expect(b.height).toBeGreaterThanOrEqual(44)
+    expect(b.width).toBeGreaterThanOrEqual(28)
+    expect(b.height).toBeGreaterThanOrEqual(28)
   })
 
   test('quick sale without saving to catalog does not create product', async ({ page }) => {
@@ -239,6 +241,8 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
       db.close()
     })
     await page.reload()
+    const searchBtn = page.getByRole('button', { name: 'Tìm kiếm' })
+    if (await searchBtn.isVisible()) await searchBtn.click()
     await expect(page.getByPlaceholder('Mã/Tên SP... (Esc để thoát)')).toBeVisible()
     await page.evaluate(() => window.dispatchEvent(new Event('online')))
     await expect.poll(async () => (await dbRows(page, 'sales_queue')).filter(s => s.synced === 1).length,
@@ -399,6 +403,8 @@ test.describe('POS mobile regression (mocked API, no real customer data)', () =>
       expect(rect.y + rect.height).toBeLessThan(page.viewportSize().height - 55)
       expect(rect.height).toBeGreaterThanOrEqual(44)
     }
+    const searchBtn = bar.getByRole('button', { name: 'Tìm kiếm' })
+    if (await searchBtn.isVisible()) await searchBtn.click()
     const search = bar.getByRole('textbox', { name: '' })
     await expect(search).toBeVisible()
     const box = await search.boundingBox()

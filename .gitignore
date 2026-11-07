@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.*.local
+.jwt_secret
+bot_backend/.jwt_secret
 
 # Dependencies
 node_modules/
@@ -40,5 +42,7 @@ bot_backend/backup_err.json
 
 # Backups
 bot_backend/backups/
+test-results/
+cf_*.txt
 
 

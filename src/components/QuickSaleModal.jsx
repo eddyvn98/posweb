@@ -125,11 +125,11 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
     }
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-sm">
-            <div className="w-full max-w-sm rounded-t-[24px] sm:rounded-[24px] bg-white shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-sm overscroll-none">
+            <div className="w-full max-w-sm max-h-[92dvh] sm:max-h-[85vh] rounded-t-[24px] sm:rounded-[24px] bg-white shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
                 {/* Header */}
-                <div className="flex items-center justify-between border-b px-5 py-3.5 bg-white">
-                    <h3 className="text-xl font-bold flex items-center gap-2 text-gray-900">
+                <div className="flex items-center justify-between border-b px-4 sm:px-5 py-3 sm:py-3.5 bg-white shrink-0">
+                    <h3 className="text-lg sm:text-xl font-bold flex items-center gap-2 text-gray-900">
                         <Zap className="w-5 h-5 text-amber-500" /> Bán nhanh
                     </h3>
                     <button
@@ -141,7 +141,7 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
                     </button>
                 </div>
 
-                <div className="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
+                <div className="p-4 sm:p-5 space-y-3.5 sm:space-y-4 flex-1 overflow-y-auto overscroll-contain">
                     {/* Step 1: Price */}
                     <div className={`${step >= 1 ? 'block' : 'hidden'} space-y-2`}>
                         <label className="block text-[9px] font-black uppercase text-primary/60 tracking-[0.2em]">GIÁ BÁN</label>
@@ -249,12 +249,12 @@ export default function QuickSaleModal({ onClose, onAddToCart, presetBarcode = '
                 </div>
 
                 {/* Footer Button */}
-                <div className="p-5 pt-0 mt-auto">
+                <div className="p-4 sm:p-5 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] shrink-0 bg-white border-t border-slate-100">
                     <button
                         type="button"
                         onClick={nextStep}
                         disabled={submitting}
-                        className="btn-primary w-full h-14 text-[15px] font-black shadow-lg shadow-primary/10 hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-widest rounded-2xl"
+                        className="btn-primary w-full h-11 sm:h-12 text-sm font-black shadow-lg shadow-primary/10 hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-widest rounded-xl sm:rounded-2xl"
                     >
                         {step === 3 ? 'Xác nhận bán' : 'Tiếp tục (Enter)'}
                     </button>

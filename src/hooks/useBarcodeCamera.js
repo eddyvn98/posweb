@@ -60,7 +60,7 @@ export function useBarcodeCamera({ active, onDetected }) {
                 schedule()
                 return
             }
-            if (processingFrame || timestamp - lastFrameAt < 85) {
+            if (processingFrame || timestamp - lastFrameAt < 60) {
                 schedule()
                 return
             }
@@ -129,7 +129,11 @@ export function useBarcodeCamera({ active, onDetected }) {
             }
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                    video: {
+                        facingMode: { ideal: cameraFacing },
+                        width: { ideal: 1280, min: 640 },
+                        height: { ideal: 720, min: 480 }
+                    },
                     audio: false
                 })
                 if (stopped) {

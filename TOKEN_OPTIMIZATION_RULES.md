@@ -39,6 +39,12 @@ Sau khi kiểm tra các session làm việc gần đây, các điểm gây tổn
 | **27** | **Tạo script tạm vụn vặt cho từng bước nhỏ của tác vụ file/dọn đĩa (`check_*.ps1`, `move_*.ps1`, `verify_*.ps1`)** | Tạo 8-12 file script riêng cho từng thao tác kiểm tra/copy/xóa/shortcut, biến 1 tác vụ 5 phút thành 78 turns | 🔴 **CRITICAL** (~25,000 - 60,000 tokens/session) |
 | **28** | **Scan đệ quy sâu không giới hạn (`Get-ChildItem -Recurse`) trên thư mục người dùng / toàn ổ** | Quét đệ quy `C:\Users` hoặc `AppData` gây nghẽn IO, timeout, crash phải thử lại nhiều lần | 🔴 **CRITICAL** (~15,000 - 35,000 tokens/session) |
 | **29** | **Nhảy cóc thử-sai ngôn ngữ kịch bản (Python <-> PowerShell) cho tác vụ hệ thống Windows** | Viết Python rồi lỗi môi trường đổi sang PowerShell, rồi lại chuyển về Python, tiêu tốn turn vô ích | 🟠 **HIGH** (~8,000 - 20,000 tokens/session) |
+| **30** | **Bùng nổ Tool Calls không kiểm soát trong 1 turn (100+ calls/turn)** | Không có chốt chặn ngắt (Circuit Breaker), chạy 122 - 126 tool calls trong 1 turn làm phình transcript context lên >1.7MB | 🔴 **CRITICAL** (~40,000 - 80,000 tokens/turn) |
+| **31** | **Bỏ qua `edit_file` và sửa code bằng Node.js inline script (`node -e "const fs..."`) hoặc file `.cjs` vá tạm** | Gõ script thay thế chuỗi bằng Node inline dẫn tới lỗi escaping và tốn turn | 🔴 **CRITICAL** (~10,000 - 25,000 tokens/session) |
+| **32** | **Xâm lấn phạm vi đọc file Backend cho tác vụ UI/CSS Frontend (Cross-Layer Creep)** | Yêu cầu chỉnh responsive giao diện nhưng đọc cả `createSale.js`, `sales.repo.js`, `SyncContext.jsx` | 🟠 **HIGH** (~15,000 - 30,000 tokens/session) |
+| **33** | **Spam lệnh Git thăm dò (`git status`, `git diff`, `git push` lặp đi lặp lại)** | Gọi `git status` 12 lần, `git push` 6 lần, `git diff` 5 lần trong một phiên làm việc | 🟡 **MEDIUM** (~5,000 - 15,000 tokens/session) |
+| **34** | **Viết "luận văn" hướng dẫn xử lý sự cố (2,800 - 4,100 ký tự output)** | Trả lời câu hỏi ngắn ("kẹt giấy làm sao", "máy in l3316 nó") bằng bài viết hàng nghìn chữ | 🔴 **CRITICAL** (~1,500 - 3,000 tokens/turn) |
+| **35** | **Thăm dò mù cổng Remote Debugging (port 9222 / msedge process loop)** | Lặp lại 15 lần `Get-CimInstance msedge` và kiểm tra port 9222 khi trình duyệt chưa bật remote debugging | 🟠 **HIGH** (~6,000 - 15,000 tokens/session) |
 
 ---
 
@@ -181,7 +187,42 @@ Sau khi kiểm tra các session làm việc gần đây, các điểm gây tổn
 
 ---
 
+### 📌 Quy Tắc 31: CHỐT CHẶN NGẮT TOOL CALLS (CIRCUIT BREAKER: TỐI ĐA 10-12 TOOL CALLS / TURN)
+- **Hiện tượng đã phát hiện:** AI chạy liên tiếp 122 - 126 tool calls trong duy nhất 1 turn làm phình transcript context lên 1.7 MB.
+- **Bắt buộc:** Thiết lập chốt chặn ngắt (Circuit Breaker):
+  - Không bao giờ vượt quá **10-12 tool calls** trong một turn đơn lẻ.
+  - Nếu sau 10 tool calls công việc vẫn chưa xong: **Dừng lại (stop calling tools)**, báo cáo tiến độ 1-2 dòng và xác nhận bước tiếp theo với người dùng thay vì chạy vòng lặp vô tận.
+
+### 📌 Quy Tắc 32: CẤM SỬA CODE BẰNG `node -e` HOẶC TẠO SCRIPT `.cjs` VÁ TẠM (BẮT BUỘC DÙNG `edit_file`)
+- **Hiện tượng đã phát hiện:** Chạy `node -e "const fs = require('fs'); ..."` 7 lần và tạo file `.cjs` tạm để đọc/ghi đè file code.
+- **Bắt buộc:** Mọi thay đổi mã nguồn phải sử dụng công cụ chuẩn `edit_file` / `replace_file_content`. Tuyệt đối không dùng Node inline hoặc script `.cjs` để vá code.
+
+### 📌 Quy Tắc 33: TÁCH BIỆT RANH GIỚI FRONTEND - BACKEND (CẤM ĐỌC CODE BACKEND CHO TÁC VỤ UI/CSS)
+- **Hiện tượng đã phát hiện:** Người dùng yêu cầu chỉnh CSS responsive giao diện mobile nhưng AI lại đọc cả `createSale.js`, `sales.repo.js`, `SyncContext.jsx`.
+- **Bắt buộc:** Khi người dùng yêu cầu chỉnh sửa UI, CSS, responsive, bố cục hiển thị:
+  - CHỈ đọc các file liên quan trực tiếp đến giao diện (`src/pages/*.jsx`, `src/components/*.jsx`, `src/styles/*.css`).
+  - **CẤM** mở các file backend trong `bot_backend/`, controllers, repositories hay database models.
+
+### 📌 Quy Tắc 34: CẤM SPAM LỆNH GIT (`git status`, `git diff`, `git push` VÔ TỘI VẠ)
+- **Hiện tượng đã phát hiện:** Gọi `git status` 12 lần, `git push` 6 lần, `git diff` 5 lần trong một phiên.
+- **Bắt buộc:** 
+  - Chỉ chạy `git status` **1 lần duy nhất** trước khi commit.
+  - Không chạy `git push` lặp đi lặp lại khi chưa giải quyết xong conflict hoặc chưa xác thực nhánh.
+
+### 📌 Quy Tắc 35: TRẦN ĐỘ DÀI PHẢN HỒI CHO CÂU HỎI TƯ VẤN / SỰ CỐ (HARD CEILING: < 200 TỪ / < 1,000 KÝ TỰ)
+- **Hiện tượng đã phát hiện:** Khi người dùng hỏi ngắn ("kẹt giấy làm sao", "máy in l3316 nó"), AI xả ra bài luận dài 2,800 - 4,100 ký tự (>1,000 tokens output).
+- **Bắt buộc:** 
+  - Phản hồi siêu ngắn gọn: Tối đa **150 - 200 từ** (dưới 1,000 ký tự).
+  - Trình bày dạng danh sách gạch đầu dòng (3-5 bullet points) nêu thẳng nguyên nhân và cách xử lý, cấm viết văn chào hỏi, mở bài và kết bài dài dòng.
+
+### 📌 Quy Tắc 36: CẤM THĂM DÒ MÙ CỔNG REMOTE DEBUGGING (PORT 9222 / MSEDGE)
+- **Hiện tượng đã phát hiện:** Gọi lặp đi lặp lại 15 lần các lệnh kiểm tra PID Edge và kiểm tra cổng 9222 khi trình duyệt cá nhân chưa bật cờ remote debugging.
+- **Bắt buộc:** Kiểm tra cổng 9222 đúng **1 lần**. Nếu không mở, lập tức hướng dẫn người dùng khởi động trình duyệt kèm cờ `--remote-debugging-port=9222` thay vì liên tục thăm dò trong vòng lặp.
+
+---
+
 ## 📌 3. THƯỚC ĐO HIỆU QUẢ (KPIS TỐI ƯU TOKEN)
-- **Output Token/Turn:** Không vượt quá 500 - 800 tokens cho mỗi câu trả lời chat.
+- **Tool Calls/Turn:** Tối đa 10-12 calls/turn (Kích hoạt Circuit Breaker nếu vượt quá, dừng lại xin ý kiến user).
+- **Output Token/Turn:** Không vượt quá 200 - 300 tokens (dưới 1,000 ký tự) cho câu trả lời thông thường; dưới 100 từ cho lệnh hành động nhanh.
 - **Turns to Resolve Task:** Tối đa 2-3 turns cho các công việc chỉnh sửa vừa và nhỏ.
 - **Code Edit Method:** 100% các file sửa đổi hiện có phải dùng `replace_file_content`.

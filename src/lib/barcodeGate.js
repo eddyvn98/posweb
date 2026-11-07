@@ -1,15 +1,26 @@
-// A decoder can lose focus for seconds while the physical barcode stays in place.
-// Never infer physical removal from missing frames. A different code is accepted
-// immediately; deliberately scanning the same code again requires explicit rearm.
-export function createBarcodeGate() {
+// Barcode gate: prevents repeated reads while a barcode is held stationary,
+// accepts different barcodes immediately, and automatically re-arms once the
+// barcode leaves the frame or after a brief release window (no manual rearm needed).
+export function createBarcodeGate(releaseAfterMs = 1000) {
     let held = null
+    let lastVisibleAt = 0
     return {
-        observe(raw) {
+        observe(raw, now = performance.now()) {
             const code = String(raw || '').trim()
-            if (!code || held === code) return { accepted: null, held }
-            held = code
-            return { accepted: code, held }
+            if (code) {
+                lastVisibleAt = now
+                if (held === code) return { accepted: null, held }
+                held = code
+                return { accepted: code, held }
+            }
+            if (held && now - lastVisibleAt >= releaseAfterMs) {
+                held = null
+            }
+            return { accepted: null, held }
         },
-        reset() { held = null }
+        reset() {
+            held = null
+            lastVisibleAt = 0
+        }
     }
 }

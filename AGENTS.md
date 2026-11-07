@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **posweb** (1905 symbols, 3570 relationships, 137 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **posweb** (2559 symbols, 5106 relationships, 209 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
@@ -76,9 +76,15 @@ This project is indexed by GitNexus as **posweb** (1905 symbols, 3570 relationsh
 24. **CẤM TẠO SCRIPT TẠM VỤN VẶT TỪNG BƯỚC CHO TÁC VỤ FILE/OS:** Cấm tạo 5-10 file script riêng lẻ (`check_*.ps1`, `move_*.ps1`, `verify_*.ps1`). Phải gom trọn chu trình (kiểm tra -> copy/move -> xác thực -> shortcut -> dọn dẹp) vào 1 script duy nhất.
 25. **CẤM QUÉT ĐỆ QUY TỔNG THỂ KHÔNG GIỚI HẠN (`Get-ChildItem -Recurse`):** Cấm chạy quét đệ quy sâu toàn bộ `C:\` hoặc `C:\Users` gây nghẽn IO, timeout và tràn context. Bắt buộc quét tầng 1 (`-Depth 1` hoặc `Get-ChildItem -Directory`) và chỉ đào sâu vào thư mục cụ thể đã xác định.
 26. **CẤM NHẢY CÓC THỬ-SAI NGÔN NGỮ (PYTHON <-> POWERSHELL) TRÊN WINDOWS:** Nhất quán dùng PowerShell thuần với `BypassSandbox: true` cho mọi tác vụ OS/file/shortcut trên Windows; cấm viết Python rồi lỗi lại đổi sang PowerShell và ngược lại.
+27. **CẤM BÙNG NỔ TOOL CALLS (CIRCUIT BREAKER: TỐI ĐA 10-12 CALLS/TURN):** Tuyệt đối không chạy vòng lặp 50-120 tool calls trong 1 turn; nếu sau 10-12 calls chưa xong phải dừng lại tóm tắt 1-2 dòng và hỏi ý kiến user.
+28. **CẤM SỬA CODE BẰNG `node -e` HOẶC TẠO SCRIPT `.cjs` VÁ TẠM:** Mọi chỉnh sửa mã nguồn bắt buộc dùng `replace_file_content` / `edit_file`, cấm dùng inline node script vá file.
+29. **CẤM ĐỌC CODE BACKEND CHO TÁC VỤ FRONTEND/CSS (SCOPE CREEP):** Khi làm UI, responsive mobile, cấm mở đọc các file trong `bot_backend`, repositories, controllers.
+30. **CẤM SPAM LỆNH GIT (`git status`, `git push`, `git diff`):** Chỉ chạy `git status` 1 lần trước khi commit. Không chạy lặp đi lặp lại sau mỗi vi thao tác.
+31. **CẤM XẢ BÀI LUẬN DÀI KHI TƯ VẤN SỰ CỐ (HARD CEILING < 200 TỪ / < 1,000 KÝ TỰ):** Khi trả lời câu hỏi kẹt giấy, lỗi máy in, trả lời tối đa 3-5 gạch đầu dòng, không viết bài luận 2,000-4,000 ký tự.
+32. **CẤM THĂM DÒ MÙ CỔNG REMOTE DEBUGGING (PORT 9222/MSEDGE):** Chỉ kiểm tra 1 lần, nếu cổng không mở yêu cầu user bật cờ khởi động thay vì chạy vòng lặp polling process.
 
 ## ✅ NGUYÊN TẮC BẮT BUỘC (ALWAYS DO)
 1. **CHỈNH SỬA TOÁN CỤC SÚC TÍCH:** Dùng `replace_file_content` với chunk tối thiểu.
-2. **KẾT QUẢ NGẮN GỌN (OUTPUT < 500 TOKENS/TURN):** Phản hồi chat bằng tiếng Việt súc tích, dạng bullet-points.
-3. **THAM CHIẾU TOKEN OPTIMIZATION SPEC:** Xem thông tin chi tiết tại [TOKEN_OPTIMIZATION_RULES.md](file:///d:/posweb2/TOKEN_OPTIMIZATION_RULES.md).
-
+2. **KẾT QUẢ NGẮN GỌN (OUTPUT < 250 TOKENS / < 1,000 KÝ TỰ):** Phản hồi chat bằng tiếng Việt súc tích, dạng bullet-points (tối đa 150-200 từ).
+3. **GIỚI HẠN TOOL CALLS (CIRCUIT BREAKER):** Tối đa 10-12 tool calls/turn; dừng lại báo cáo nếu chưa xong.
+4. **THAM CHIẾU TOKEN OPTIMIZATION SPEC:** Xem thông tin chi tiết tại [TOKEN_OPTIMIZATION_RULES.md](file:///d:/posweb2/TOKEN_OPTIMIZATION_RULES.md).

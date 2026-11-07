@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { playBeep, unlockAudio } from '../lib/soundUtils'
 import { searchLocalProducts, saveProductsToLocal, upsertProductsToLocal } from '../lib/db'
-import CameraScanSheet from '../components/CameraScanSheet'
+import BarcodeScanner from '../components/BarcodeScanner'
 import api from '../lib/api'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -49,6 +49,22 @@ export default function Sales() {
     const [showCameraScanner, setShowCameraScanner] = useState(false)
     const scanInFlightRef = useRef(false)
     const [cameraFeedback, setCameraFeedback] = useState('')
+    const [isSearchOpen, setIsSearchOpen] = useState(false)
+
+    useEffect(() => {
+        window.scrollTo(0, 0)
+        const shouldHide = showCameraScanner || showQuickSale || showCheckout
+        window.dispatchEvent(new CustomEvent('pos-toggle-bottom-nav', { detail: { hide: shouldHide } }))
+        return () => {
+            window.dispatchEvent(new CustomEvent('pos-toggle-bottom-nav', { detail: { hide: false } }))
+        }
+    }, [showCameraScanner, showQuickSale, showCheckout])
+
+    useEffect(() => {
+        if (!cameraFeedback) return
+        const timer = setTimeout(() => setCameraFeedback(''), 3000)
+        return () => clearTimeout(timer)
+    }, [cameraFeedback])
 
     const { cart, addToCart, removeFromCart, updateQuantity, setQuantity, clearCart, totalAmount, totalItems } = useCart()
     const { pullProducts, isOnline } = useSync()
@@ -97,18 +113,19 @@ export default function Sales() {
 
             if (e.key === 'Escape') {
                 if (showCheckout || showQuickSale || lastSale) return
-                if (query || isSearchInputFocused) {
+                if (query || isSearchInputFocused || isSearchOpen) {
                     e.preventDefault()
                     setQuery('')
                     setProducts([])
                     setIsSearchInputFocused(false)
+                    setIsSearchOpen(false)
                     searchInputRef.current?.blur()
                 }
             }
         }
         window.addEventListener('keydown', handleGlobalKeyDown)
         return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-    }, [query, isSearchInputFocused, showCheckout, showQuickSale, lastSale, totalItems])
+    }, [query, isSearchInputFocused, isSearchOpen, showCheckout, showQuickSale, lastSale, totalItems])
 
     const isSearching = query.trim().length > 0
 
@@ -165,9 +182,10 @@ export default function Sales() {
                         behavior: 'smooth'
                     })
                 } else if (itemElement) {
-                    itemElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'nearest'
+                    const itemTop = itemElement.offsetTop - container.offsetTop
+                    container.scrollTo({
+                        top: Math.max(0, itemTop - 10),
+                        behavior: 'smooth'
                     })
                 }
             }
@@ -241,11 +259,40 @@ export default function Sales() {
     }
 
     return (
-        <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50 md:flex-col-reverse">
+        <div className="fixed inset-0 md:relative md:inset-auto md:h-full flex flex-col overflow-hidden bg-slate-50 md:flex-col-reverse">
             {/* Main Content: Products + Cart */}
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 bg-slate-50">
                 {/* --- LEFT: MAIN LOGIC AREA --- */}
-                <div className={`${cart.length > 0 ? 'hidden md:flex' : 'flex'} flex-1 flex flex-col h-full relative z-0`}>
+                {/* --- CAMERA SCANNER (SPLIT-VIEW) --- */}
+                {showCameraScanner && (
+                    <div className="relative shrink-0 border-b border-slate-200 bg-slate-950 md:flex-1 md:border-b-0 md:border-r md:h-full md:flex md:flex-col md:justify-center overflow-hidden">
+                        {/* Top-right overlay close button */}
+                        <button
+                            type="button"
+                            onClick={() => { setShowCameraScanner(false); setCameraFeedback('') }}
+                            className="absolute right-3 top-3 z-30 h-8 w-8 rounded-full bg-slate-900/80 hover:bg-slate-900 active:scale-95 text-white flex items-center justify-center backdrop-blur-sm shadow-md transition-all border border-white/10"
+                            title="Đóng camera"
+                            aria-label="Đóng camera"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+
+                        {/* Floating Scan Success Feedback Pill */}
+                        {cameraFeedback && (
+                            <div className="absolute bottom-16 left-3 right-3 z-30 flex justify-center pointer-events-none">
+                                <div className="bg-emerald-600/95 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-xl backdrop-blur-sm flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200 truncate max-w-[90%] border border-emerald-400/30">
+                                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-200" />
+                                    <span className="truncate">{cameraFeedback}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        <BarcodeScanner onDetected={handleScanResult} active={showCameraScanner} />
+                    </div>
+                )}
+
+                {!showCameraScanner && (
+                <div className={`${cart.length > 0 ? 'hidden md:flex' : 'flex'} flex-1 flex flex-col min-h-0 relative z-0`}>
                     {/* Main Content Area - Just Show "Sẵn sàng" state when idle */}
                     <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-center custom-scrollbar select-none">
                         <div className="text-center my-auto w-full max-w-lg">
@@ -255,10 +302,12 @@ export default function Sales() {
                         </div>
                     </div>
                 </div>
+                )}
 
                 {/* --- RIGHT: CART & CHECKOUT --- */}
-                <div className={`flex flex-col z-20 overflow-hidden md:flex-none md:w-[380px] bg-white border-l border-slate-200 shadow-sm ${cart.length === 0 ? 'h-auto' : 'flex-1 md:flex-1'}`}>
-                    <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+
+                <div className={`flex flex-col z-20 overflow-hidden md:flex-none md:w-[380px] bg-white border-l border-slate-200 shadow-sm min-h-0 ${cart.length === 0 ? 'hidden md:flex' : 'flex flex-1 md:flex-1'}`}>
+                    <div className="py-2 px-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                         <h2 className="font-bold text-xs uppercase tracking-wider text-slate-600 flex items-center gap-2">
                             <ShoppingCart className="w-4 h-4 text-sky-600" /> GIỎ HÀNG <span className="bg-sky-600 text-white px-2 py-0.5 rounded-full text-[10px] font-mono tabular-nums">{totalItems}</span>
                         </h2>
@@ -271,9 +320,9 @@ export default function Sales() {
                         </button>
                     </div>
 
-                    <div ref={cartListRef} className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar min-h-0 scroll-smooth flex flex-col justify-end md:block">
+                    <div ref={cartListRef} className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar min-h-0 overscroll-contain touch-pan-y">
                         {cart.length === 0 ? (
-                            <div className="hidden md:flex flex-col items-center justify-center h-full text-slate-400 text-xs italic font-medium">
+                            <div className={`${showCameraScanner ? 'flex' : 'hidden md:flex'} flex-col items-center justify-center h-full text-slate-400 text-xs italic font-medium p-4 text-center`}>
                                 Chưa có sản phẩm trong giỏ...
                             </div>
                         ) : (
@@ -292,30 +341,31 @@ export default function Sales() {
                         )}
                     </div>
 
-                    {/* Sticky Checkout Area - Combined Total into Button */}
-                    <div className="p-3 border-t border-slate-200 bg-white shadow-sm shrink-0">
-                        <button
-                            onClick={() => setShowCheckout(true)}
-                            className="btn-success w-full h-13 rounded-xl shadow-sm active:scale-[0.98] transition-all disabled:opacity-30 disabled:shadow-none flex items-center justify-between px-4 py-3"
-                            disabled={totalItems === 0}
-                        >
-                            <div className="flex flex-col items-start">
-                                <span className="text-[10px] opacity-80 font-bold uppercase tracking-wider leading-none mb-0.5">Xác nhận</span>
-                                <span className="text-sm font-bold uppercase tracking-tight flex items-center gap-1.5">THANH TOÁN <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white/20 rounded border border-white/25 text-white leading-none">Ctrl + Enter</kbd> <ArrowRight className="w-4 h-4" /></span>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-lg font-bold font-mono tabular-nums leading-none">
-                                    {new Intl.NumberFormat('vi-VN').format(totalAmount)}
-                                    <span className="text-xs ml-0.5 opacity-90 font-normal">đ</span>
-                                </span>
-                            </div>
-                        </button>
-                    </div>
+                    {/* Sticky Checkout Area - Slim Single Row */}
+                    {totalItems > 0 && (
+                        <div className="py-1.5 px-2.5 border-t border-slate-200 bg-white shadow-sm shrink-0">
+                            <button
+                                onClick={() => setShowCheckout(true)}
+                                className="btn-success w-full h-10 rounded-xl shadow-sm active:scale-[0.98] transition-all disabled:opacity-30 disabled:shadow-none flex items-center justify-between px-3 py-1.5"
+                                disabled={totalItems === 0}
+                            >
+                                <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-tight">
+                                    <span>THANH TOÁN</span>
+                                    <span className="bg-white/20 px-1.5 py-0.5 rounded text-[11px] font-mono leading-none">({totalItems})</span>
+                                    <ArrowRight className="w-3.5 h-3.5 opacity-80" />
+                                </div>
+                                <div className="text-right font-bold font-mono tabular-nums text-sm sm:text-base leading-none flex items-baseline gap-0.5">
+                                    <span>{new Intl.NumberFormat('vi-VN').format(totalAmount)}</span>
+                                    <span className="text-[11px] font-normal opacity-90">đ</span>
+                                </div>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Search Bar + Action Buttons - Combined Single Row */}
-            <div data-testid="mobile-sales-actions" className="px-2 pt-2 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:p-2 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.1)] z-30 border-t transition-all relative md:border-t-0 md:border-b md:shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
+            <div data-testid="mobile-sales-actions" className={`shrink-0 px-2 pt-2 md:p-2 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.1)] z-30 border-t transition-all relative md:border-t-0 md:border-b md:shadow-[0_8px_24px_rgba(0,0,0,0.06)] ${showCameraScanner ? 'pb-2 safe-bottom' : 'mb-[58px] pb-2'}`}>
 
                 {/* 🚀 INTEGRATED SEARCH RESULTS - Pops up from the bar */}
                 {isSearching && (
@@ -387,53 +437,67 @@ export default function Sales() {
                     </div>
                 )}
 
-                <div className="flex flex-col gap-2 max-w-full sm:flex-row">
-                    {/* Search Input - Main Expandable */}
-                    <div className="flex-1 relative w-full">
-                        <input
-                            ref={searchInputRef}
-                            autoFocus={typeof window !== 'undefined' && window.innerWidth >= 768}
-                            type="text"
-                            className="w-full h-12 md:h-10 pl-9 pr-8 text-base md:text-sm bg-gray-50 border border-gray-100 rounded-xl focus:ring-primary focus:border-primary focus:bg-white transition-all outline-none"
-                            placeholder="Mã/Tên SP... (Esc để thoát)"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Escape') {
-                                    e.preventDefault()
-                                    setQuery('')
-                                    setProducts([])
-                                    setIsSearchInputFocused(false)
-                                    searchInputRef.current?.blur()
-                                    return
-                                }
-                                if (e.ctrlKey && e.key === 'Enter') {
-                                    e.preventDefault()
-                                    if (!showCheckout && !showQuickSale && !lastSale && totalItems > 0) {
-                                        searchInputRef.current?.blur()
-                                        setShowCheckout(true)
-                                    }
-                                    return
-                                }
-                                const scanCode = e.currentTarget.value.trim()
-                                if (e.key === 'Enter') {
-                                    if (scanCode) {
-                                        handleScanResult(scanCode)
+                <div className="flex items-center gap-2 max-w-full">
+                    {/* Search: Icon-only by default, expands to input when clicked */}
+                    {!(isSearchOpen || query) ? (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsSearchOpen(true)
+                                setTimeout(() => searchInputRef.current?.focus(), 50)
+                            }}
+                            className="flex-1 sm:flex-none h-11 w-11 md:h-10 md:w-10 rounded-xl flex items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-500 shadow-xs shrink-0 active:scale-95 transition-all"
+                            title="Tìm kiếm sản phẩm"
+                            aria-label="Tìm kiếm"
+                        >
+                            <Search className="w-5 h-5" />
+                        </button>
+                    ) : (
+                        <div className="flex-1 relative flex items-center min-w-0 animate-in fade-in zoom-in-95 duration-150">
+                            <input
+                                ref={searchInputRef}
+                                autoFocus
+                                type="text"
+                                className="w-full h-11 md:h-10 pl-9 pr-8 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary focus:bg-white transition-all outline-none"
+                                placeholder="Mã/Tên SP... (Esc để thoát)"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Escape') {
                                         e.preventDefault()
+                                        setQuery('')
+                                        setProducts([])
+                                        setIsSearchInputFocused(false)
+                                        setIsSearchOpen(false)
+                                        searchInputRef.current?.blur()
+                                        return
                                     }
-                                }
-                            }}
-                            onFocus={() => setIsSearchInputFocused(true)}
-                            onBlur={() => {
-                                if (query.trim() === '') {
-                                    setIsSearchInputFocused(false)
-                                }
-                            }}
-                        />
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <Search className="w-4 h-4" />
-                        </span>
-                        {query && (
+                                    if (e.ctrlKey && e.key === 'Enter') {
+                                        e.preventDefault()
+                                        if (!showCheckout && !showQuickSale && !lastSale && totalItems > 0) {
+                                            searchInputRef.current?.blur()
+                                            setShowCheckout(true)
+                                        }
+                                        return
+                                    }
+                                    const scanCode = e.currentTarget.value.trim()
+                                    if (e.key === 'Enter') {
+                                        if (scanCode) {
+                                            handleScanResult(scanCode)
+                                            e.preventDefault()
+                                        }
+                                    }
+                                }}
+                                onFocus={() => setIsSearchInputFocused(true)}
+                                onBlur={() => {
+                                    if (query.trim() === '') {
+                                        setIsSearchInputFocused(false)
+                                    }
+                                }}
+                            />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                                <Search className="w-4 h-4" />
+                            </span>
                             <button
                                 type="button"
                                 tabIndex={-1}
@@ -441,51 +505,59 @@ export default function Sales() {
                                     setQuery('')
                                     setProducts([])
                                     setIsSearchInputFocused(false)
+                                    setIsSearchOpen(false)
                                     searchInputRef.current?.blur()
                                 }}
                                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-rose-500 transition-colors p-1"
+                                title="Đóng tìm kiếm"
+                                aria-label="Đóng tìm kiếm"
                             >
                                 <XCircle className="w-4 h-4" />
                             </button>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
-                    <div className="grid grid-cols-3 gap-2 w-full sm:contents">
-                    {/* Camera Scanner Button */}
+                    {/* Camera Scanner Button - Icon only */}
                     <button
                         type="button"
                         onClick={() => setShowCameraScanner(prev => !prev)}
                         aria-label="Quét mã bằng camera"
-                        className={`h-12 md:h-10 px-3 rounded-xl flex items-center justify-center font-bold text-xs gap-1.5 transition-all border shadow-xs shrink-0 active:scale-95 ${
+                        className={`${(isSearchOpen || query) ? 'w-11 sm:w-10' : 'flex-1 sm:w-10'} h-11 md:h-10 rounded-xl flex items-center justify-center transition-all border shadow-xs shrink-0 active:scale-95 ${
                             showCameraScanner
                                 ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100'
                                 : 'bg-sky-50 text-sky-600 hover:bg-sky-100 border-sky-200'
                         }`}
-                        title={showCameraScanner ? "Đóng camera" : "Quét mã vạch bằng camera điện thoại"}
+                        title={showCameraScanner ? "Đóng camera" : "Quét mã bằng camera"}
                     >
-                        {showCameraScanner ? <CameraOff className="w-4 h-4" /> : <Camera className="w-4 h-4 text-sky-600" />}
-                        <span>{showCameraScanner ? "Đóng" : "Quét mã"}</span>
+                        {showCameraScanner ? <CameraOff className="w-5 h-5" /> : <Camera className="w-5 h-5 text-sky-600" />}
                     </button>
 
-                    {/* Quick Sale Button - Compact */}
+                    {/* Quick Sale Button - Icon only */}
                     <button
                         onClick={() => {
                             setQuickSalePreset({ barcode: '', name: '' })
                             setShowQuickSale(true)
                         }}
-                        className="btn-primary min-h-12 md:min-h-0 btn-md"
+                        aria-label="Bán nhanh"
+                        title="Bán nhanh"
+                        className={`${(isSearchOpen || query) ? 'w-11 sm:w-10' : 'flex-1 sm:w-10'} h-11 md:h-10 rounded-xl flex items-center justify-center transition-all border shadow-xs shrink-0 active:scale-95 ${
+                            showQuickSale
+                                ? 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'
+                                : 'bg-white hover:bg-amber-50 text-amber-500 border-slate-200 hover:border-amber-200'
+                        }`}
                     >
-                        <Zap className="w-3.5 h-3.5" /> <span>Bán nhanh</span>
+                        <Zap className={`w-5 h-5 ${showQuickSale ? 'text-white' : 'text-amber-500'}`} />
                     </button>
 
-                    {/* History Button - Compact */}
+                    {/* History Button - Icon only */}
                     <button
                         onClick={() => navigate('/history')}
-                        className="btn-secondary min-h-12 md:min-h-0 btn-md"
+                        aria-label="Lịch sử"
+                        title="Lịch sử"
+                        className={`${(isSearchOpen || query) ? 'w-11 sm:w-10' : 'flex-1 sm:w-10'} h-11 md:h-10 rounded-xl flex items-center justify-center bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 shadow-xs shrink-0 active:scale-95 transition-all`}
                     >
-                        <History className="w-3.5 h-3.5 text-slate-500" /> <span>Lịch sử</span>
+                        <History className="w-5 h-5 text-slate-500" />
                     </button>
-                    </div>
                 </div>
             </div>
 
@@ -517,12 +589,6 @@ export default function Sales() {
                     onClose={() => setLastSale(null)}
                 />
             )}
-            <CameraScanSheet title="Quét mã bán hàng" active={showCameraScanner}
-                onDetected={handleScanResult} onClose={() => { setShowCameraScanner(false); setCameraFeedback('') }}
-                feedback={cameraFeedback}
-                summary={`Giỏ hàng: ${totalItems} món · ${Number(totalAmount).toLocaleString('vi-VN')}đ`}
-                actionLabel="Xem giỏ hàng"
-            />
         </div>
     )
 }

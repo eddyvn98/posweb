@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useSync } from '../contexts/SyncContext'
 import { useCart } from '../contexts/CartContext'
@@ -26,6 +26,13 @@ export default function Layout({ children }) {
     const { isOnline, pendingCount } = useSync()
     const { totalItems } = useCart()
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const [hideBottomNav, setHideBottomNav] = useState(false)
+
+    useEffect(() => {
+        const handleToggle = (e) => setHideBottomNav(Boolean(e.detail?.hide))
+        window.addEventListener('pos-toggle-bottom-nav', handleToggle)
+        return () => window.removeEventListener('pos-toggle-bottom-nav', handleToggle)
+    }, [])
 
     const mainItems = [
         { path: '/sales', label: 'Bán hàng', icon: ShoppingCart },
@@ -116,7 +123,7 @@ export default function Layout({ children }) {
             </main>
 
             {/* Mobile Bottom Bar - Only Main 3 Items */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 flex justify-between items-center px-2 py-1.5 z-[100] safe-bottom shadow-lg">
+            <nav className={`md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 items-center px-2 py-1.5 z-[100] safe-bottom shadow-lg transition-transform duration-200 ${hideBottomNav ? 'hidden pointer-events-none' : 'flex justify-between'}`}>
                 {mainItems.map(item => (
                     <button
                         key={item.path}

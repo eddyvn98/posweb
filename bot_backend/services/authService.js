@@ -6,7 +6,31 @@ const { getAuthRepo } = require('../repositories/auth.repo');
 if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32)) {
   throw new Error('JWT_SECRET must be set to a strong 32+ character secret');
 }
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+const fs = require('node:fs');
+const path = require('node:path');
+
+function resolveJwtSecret() {
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 32) {
+    return process.env.JWT_SECRET;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be set to a strong 32+ character secret');
+  }
+  const secretPath = path.resolve(__dirname, '../.jwt_secret');
+  try {
+    if (fs.existsSync(secretPath)) {
+      const stored = fs.readFileSync(secretPath, 'utf8').trim();
+      if (stored.length >= 32) return stored;
+    }
+    const generated = crypto.randomBytes(32).toString('hex');
+    fs.writeFileSync(secretPath, generated, 'utf8');
+    return generated;
+  } catch {
+    return crypto.randomBytes(32).toString('hex');
+  }
+}
+
+const JWT_SECRET = resolveJwtSecret();
 
 function generateToken(user) {
   return jwt.sign(
